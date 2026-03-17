@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fed Funds Probability Tree — CME FedWatch + Kalshi</title>
+<style>
+:root {
+  --color-text-primary:#1a1a1a;--color-text-secondary:#555;--color-text-tertiary:#888;
+  --color-text-info:#1d6fa4;--color-text-warning:#c97d00;--color-text-danger:#c0392b;--color-text-success:#166534;
+  --color-background-primary:#ffffff;--color-background-secondary:#f4f4f5;
+  --color-background-info:#dbeafe;--color-background-danger:#fee2e2;--color-background-success:#dcfce7;
+  --color-border-secondary:#d1d5db;--color-border-tertiary:#e5e7eb;--color-border-info:#93c5fd;
+  --border-radius-md:8px;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
+  --c-cme:#3b82f6;--c-kal:#f97316;--c-dots:#8b5cf6;--c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --color-text-primary:#f0f0f0;--color-text-secondary:#aaa;--color-text-tertiary:#777;
+    --color-text-info:#60a5fa;--color-text-warning:#fbbf24;--color-text-danger:#f87171;--color-text-success:#86efac;
+    --color-background-primary:#18181b;--color-background-secondary:#27272a;
+    --color-background-info:#1e3a5f;--color-background-danger:#450a0a;--color-background-success:#14532d;
+    --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
+    --c-cme:#60a5fa;--c-kal:#fb923c;--c-dots:#a78bfa;--c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);
+  }
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto}
+.fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
+.fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
+.fwt{width:100%;border-collapse:collapse}
+.fwt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.fwt td{padding:5px 8px;border-bottom:.5px solid var(--color-border-tertiary);font-size:12px;vertical-align:middle}
+.fw-in{font-family:var(--font-mono);font-size:12px;padding:2px 5px;border:.5px solid var(--color-border-secondary);border-radius:4px;background:transparent;color:var(--color-text-primary)}
+.fw-stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px}
+.fw-stat-l{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.fw-stat-v{font-size:20px;font-weight:500}
+.fw-stat-s{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.refresh-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:500;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-primary);transition:opacity .2s}
+.refresh-btn:hover{opacity:.75}.refresh-btn:disabled{opacity:.4;cursor:not-allowed}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.data-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.data-badge.live{background:var(--color-background-success);color:var(--color-text-success)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.api-note{font-size:11px;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;margin-top:6px;line-height:1.5}
+.api-note code{font-family:var(--font-mono);font-size:10px;background:var(--color-background-primary);padding:1px 4px;border-radius:3px;border:.5px solid var(--color-border-tertiary)}
+/* Kalshi panels */
+.k-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}
+.k-full{grid-column:1/-1}
+.k-panel{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px;overflow:hidden}
+.k-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:6px;flex-wrap:wrap}
+.k-title{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.k-contract{font-size:9px;font-family:var(--font-mono);color:var(--color-text-tertiary);background:var(--color-background-primary);padding:1px 5px;border-radius:3px;border:.5px solid var(--color-border-tertiary)}
+.k-note{font-size:10px;color:var(--color-text-tertiary);margin-top:6px;line-height:1.5;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)}
+.k-legend{display:flex;gap:12px;font-size:10px;color:var(--color-text-secondary);margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.k-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
+.k-pill{font-size:9px;padding:1px 6px;border-radius:10px;font-weight:500;white-space:nowrap}
+.k-up{background:var(--color-background-info);color:var(--color-text-info)}
+.k-dn{background:var(--color-background-danger);color:var(--color-text-danger)}
+.k-neu{background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.k-fetch-bar{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:14px;flex-wrap:wrap}
+.k-seed-note{font-size:11px;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-radius:4px;padding:4px 10px;border:.5px solid var(--color-border-tertiary)}
+</style>
+</head>
+<body>
+<div style="padding:1rem 0 .5rem">
+
+<div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:6px">
+  <div>
+    <h2 style="font-size:18px;font-weight:500;margin:0 0 2px">Fed Funds probability tree</h2>
+    <div style="font-size:12px;color:var(--color-text-secondary)">
+      Target: <b id="fw-target" style="color:var(--color-text-primary)">3.50–3.75%</b> &nbsp;·&nbsp;
+      EFFR: <b id="fw-effr" style="color:var(--color-text-primary)">3.64%</b> &nbsp;·&nbsp;
+      <span id="data-badge" class="data-badge"><span class="dot"></span>&nbsp;Seed data</span>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+    <div style="display:flex;gap:6px;align-items:center">
+      <input id="api-key-input" class="fw-in" type="password" placeholder="sk-ant-... (standalone only)" style="width:195px;font-size:11px">
+      <button class="refresh-btn" id="refresh-btn" onclick="refreshData()">
+        <span id="refresh-icon">⟳</span> Refresh ZQ
+      </button>
+    </div>
+    <div id="refresh-status" style="font-size:10px;color:var(--color-text-tertiary);text-align:right;max-width:400px;min-height:14px"></div>
+  </div>
+</div>
+
+<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 .5rem">CME FedWatch methodology (30-day ZQ futures) with Kalshi prediction market overlay. 12 months forward, 4 tabs.</p>
+<div class="api-note">
+  <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above — get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
+</div>
+
+<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin:1rem 0 1.25rem;width:fit-content">
+  <div class="fw-tab act" onclick="fwSwitch('inputs',this)">Futures inputs</div>
+  <div class="fw-tab" onclick="fwSwitch('chain',this)">EFFR chain</div>
+  <div class="fw-tab" onclick="fwSwitch('tree',this)">Probability tree</div>
+  <div class="fw-tab" onclick="fwSwitch('kalshi',this)">⚖ Kalshi compare</div>
+</div>
+
+<div id="fw-inputs"></div>
+<div id="fw-chain" style="display:none"></div>
+<div id="fw-tree" style="display:none"></div>
+<div id="fw-kalshi" style="display:none"></div>
+</div>
+
+<script>
+// ─── ZQ seed data (12 months, corrected FOMC schedule) ─────────────────────
+let fwActive='inputs';
+let fwD=[
+  {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28–29'},
+  {lb:'May 2026',price:96.40,mtg:false,N:0, M:0, ml:''},
+  {lb:'Jun 2026',price:96.50,mtg:true, N:17,M:13,ml:'Jun 17–18'},
+  {lb:'Jul 2026',price:96.58,mtg:true, N:28,M:3, ml:'Jul 28–29'},
+  {lb:'Aug 2026',price:96.65,mtg:false,N:0, M:0, ml:''},
+  {lb:'Sep 2026',price:96.72,mtg:true, N:16,M:14,ml:'Sep 16–17'},
+  {lb:'Oct 2026',price:96.78,mtg:true, N:28,M:3, ml:'Oct 28–29'},
+  {lb:'Nov 2026',price:96.85,mtg:false,N:0, M:0, ml:''},
+  {lb:'Dec 2026',price:96.90,mtg:true, N:9, M:22,ml:'Dec 9–10'},
+  {lb:'Jan 2027',price:96.94,mtg:true, N:27,M:4, ml:'Jan 27–28'},
+  {lb:'Feb 2027',price:96.97,mtg:false,N:0, M:0, ml:''},
+  {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17–18'},
+];
+
+// ─── Kalshi seed data ────────────────────────────────────────────────────────
+// Per-meeting: probability of each outcome (hold / -25bp / -50bp / +25bp)
+// Keyed by fwD[i].lb (month label)
+let kalshiD={
+  fetched:false, asOf:null, source:'Seed data — click Fetch Kalshi',
+  kBadge:'Seed',
+  // Panel 1: per-meeting decision market probabilities (kxfeddecision)
+  meetings:{
+    'Apr 2026':{hold:.992,cut25:.005,cut50:.001,hike25:.002},
+    'Jun 2026':{hold:.74, cut25:.22, cut50:.02, hike25:.02},
+    'Jul 2026':{hold:.64, cut25:.28, cut50:.05, hike25:.03},
+    'Sep 2026':{hold:.55, cut25:.32, cut50:.09, hike25:.04},
+    'Oct 2026':{hold:.50, cut25:.32, cut50:.13, hike25:.05},
+    'Dec 2026':{hold:.46, cut25:.31, cut50:.16, hike25:.07},
+    'Jan 2027':{hold:.44, cut25:.32, cut50:.17, hike25:.07},
+    'Mar 2027':{hold:.42, cut25:.33, cut50:.18, hike25:.07},
+  },
+  // Panel 2: cut count distribution for calendar 2026 (kxratecutcount-26dec31)
+  cutCount:{
+    0:.15, 1:.32, 2:.30, 3:.15, 4:.08
+  },
+  // Panel 3: combo paths — seeded with common Kalshi combo contract prices
+  // Each entry: path label → Kalshi market price
+  comboPrices:{
+    'hold→hold→hold':'—',
+    'hold→hold→cut':'—',
+    'hold→cut→hold':'—',
+    'hold→cut→cut':'—',
+    'cut→hold→hold':'—',
+    'cut→cut→hold':'—',
+    'cut→cut→cut':'—',
+  },
+  // Panel 4: implied rate per meeting from Kalshi (kxfed-26xxx) — best estimate
+  kalshiRate:{
+    'Apr 2026':3.625,'Jun 2026':3.54,'Jul 2026':3.47,'Sep 2026':3.38,
+    'Oct 2026':3.30,'Dec 2026':3.22,'Jan 2027':3.16,'Mar 2027':3.10,
+  },
+  // Fed dot plot (Dec 2025 SEP medians, annualized mid-year interpolation)
+  fedDots:[
+    {lb:'Jun 2026',rate:3.75},{lb:'Dec 2026',rate:3.375},{lb:'Mar 2027',rate:3.25},
+  ],
+  fedDotsNote:'Dec 2025 SEP median: 3.375% end-2026, 3.125% end-2027',
+  // Panel 5: hike risk (kxfedhike)
+  hikeAny:.04,       // Kalshi P(any hike at any upcoming meeting)
+  // Panel 6: cut-by-date binary contracts (kxratecut)
+  cutBinary:{
+    'end-2026':.85,  // kxratecut-26dec31
+    'end-2027':.97,  // kxratecut (2027 horizon)
+  },
+  // Derived (Panel 5): CME max single-meeting hike probability — filled at render time
+  cmeHikeAny:null,
+  // Large cut flag (kxlargecut-26)
+  largeCutAny:.11,
+};
+
+// ─── ZQ refresh (Anthropic API + web search) ────────────────────────────────
+async function refreshData(){
+  const btn=document.getElementById('refresh-btn'),icon=document.getElementById('refresh-icon'),status=document.getElementById('refresh-status');
+  const key=document.getElementById('api-key-input').value.trim();
+  btn.disabled=true; icon.className='spin';
+  status.textContent='Searching for ZQ futures and FOMC schedule…';
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Return ONLY raw JSON — no markdown, no fences — for CME 30-Day Fed Funds (ZQ) futures prices Apr 2026–Mar 2027 and FOMC meeting dates. Shape:
+{"asOf":"YYYY-MM-DD","source":"name","effr":3.64,"prices":{"Apr 2026":96.36,"May 2026":96.40,"Jun 2026":96.50,"Jul 2026":96.58,"Aug 2026":96.65,"Sep 2026":96.72,"Oct 2026":96.78,"Nov 2026":96.85,"Dec 2026":96.90,"Jan 2027":96.94,"Feb 2027":96.97,"Mar 2027":97.00},"meetings":{"Apr 2026":{"hasMeeting":true,"label":"Apr 28-29","N":28,"M":2},"May 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Jun 2026":{"hasMeeting":true,"label":"Jun 17-18","N":17,"M":13},"Jul 2026":{"hasMeeting":true,"label":"Jul 28-29","N":28,"M":3},"Aug 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Sep 2026":{"hasMeeting":true,"label":"Sep 16-17","N":16,"M":14},"Oct 2026":{"hasMeeting":true,"label":"Oct 28-29","N":28,"M":3},"Nov 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Dec 2026":{"hasMeeting":true,"label":"Dec 9-10","N":9,"M":22},"Jan 2027":{"hasMeeting":true,"label":"Jan 27-28","N":27,"M":4},"Feb 2027":{"hasMeeting":false,"label":"","N":0,"M":0},"Mar 2027":{"hasMeeting":true,"label":"Mar 17-18","N":17,"M":14}}}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||`API ${res.status}`);
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON in response');
+    const p=JSON.parse(m[0]);
+    let up=0;
+    fwD.forEach((row,i)=>{
+      if(p.prices?.[row.lb]!==undefined){const v=parseFloat(p.prices[row.lb]);if(v>90&&v<100){row.price=v;up++;}}
+      if(p.meetings?.[row.lb]){const mt=p.meetings[row.lb];row.mtg=!!mt.hasMeeting;if(mt.label)row.ml=mt.label;if(mt.hasMeeting&&mt.N>0){row.N=mt.N;row.M=mt.M;}if(!mt.hasMeeting){row.N=0;row.M=0;}}
+    });
+    const badge=document.getElementById('data-badge');
+    badge.className='data-badge live';badge.innerHTML=`<span class="dot"></span>&nbsp;Live · ${p.asOf||today}`;
+    status.textContent=`${up} ZQ prices updated · ${p.source||'web'} · EFFR ${p.effr||'—'}%`;
+    if(p.effr) document.getElementById('fw-effr').textContent=parseFloat(p.effr).toFixed(2)+'%';
+    fwRender();
+  }catch(e){status.textContent='⚠ '+(e.message||'Failed — data unchanged');}
+  finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
+}
+
+// ─── Kalshi refresh ──────────────────────────────────────────────────────────
+async function fetchKalshi(){
+  const btn=document.getElementById('kal-btn'),icon=document.getElementById('kal-icon'),status=document.getElementById('kal-status');
+  const key=document.getElementById('api-key-input').value.trim();
+  btn.disabled=true;icon.className='spin';status.textContent='Searching Kalshi markets…';
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Kalshi.com for current market prices on these contracts:
+1. kxfeddecision-26mar, kxfeddecision-26jun, kxfeddecision-26jul, kxfeddecision-26sep, kxfeddecision-26oct, kxfeddecision-26dec, kxfeddecision-27jan, kxfeddecision-27mar — per-meeting Fed decision markets (hold/cut/hike probabilities)
+2. kxfedhike / fedhike — next Fed rate hike probability
+3. kxlargecut-26 — large cut (>25bp) probability this year
+4. kxratecutcount-26dec31 — number of rate cuts in 2026
+5. kxratecut-26dec31 — P(any cut by end 2026)
+6. kxfed-26mar, kxfed-26jun, kxfed-26sep, kxfed-26dec — implied rate level after each meeting
+Return ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best available data, keep shown fallbacks where unavailable):
+{
+  "asOf":"YYYY-MM-DD","source":"Kalshi",
+  "meetings":{
+    "Apr 2026":{"hold":0.992,"cut25":0.005,"cut50":0.001,"hike25":0.002},
+    "Jun 2026":{"hold":0.74,"cut25":0.22,"cut50":0.02,"hike25":0.02},
+    "Jul 2026":{"hold":0.64,"cut25":0.28,"cut50":0.05,"hike25":0.03},
+    "Sep 2026":{"hold":0.55,"cut25":0.32,"cut50":0.09,"hike25":0.04},
+    "Oct 2026":{"hold":0.50,"cut25":0.32,"cut50":0.13,"hike25":0.05},
+    "Dec 2026":{"hold":0.46,"cut25":0.31,"cut50":0.16,"hike25":0.07},
+    "Jan 2027":{"hold":0.44,"cut25":0.32,"cut50":0.17,"hike25":0.07},
+    "Mar 2027":{"hold":0.42,"cut25":0.33,"cut50":0.18,"hike25":0.07}
+  },
+  "cutCount":{"0":0.15,"1":0.32,"2":0.30,"3":0.15,"4":0.08},
+  "hikeAny":0.04,
+  "largeCutAny":0.11,
+  "cutBinary":{"end-2026":0.85,"end-2027":0.97},
+  "kalshiRate":{"Apr 2026":3.625,"Jun 2026":3.54,"Jul 2026":3.47,"Sep 2026":3.38,"Oct 2026":3.30,"Dec 2026":3.22,"Jan 2027":3.16,"Mar 2027":3.10}
+}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||`API ${res.status}`);
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    // Merge into kalshiD
+    if(p.meetings) Object.assign(kalshiD.meetings,p.meetings);
+    if(p.cutCount) kalshiD.cutCount=p.cutCount;
+    if(p.hikeAny!==undefined) kalshiD.hikeAny=p.hikeAny;
+    if(p.largeCutAny!==undefined) kalshiD.largeCutAny=p.largeCutAny;
+    if(p.cutBinary) Object.assign(kalshiD.cutBinary,p.cutBinary);
+    if(p.kalshiRate) Object.assign(kalshiD.kalshiRate,p.kalshiRate);
+    kalshiD.fetched=true;
+    kalshiD.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    kalshiD.source=p.source||'Kalshi (web search)';
+    kalshiD.kBadge='Live';
+    status.textContent=`Kalshi data updated · ${kalshiD.source} · ${kalshiD.asOf}`;
+    if(fwActive==='kalshi') fwRender();
+  }catch(e){status.textContent='⚠ Kalshi: '+(e.message||'Failed');}
+  finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
+}
+
+// ─── FedWatch engine ─────────────────────────────────────────────────────────
+function fwSwitch(t,el){
+  fwActive=t;
+  ['inputs','chain','tree','kalshi'].forEach(id=>document.getElementById('fw-'+id).style.display='none');
+  document.getElementById('fw-'+t).style.display='block';
+  document.querySelectorAll('.fw-tab').forEach(e=>e.classList.remove('act'));el.classList.add('act');
+  fwRender();
+}
+function fwChain(months){
+  const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
+  for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
+  for(let r=0;r<n;r++){for(let i=n-1;i>=0;i--){const m=months[i];if(m.mtg&&c[i].end!==null&&c[i].start===null&&m.N>0)c[i].start=(c[i].avg-(m.M/(m.N+m.M))*c[i].end)/(m.N/(m.N+m.M));if(m.mtg&&c[i].start!==null&&i>0&&months[i-1].mtg&&c[i-1].end===null)c[i-1].end=c[i].start;}}
+  for(let r=0;r<n;r++){for(let i=0;i<n;i++){const m=months[i];if(m.mtg&&c[i].start!==null&&c[i].end===null&&m.M>0)c[i].end=(c[i].avg-(m.N/(m.N+m.M))*c[i].start)/(m.M/(m.N+m.M));if(m.mtg&&c[i].end!==null&&i<n-1&&months[i+1].mtg&&c[i+1].start===null)c[i+1].start=c[i].end;}}
+  return c;
+}
+function fwMeetings(months,chain){
+  const res=[];
+  months.forEach((m,i)=>{
+    if(!m.mtg||chain[i].start===null||chain[i].end===null)return;
+    const chg=chain[i].end-chain[i].start,moves=chg/0.25,abs=Math.abs(moves),char=Math.floor(abs),mant=abs-char;
+    const isCut=chg<-0.0001,isHike=chg>0.0001,p0=1-mant,p1=mant;
+    const b0=isCut?-char:isHike?char:0,b1=isCut?-(char+1):isHike?(char+1):0;
+    const l0=b0===0?'hold':(b0>0?`+${b0*25}bp`:`${b0*25}bp`);
+    const l1=b1===0?'hold':(b1>0?`+${b1*25}bp`:`${b1*25}bp`);
+    res.push({lb:m.lb,label:m.ml||m.lb,start:chain[i].start,end:chain[i].end,chg,moves,p0,p1,b0,b1,l0,l1,isCut,isHike});
+  });
+  return res;
+}
+function fwDist(meetings){
+  let d={'0':1.0};const states=[{'0':1.0}];
+  meetings.forEach(m=>{
+    const nd={};
+    for(const[k,p]of Object.entries(d)){const ki=parseInt(k);nd[ki+m.b0]=(nd[ki+m.b0]||0)+p*m.p0;if(m.p1>0.0005)nd[ki+m.b1]=(nd[ki+m.b1]||0)+p*m.p1;}
+    d=nd;states.push({...d});
+  });
+  return{states,final:d};
+}
+function fwRender(){
+  const chain=fwChain(fwD),meetings=fwMeetings(fwD,chain);
+  const{states,final}=fwDist(meetings);
+  const lb=parseFloat(document.getElementById('fw-lb-in')?.value)||3.50;
+  let se='3.64';for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start.toFixed(2);break;}}
+  document.getElementById('fw-effr').textContent=se+'%';
+  document.getElementById('fw-target').textContent=lb.toFixed(2)+'–'+(lb+0.25).toFixed(2)+'%';
+  if(fwActive==='inputs')fwRenderInputs(chain);
+  else if(fwActive==='chain')fwRenderChain(chain,meetings);
+  else if(fwActive==='tree')fwRenderTree(meetings,states,final,lb);
+  else if(fwActive==='kalshi')fwRenderKalshi(meetings,states,final,lb,chain);
+}
+
+// ─── Tab: Inputs ─────────────────────────────────────────────────────────────
+function fwRenderInputs(chain){
+  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;flex-wrap:wrap">
+    <span style="font-size:12px;color:var(--color-text-secondary)">Current target range lower bound:</span>
+    <input id="fw-lb-in" class="fw-in" type="number" step="0.25" min="0" max="8" value="3.50" onchange="fwRender()" style="width:60px">
+    <span style="font-size:12px;color:var(--color-text-secondary)">%</span>
+  </div>
+  <div style="overflow-x:auto"><table class="fwt">
+  <thead><tr><th>Month</th><th>ZQ price</th><th>Impl. avg EFFR</th><th>FOMC mtg</th><th>Label</th><th>N (to mtg)</th><th>M (after)</th></tr></thead><tbody>`;
+  fwD.forEach((m,i)=>{
+    const avg=(100-m.price).toFixed(4),dis=m.mtg?'':'disabled style="opacity:.3"';
+    h+=`<tr><td style="white-space:nowrap;font-weight:${m.mtg?500:400}">${m.lb}${m.mtg?` <span style="font-size:9px;color:var(--color-text-warning)">●</span>`:''}</td>
+      <td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="${m.price}" style="width:72px" onchange="fwD[${i}].price=+this.value||fwD[${i}].price;fwRender()"></td>
+      <td style="font-family:var(--font-mono);color:var(--color-text-secondary)">${avg}%</td>
+      <td style="text-align:center"><input type="checkbox" ${m.mtg?'checked':''} onchange="fwD[${i}].mtg=this.checked;fwRender()"></td>
+      <td><input class="fw-in" type="text" value="${m.ml}" style="width:80px;${!m.mtg?'opacity:.3':''}" onchange="fwD[${i}].ml=this.value"></td>
+      <td><input class="fw-in" type="number" step="1" min="1" max="31" value="${m.N}" ${dis} style="width:40px" onchange="fwD[${i}].N=+this.value||1;fwRender()"></td>
+      <td><input class="fw-in" type="number" step="1" min="0" max="31" value="${m.M}" ${dis} style="width:40px" onchange="fwD[${i}].M=+this.value||0;fwRender()"></td>
+    </tr>`;
+  });
+  h+=`</tbody></table></div><p style="font-size:11px;color:var(--color-text-tertiary);margin-top:.5rem">N = days from month start through meeting day. M = remaining days. N+M = days in month. Unchecked months are anchors.</p>`;
+  document.getElementById('fw-inputs').innerHTML=h;
+}
+
+// ─── Tab: EFFR chain ─────────────────────────────────────────────────────────
+function fwRenderChain(chain,meetings){
+  let h=`<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt">
+  <thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>Δ (bp)</th><th>25bp moves</th></tr></thead><tbody>`;
+  fwD.forEach((m,i)=>{
+    const c=chain[i],chg=(c.start!==null&&c.end!==null)?(c.end-c.start)*100:null;
+    const cc=chg!==null?(chg<-0.01?'var(--color-text-info)':chg>0.01?'var(--color-text-danger)':'var(--color-text-secondary)'):'var(--color-text-secondary)';
+    h+=`<tr><td style="white-space:nowrap">${m.mtg?'<span style="color:var(--color-text-warning);font-size:9px">● </span>':''}${m.lb}</td>
+      <td style="font-family:var(--font-mono)">${m.price}</td>
+      <td style="font-family:var(--font-mono)">${c.avg.toFixed(4)}</td>
+      <td style="font-family:var(--font-mono)">${c.start!==null?c.start.toFixed(4):'—'}</td>
+      <td style="font-family:var(--font-mono)">${c.end!==null?c.end.toFixed(4):'—'}</td>
+      <td style="font-family:var(--font-mono);color:${cc}">${chg!==null?chg.toFixed(2):'—'}</td>
+      <td style="font-family:var(--font-mono);color:${cc}">${m.mtg&&chg!==null?(chg/25).toFixed(4):'—'}</td></tr>`;
+  });
+  h+=`</tbody></table></div>`;
+  if(meetings.length){
+    h+=`<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Per-meeting probability breakdown</div>`;
+    meetings.forEach(m=>{
+      const p0=+(m.p0*100).toFixed(1),p1=+(m.p1*100).toFixed(1);
+      const col=m.isCut?'var(--color-background-info)':'var(--color-background-danger)';
+      const tcol=m.isCut?'var(--color-text-info)':'var(--color-text-danger)';
+      h+=`<div style="margin-bottom:.7rem">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">
+          <span style="font-size:12px;font-weight:500">${m.label}</span>
+          <span style="font-size:11px;color:var(--color-text-tertiary)">${m.start.toFixed(3)}% → ${m.end.toFixed(3)}% (Δ ${(m.chg*100).toFixed(2)} bp)</span>
+        </div>
+        <div style="display:flex;height:22px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary)">
+          <div style="width:${p0}%;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--color-text-secondary)">${p0>15?p0+'%':''}</div>
+          ${m.p1>0.001?`<div style="width:${p1}%;background:${col};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:${tcol}">${p1>8?p1+'%':''}</div>`:''}
+        </div>
+        <div style="display:flex;gap:1.25rem;margin-top:3px;font-size:10px;color:var(--color-text-tertiary)">
+          <span>${p0}% ${m.l0}</span>${m.p1>0.001?`<span style="color:${tcol}">${p1}% ${m.l1}</span>`:''}
+        </div></div>`;
+    });
+  }
+  document.getElementById('fw-chain').innerHTML=h;
+}
+
+// ─── Tab: Probability tree ────────────────────────────────────────────────────
+function fwRenderTree(meetings,states,final,lb){
+  if(!meetings.length){document.getElementById('fw-tree').innerHTML='<p style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</p>';return;}
+  const cuts=Object.entries(final).map(([k,p])=>({k:parseInt(k),p})).sort((a,b)=>a.k-b.k);
+  const pC1=cuts.filter(d=>d.k<=-1).reduce((s,d)=>s+d.p,0),pC2=cuts.filter(d=>d.k<=-2).reduce((s,d)=>s+d.p,0),pC3=cuts.filter(d=>d.k<=-3).reduce((s,d)=>s+d.p,0);
+  const expC=cuts.reduce((s,d)=>s+(-d.k)*d.p,0),expR=lb-expC*0.25;
+  let cards=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem">
+    <div class="fw-stat"><div class="fw-stat-l">P(≥1 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">${(pC1*100).toFixed(1)}%</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">P(≥2 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">${(pC2*100).toFixed(1)}%</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">P(≥3 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">${(pC3*100).toFixed(1)}%</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">Expected cuts</div><div class="fw-stat-v">${expC.toFixed(2)}</div><div class="fw-stat-s">of 25bp each</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">Implied rate</div><div class="fw-stat-v">${expR.toFixed(2)}%</div><div class="fw-stat-s">exp. lower bound</div></div>
+  </div>`;
+  const W=760,NR=18,nCols=states.length,colW=(W-50)/(nCols-1||1);
+  const allK=[];states.forEach(s=>Object.keys(s).forEach(k=>{const ki=parseInt(k);if(!allK.includes(ki))allK.push(ki);}));allK.sort((a,b)=>a-b);
+  const minK=allK[0],maxK=allK[allK.length-1],nRows=maxK-minK+1,rowH=Math.max(36,Math.min(56,280/Math.max(nRows,1))),svgH=nRows*rowH+60;
+  const gx=li=>30+li*colW,gyf=k=>30+(-k)*rowH+rowH/2;
+  let svg='';
+  for(let li=0;li<states.length-1;li++){
+    const m=meetings[li],x1=gx(li)+NR,x2=gx(li+1)-NR;
+    Object.entries(states[li]).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y1=gyf(ki),k0=ki+m.b0,y0=gyf(k0);
+      svg+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y0.toFixed(1)}" stroke="var(--color-border-secondary)" stroke-width="${Math.max(.6,p*m.p0*6).toFixed(1)}" opacity=".85"/>`;
+      if(m.p1>0.005){const k1=ki+m.b1,y1b=gyf(k1);svg+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y1b.toFixed(1)}" stroke="var(--color-border-info)" stroke-width="${Math.max(.4,p*m.p1*6).toFixed(1)}" stroke-dasharray="4,2" opacity=".75"/>`;}
+    });
+  }
+  states.forEach((state,li)=>{
+    const x=gx(li),lbl=li===0?'Now':meetings[li-1]?.label?.split('–')[0]||'';
+    svg+=`<text x="${x.toFixed(1)}" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${lbl}</text>`;
+    Object.entries(state).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
+      svg+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${NR}" fill="var(--color-background-info)" fill-opacity="${fo.toFixed(2)}" stroke="var(--color-border-info)" stroke-width=".8"/>`;
+      svg+=`<text x="${x.toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="500" fill="var(--color-text-primary)" font-family="var(--font-mono)">${(p*100).toFixed(0)}%</text>`;
+      svg+=`<text x="${x.toFixed(1)}" y="${(y+6).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-secondary)" font-family="var(--font-mono)">${rate}%</text>`;
+    });
+  });
+  for(let k=0;k>=minK;k--){const y=gyf(k);svg+=`<text x="0" y="${y.toFixed(1)}" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(lb+k*.25).toFixed(2)}%</text>`;}
+  const maxP=Math.max(...cuts.map(d=>d.p)),bW=Math.min(60,520/Math.max(cuts.length,1));
+  let dSvg='';
+  cuts.slice().reverse().forEach((d,i)=>{const x=20+i*(bW+5),h=Math.max(2,(d.p/maxP)*52),y=60-h,fo=.2+d.p*.75;
+    dSvg+=`<rect x="${x}" y="${y}" width="${bW}" height="${h}" rx="2" fill="var(--color-background-info)" fill-opacity="${fo.toFixed(2)}" stroke="var(--color-border-info)" stroke-width=".5"/>`;
+    if(d.p>.02)dSvg+=`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${(d.p*100).toFixed(1)}%</text>`;
+    dSvg+=`<text x="${x+bW/2}" y="73" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(lb+d.k*.25).toFixed(2)}%</text>`;
+  });
+  document.getElementById('fw-tree').innerHTML=`${cards}
+    <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice — ${meetings.length} meetings</div>
+    <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${svgH}" style="min-width:500px;width:100%;display:block;height:${svgH}px">${svg}</svg></div>
+    <div style="margin-top:1.25rem">
+      <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution — lower bound</div>
+      <div style="overflow-x:auto"><svg viewBox="0 0 ${Math.max(560,20+cuts.length*(bW+5)+20)} 80" style="min-width:400px;width:100%;display:block;height:80px">${dSvg}</svg></div>
+    </div>
+    <div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">
+      <span>Opacity ∝ probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width ∝ weight</span>
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ─── Tab: Kalshi compare — 6 panels ──────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function fwRenderKalshi(meetings,states,final,lb,chain){
+  const el=document.getElementById('fw-kalshi');
+
+  // ── Fetch bar ──
+  let html=`<div class="k-fetch-bar">
+    <button class="refresh-btn" id="kal-btn" onclick="fetchKalshi()"><span id="kal-icon">⟳</span> Fetch Kalshi data</button>
+    <span class="k-seed-note" id="kal-status">${kalshiD.source}</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="k-dot" style="background:var(--c-cme)"></span> CME futures &nbsp;
+      <span class="k-dot" style="background:var(--c-kal)"></span> Kalshi markets &nbsp;
+      <span class="k-dot" style="background:var(--c-dots)"></span> Fed dots (Dec 2025 SEP)
+    </span>
+  </div>`;
+
+  // ── Panel 1: Meeting-by-meeting divergence ──────────────────────────────────
+  const comps=getMeetingComps(meetings);
+  html+=`<div class="k-grid" style="margin-bottom:12px">
+  <div class="k-panel k-full">
+    <div class="k-hdr"><span class="k-title">① Meeting-by-meeting divergence: P(cut) — CME vs Kalshi</span><span class="k-contract">kxfeddecision-26xxx</span></div>`;
+  html+=panel1Svg(comps,lb);
+  html+=`<div class="k-note">Each pair of bars shows CME futures-implied vs Kalshi market-implied probability of <i>any</i> cut at that meeting. Where Kalshi > CME the market may be pricing extra tail risk; where CME > Kalshi retail sentiment may lag. The basis (Kalshi − CME) is shown as a pill above each pair.</div>
+  </div></div>`;
+
+  // ── Panels 2 + 3 ───────────────────────────────────────────────────────────
+  html+=`<div class="k-grid" style="margin-bottom:12px">`;
+
+  // Panel 2: Cut count distribution basis
+  const cmeCC=cmeCutCountDist(final);
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">② Cut count distribution — 2026</span><span class="k-contract">kxratecutcount-26dec31</span></div>`;
+  html+=panel2Svg(cmeCC,kalshiD.cutCount);
+  const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kalshiD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const basisCC=(kalExpCC-cmeExpCC).toFixed(2);
+  html+=`<div class="k-note">Expected 2026 cuts — CME: <b>${cmeExpCC.toFixed(2)}</b> · Kalshi: <b>${kalExpCC.toFixed(2)}</b> · Basis: <span class="k-pill ${parseFloat(basisCC)>0.05?'k-up':parseFloat(basisCC)<-0.05?'k-dn':'k-neu'}">${basisCC>0?'+':''}${basisCC}</span><br>
+    Kalshi assigns explicit probability mass to discrete cut counts; CME is derived from the cumulative futures chain ending in Dec 2026.
+  </div></div>`;
+
+  // Panel 3: Combo path decomposer
+  const paths=enumeratePaths(meetings,3);
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">③ Combo path decomposer — top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>
+    <div style="overflow-x:auto"><table class="fwt">
+      <thead><tr><th>Path (Apr→Jun→Jul)</th><th>CME prob</th><th>Kalshi</th><th>Basis</th></tr></thead><tbody>`;
+  paths.forEach(p=>{
+    const kp=kalshiD.comboPrices[p.key]||'—';
+    const basis=kp!=='—'?((kp-p.prob)*100).toFixed(1)+'pp':'—';
+    const bClass=kp!=='—'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
+    html+=`<tr>
+      <td style="font-family:var(--font-mono);font-size:11px">${p.key}</td>
+      <td style="font-family:var(--font-mono)">${(p.prob*100).toFixed(1)}%</td>
+      <td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">${kp==='—'?kp:Math.round(kp*100)+'%'}</td>
+      <td><span class="k-pill ${bClass}">${basis}</span></td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+    <div class="k-note">CME tree path probabilities for the first three meeting months. Kalshi "combo" markets price specific hold/cut sequences as binary contracts. Fetch live data to populate Kalshi prices. Large positive basis = Kalshi market prices this path more richly than CME.</div>
+  </div></div>`;
+
+  // ── Panel 4: Market-implied dot plot ─────────────────────────────────────────
+  html+=`<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">
+    <div class="k-hdr"><span class="k-title">④ Market-implied dot plot — CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx · Dec 2025 SEP</span></div>`;
+  html+=panel4Svg(meetings,states,lb);
+  html+=`<div class="k-note">Three implied rate paths on the same canvas. CME (blue): expected EFFR derived from the ZQ futures chain at each monthly node. Kalshi (orange): implied rate level from per-meeting decision market expectations. Fed dots (purple): December 2025 SEP medians at end-year horizons. Gaps between the curves reveal where futures, prediction markets, and the Fed itself disagree about the easing path.</div>
+  </div></div>`;
+
+  // ── Panels 5 + 6 ───────────────────────────────────────────────────────────
+  html+=`<div class="k-grid">`;
+
+  // Panel 5: Hike risk gauge
+  const cmeHike=getCmeHikeProb(meetings);
+  kalshiD.cmeHikeAny=cmeHike;
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">⑤ Hike risk monitor</span><span class="k-contract">kxfedhike · kxlargecut-26</span></div>`;
+  html+=panel5Svg(cmeHike,kalshiD.hikeAny,kalshiD.largeCutAny);
+  html+=`<div class="k-note">CME-implied max single-meeting hike probability (derived from the futures chain) vs Kalshi's explicit "any hike" contract. When Kalshi's hike probability exceeds ~10%, the ZQ chain's purely-cut-or-hold framing may understate tail risk. Also shown: Kalshi's implied probability of a single cut exceeding 25bp (jumbo cut).</div>
+  </div>`;
+
+  // Panel 6: First-cut timing
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">⑥ First cut timing — cumulative P(cut has happened)</span><span class="k-contract">kxratecut-26dec31 · kxratecut-26dec31 (2027)</span></div>`;
+  html+=panel6Svg(meetings,states,lb);
+  html+=`<div class="k-note">CME (blue step curve): cumulative probability that <i>at least one</i> 25bp cut has occurred by each successive meeting, derived from the probability tree. Kalshi binary markers (orange ●): P(any cut by end-2026) = <b>${(kalshiD.cutBinary['end-2026']*100).toFixed(0)}%</b> and P(any cut by end-2027) = <b>${(kalshiD.cutBinary['end-2027']*100).toFixed(0)}%</b>. Divergence between the step curve and binary markers flags timing disagreement between futures and prediction markets.</div>
+  </div></div>`;
+
+  el.innerHTML=html;
+}
+
+// ─── Helper: CME vs Kalshi per-meeting comparisons ───────────────────────────
+function getMeetingComps(meetings){
+  const comps=[];
+  meetings.forEach(m=>{
+    const cmeCut=(m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0);
+    const cmeHold=1-cmeCut-(m.b0>0?m.p0:0)-(m.b1>0&&m.p1>0.001?m.p1:0);
+    const kd=kalshiD.meetings[m.lb];
+    const kCut=kd?(kd.cut25||0)+(kd.cut50||0):null;
+    comps.push({lb:m.lb,label:m.label,cmeCut,cmeHold,kCut,basis:kCut!==null?kCut-cmeCut:null});
+  });
+  return comps;
+}
+
+// ─── Helper: CME-implied cut count distribution for 2026 meetings ────────────
+function cmeCutCountDist(final){
+  // final is the distribution after ALL 12 months; need subset up to Dec 2026
+  // Re-compute with only 2026 meetings
+  const chain2=fwChain(fwD);
+  const m2026=fwMeetings(fwD.filter(d=>d.lb.includes('2026')&&d.mtg),chain2.filter((_,i)=>fwD[i].lb.includes('2026')));
+  const {final:f26}=fwDist(m2026);
+  // Convert to 0/1/2/3/4+ (cuts are negative keys)
+  const out={0:0,1:0,2:0,3:0,4:0};
+  Object.entries(f26).forEach(([k,p])=>{const ki=Math.max(0,Math.min(4,-parseInt(k)));out[ki]=(out[ki]||0)+p;});
+  return out;
+}
+
+// ─── Helper: CME max single-meeting hike probability ────────────────────────
+function getCmeHikeProb(meetings){
+  return meetings.reduce((mx,m)=>{
+    const ph=(m.b0>0?m.p0:0)+(m.b1>0&&m.p1>0.001?m.p1:0);
+    return Math.max(mx,ph);
+  },0);
+}
+
+// ─── Helper: enumerate top N paths through first `depth` meetings ────────────
+function enumeratePaths(meetings,depth){
+  const paths=[];
+  const mSlice=meetings.slice(0,depth);
+  function dfs(idx,seq,prob){
+    if(idx===mSlice.length){paths.push({key:seq.join('→'),prob});return;}
+    const m=mSlice[idx];
+    dfs(idx+1,[...seq,m.l0],prob*m.p0);
+    if(m.p1>0.005)dfs(idx+1,[...seq,m.l1],prob*m.p1);
+  }
+  dfs(0,[],1);
+  return paths.sort((a,b)=>b.prob-a.prob).slice(0,8);
+}
+
+// ─── SVG helpers ─────────────────────────────────────────────────────────────
+
+// Panel 1: grouped bars — CME vs Kalshi P(cut) per meeting
+function panel1Svg(comps,lb){
+  const W=680,H=130,ml=10,mr=10,mt=30,mb=25,cW=W-ml-mr;
+  const n=comps.length,grpW=cW/n,bW=Math.min(18,grpW*0.35),gap=4;
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // y-axis: 0 to 1
+  const ys=v=>mt+H*(1-v);
+  // grid lines
+  [0.25,0.5,0.75,1.0].forEach(v=>{
+    svg+=`<line x1="${ml}" y1="${ys(v).toFixed(1)}" x2="${W-mr}" y2="${ys(v).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${ml}" y="${(ys(v)-2).toFixed(1)}" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;
+  });
+  comps.forEach((c,i)=>{
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW-gap/2,x1=cx+gap/2;
+    // CME bar
+    const hCme=H*c.cmeCut,yCme=mt+H-hCme;
+    svg+=`<rect x="${x0.toFixed(1)}" y="${yCme.toFixed(1)}" width="${bW}" height="${Math.max(1,hCme).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".8"/>`;
+    // Kalshi bar
+    if(c.kCut!==null){
+      const hKal=H*c.kCut,yKal=mt+H-hKal;
+      svg+=`<rect x="${x1.toFixed(1)}" y="${yKal.toFixed(1)}" width="${bW}" height="${Math.max(1,hKal).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".8"/>`;
+      // Basis pill above bars
+      const bv=((c.kCut-c.cmeCut)*100).toFixed(1);
+      const pillCol=c.basis>0.02?'var(--color-text-info)':c.basis<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+      svg+=`<text x="${cx.toFixed(1)}" y="${(Math.min(yCme,yKal)-4).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="500" fill="${pillCol}" font-family="var(--font-mono)">${bv>0?'+':''}${bv}</text>`;
+    }
+    // X label
+    const shortLbl=c.label.replace(/\d{4}/,'').trim()||c.lb.replace(/ 20\d\d/,'');
+    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${shortLbl}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+// Panel 2: grouped bars — cut count distribution
+function panel2Svg(cme,kal){
+  const W=300,H=90,mt=16,mb=20,ml=6,mr=6,cW=W-ml-mr;
+  const keys=['0','1','2','3','4'];
+  const n=keys.length,grpW=cW/n,bW=Math.min(16,grpW*0.38),gap=3;
+  const maxV=Math.max(...keys.flatMap(k=>[cme[k]||0,kal[k]||0]));
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxV*maxV);if(v<=maxV){svg+=`<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;svg+=`<text x="${ml}" y="${(y-2).toFixed(1)}" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;}});
+  keys.forEach((k,i)=>{
+    const cx=ml+i*grpW+grpW/2,x0=cx-bW-gap/2,x1=cx+gap/2;
+    const hC=H*(cme[k]||0)/maxV,yC=mt+H-hC;
+    svg+=`<rect x="${x0.toFixed(1)}" y="${yC.toFixed(1)}" width="${bW}" height="${Math.max(1,hC).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".8"/>`;
+    const hK=H*(kal[k]||0)/maxV,yK=mt+H-hK;
+    svg+=`<rect x="${x1.toFixed(1)}" y="${yK.toFixed(1)}" width="${bW}" height="${Math.max(1,hK).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".8"/>`;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+13).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${k==='4'?'4+':k}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+// Panel 4: multi-line implied dot plot
+function panel4Svg(meetings,states,lb){
+  const W=680,H=120,mt=20,mb=24,ml=34,mr=10;
+  const months=fwD.map(d=>d.lb);
+  // CME expected rate at each month (post-meeting if meeting month, else same as last)
+  const cmeRates=[];
+  let si=0;
+  months.forEach((lb2,i)=>{
+    if(fwD[i].mtg&&si<states.length-1){si++;}
+    const s=states[Math.min(si,states.length-1)];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    cmeRates.push(lb+ek*.25);
+  });
+  // Kalshi rates (only for meeting months)
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  // Fed dots (sparse)
+  const dots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  // Scale
+  const allV=[...cmeRates,...kalRates.filter(v=>v!==null),...dots.map(d=>d.rate)];
+  const minR=Math.min(...allV)-0.1,maxR=Math.max(...allV)+0.1;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Y grid
+  const step=0.25,ymin=Math.floor(minR/step)*step,ymax=Math.ceil(maxR/step)*step;
+  for(let y2=ymin;y2<=ymax;y2+=step){
+    svg+=`<line x1="${ml}" y1="${ys(y2).toFixed(1)}" x2="${W-mr}" y2="${ys(y2).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(y2).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${y2.toFixed(2)}</text>`;
+  }
+  // CME line
+  const cPts=cmeRates.map((r,i)=>`${xs(i).toFixed(1)},${ys(r).toFixed(1)}`).join(' ');
+  svg+=`<polyline points="${cPts}" fill="none" stroke="var(--c-cme)" stroke-width="2" opacity=".85"/>`;
+  cmeRates.forEach((r,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="3" fill="var(--c-cme)" opacity=".7"/>`;});
+  // Kalshi line (only meeting months)
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev!==null)svg+=`<line x1="${xs(kPrev.i).toFixed(1)}" y1="${ys(kPrev.r).toFixed(1)}" x2="${xs(i).toFixed(1)}" y2="${ys(r).toFixed(1)}" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="5,3" opacity=".8"/>`;
+    svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="4" fill="var(--c-kal)" opacity=".8"/>`;
+    kPrev={i,r};
+  });
+  // Fed dots
+  dots.forEach(d=>{
+    svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.rate).toFixed(1)}" r="5" fill="var(--c-dots)" opacity=".85"/>`;
+    svg+=`<text x="${xs(d.i).toFixed(1)}" y="${(ys(d.rate)-8).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-dots)" font-family="var(--font-mono)">${d.rate.toFixed(2)}</text>`;
+  });
+  // X labels (every other month)
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+=`<text x="${xs(i).toFixed(1)}" y="${(mt+H+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${lb2.replace(/ 20\d\d/,'').replace(/ 20\d\d/,'')}</text>`;});
+  svg+=`</svg>`;
+  return svg;
+}
+
+// Panel 5: hike gauge + risk bars
+function panel5Svg(cmeHike,kalHike,largeCut){
+  const W=280,HC=110;
+  let svg=`<svg viewBox="0 0 ${W} ${HC+20}" style="width:100%;display:block;overflow:visible">`;
+  // Semicircle gauge
+  const cx=W/2,cy=HC-10,r=64,sw=14;
+  // Background arc (full semicircle 180° to 0°)
+  function arc(pct,col,opacity){
+    const startA=Math.PI,endA=Math.PI-(pct*Math.PI),x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA),x2=cx+r*Math.cos(endA),y2=cy+r*Math.sin(endA),lg=pct>.5?1:0;
+    return `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${lg} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" opacity="${opacity}"/>`;
+  }
+  // Background track
+  svg+=`<path d="M ${(cx-r).toFixed(2)} ${cy.toFixed(2)} A ${r} ${r} 0 0 1 ${(cx+r).toFixed(2)} ${cy.toFixed(2)}" fill="none" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
+  // Danger zone (25%+) in red
+  const dangerFrac=Math.max(0,(1-0.25));
+  svg+=arc(dangerFrac*1,'#fee2e2',.6);
+  // CME arc
+  svg+=arc(Math.min(1,cmeHike),'var(--c-cme)',.9);
+  // Kalshi arc (thinner, on top)
+  svg+=arc(Math.min(1,kalHike),'var(--c-kal)',.85);
+  // Labels
+  svg+=`<text x="${cx}" y="${(cy-r/2).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Hike risk</text>`;
+  svg+=`<text x="${(cx-r-4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0%</text>`;
+  svg+=`<text x="${(cx+r+4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">100%</text>`;
+  // Central readout
+  svg+=`<text x="${cx}" y="${(cy+5).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--c-cme)" font-family="var(--font-mono)" font-weight="500">CME ${(cmeHike*100).toFixed(1)}%</text>`;
+  svg+=`<text x="${cx}" y="${(cy+18).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL ${(kalHike*100).toFixed(1)}%</text>`;
+  svg+=`</svg>`;
+  // Large-cut bar below gauge
+  svg+=`<div style="margin-top:8px">
+    <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut probability (>25bp at any meeting) — Kalshi kxlargecut-26</div>
+    <div style="height:18px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex">
+      <div style="width:${(largeCut*100).toFixed(1)}%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">${(largeCut*100).toFixed(0)}%</div>
+      <div style="flex:1;background:var(--color-background-primary)"></div>
+    </div>
+  </div>`;
+  return svg;
+}
+
+// Panel 6: cumulative first-cut timing
+function panel6Svg(meetings,states,lb){
+  const W=340,H=100,mt=16,mb=28,ml=30,mr=10;
+  const n=states.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-v);
+  // CME cumulative P(at least one cut by step i)
+  const cumCuts=states.map(s=>Object.entries(s).filter(([k])=>parseInt(k)<=-1).reduce((sum,[,p])=>sum+p,0));
+  // Kalshi binary points
+  // Map end-2026 and end-2027 to step indices
+  const dec2026Idx=meetings.findIndex(m=>m.lb==='Dec 2026');
+  const mar2027Idx=meetings.findIndex(m=>m.lb==='Mar 2027');
+  const kalPoints=[];
+  if(dec2026Idx>=0&&kalshiD.cutBinary['end-2026'])kalPoints.push({i:dec2026Idx+1,v:kalshiD.cutBinary['end-2026'],label:'end-2026'});
+  if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'end-2027'});
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Grid
+  [.25,.5,.75,1.0].forEach(v=>{
+    svg+=`<line x1="${ml}" y1="${ys(v).toFixed(1)}" x2="${W-mr}" y2="${ys(v).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;
+  });
+  // CME step function
+  for(let i=0;i<cumCuts.length-1;i++){
+    const x1=xs(i),x2=xs(i+1),y1=ys(cumCuts[i]),y2=ys(cumCuts[i+1]);
+    svg+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y1.toFixed(1)}" stroke="var(--c-cme)" stroke-width="2"/>`;
+    svg+=`<line x1="${x2.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--c-cme)" stroke-width="2" stroke-dasharray="2,2"/>`;
+  }
+  cumCuts.forEach((v,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="3" fill="var(--c-cme)" opacity=".8"/>`;});
+  // Kalshi points
+  kalPoints.forEach(p=>{
+    svg+=`<circle cx="${xs(p.i).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="6" fill="var(--c-kal)" opacity=".85"/>`;
+    svg+=`<text x="${xs(p.i).toFixed(1)}" y="${(ys(p.v)-10).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-kal)" font-family="var(--font-mono)">${(p.v*100).toFixed(0)}%</text>`;
+    svg+=`<text x="${xs(p.i).toFixed(1)}" y="${(H+mt+mb-4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-kal)" font-family="var(--font-sans)">${p.label}</text>`;
+  });
+  // X labels
+  meetings.forEach((m,i)=>{
+    if(i%2===0)svg+=`<text x="${xs(i+1).toFixed(1)}" y="${(H+mt+16).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${m.label.split('–')[0]}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+fwRender();
+</script>
+</body>
+</html>
