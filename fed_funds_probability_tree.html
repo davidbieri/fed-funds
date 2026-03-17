@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fed Funds Probability Tree — CME FedWatch + Kalshi</title>
+<title>Fed Funds Probability Tree — CME FedWatch + Kalshi + SOFR</title>
 <style>
 :root {
   --color-text-primary:#1a1a1a;--color-text-secondary:#555;--color-text-tertiary:#888;
@@ -14,7 +14,8 @@
   --border-radius-md:8px;
   --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
-  --c-cme:#3b82f6;--c-kal:#f97316;--c-dots:#8b5cf6;--c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);
+  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;
+  --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
 }
 @media(prefers-color-scheme:dark){
   :root{
@@ -23,7 +24,8 @@
     --color-background-primary:#18181b;--color-background-secondary:#27272a;
     --color-background-info:#1e3a5f;--color-background-danger:#450a0a;--color-background-success:#14532d;
     --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
-    --c-cme:#60a5fa;--c-kal:#fb923c;--c-dots:#a78bfa;--c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);
+    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;
+    --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
   }
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -74,7 +76,8 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
     <div style="font-size:12px;color:var(--color-text-secondary)">
       Target: <b id="fw-target" style="color:var(--color-text-primary)">3.50–3.75%</b> &nbsp;·&nbsp;
       EFFR: <b id="fw-effr" style="color:var(--color-text-primary)">3.64%</b> &nbsp;·&nbsp;
-      <span id="data-badge" class="data-badge"><span class="dot"></span>&nbsp;Seed data</span>
+      <span id="data-badge" class="data-badge"><span class="dot"></span>&nbsp;Seed data</span> &nbsp;·&nbsp;
+      <span id="version-badge" style="font-size:10px;color:var(--color-text-tertiary)">v2.0 · Mar 2026</span>
     </div>
   </div>
   <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
@@ -88,26 +91,28 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
   </div>
 </div>
 
-<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 .5rem">CME FedWatch methodology (30-day ZQ futures) with Kalshi prediction market overlay. 12 months forward, 4 tabs.</p>
+<p style="font-size:13px;color:var(--color-text-secondary);margin:0 0 .5rem">CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 5 tabs.</p>
 <div class="api-note">
   <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above — get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
 </div>
 
-<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin:1rem 0 1.25rem;width:fit-content">
+<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin:1rem 0 1.25rem;width:fit-content;flex-wrap:wrap">
   <div class="fw-tab act" onclick="fwSwitch('inputs',this)">Futures inputs</div>
   <div class="fw-tab" onclick="fwSwitch('chain',this)">EFFR chain</div>
   <div class="fw-tab" onclick="fwSwitch('tree',this)">Probability tree</div>
-  <div class="fw-tab" onclick="fwSwitch('kalshi',this)">⚖ Kalshi compare</div>
+  <div class="fw-tab" onclick="fwSwitch('kalshi',this)">⚖ Prediction markets</div>
+  <div class="fw-tab" onclick="fwSwitch('sofr',this)">📈 SOFR strip</div>
 </div>
 
 <div id="fw-inputs"></div>
 <div id="fw-chain" style="display:none"></div>
 <div id="fw-tree" style="display:none"></div>
 <div id="fw-kalshi" style="display:none"></div>
+<div id="fw-sofr" style="display:none"></div>
 </div>
 
 <script>
-// ─── ZQ seed data (12 months, corrected FOMC schedule) ─────────────────────
+// --- ZQ seed data (12 months, corrected FOMC schedule) ─────────────────────
 let fwActive='inputs';
 let fwD=[
   {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28–29'},
@@ -124,7 +129,7 @@ let fwD=[
   {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17–18'},
 ];
 
-// ─── Kalshi seed data ────────────────────────────────────────────────────────
+// --- Kalshi seed data ────────────────────────────────────────────────────────
 // Per-meeting: probability of each outcome (hold / -25bp / -50bp / +25bp)
 // Keyed by fwD[i].lb (month label)
 let kalshiD={
@@ -179,7 +184,7 @@ let kalshiD={
   largeCutAny:.11,
 };
 
-// ─── ZQ refresh (Anthropic API + web search) ────────────────────────────────
+// --- ZQ refresh (Anthropic API + web search) ────────────────────────────────
 async function refreshData(){
   const btn=document.getElementById('refresh-btn'),icon=document.getElementById('refresh-icon'),status=document.getElementById('refresh-status');
   const key=document.getElementById('api-key-input').value.trim();
@@ -206,12 +211,14 @@ async function refreshData(){
     badge.className='data-badge live';badge.innerHTML=`<span class="dot"></span>&nbsp;Live · ${p.asOf||today}`;
     status.textContent=`${up} ZQ prices updated · ${p.source||'web'} · EFFR ${p.effr||'—'}%`;
     if(p.effr) document.getElementById('fw-effr').textContent=parseFloat(p.effr).toFixed(2)+'%';
+    // Update version badge
+    document.getElementById('version-badge').textContent='v2.0 · '+new Date().toLocaleDateString('en-US',{month:'short',year:'numeric'});
     fwRender();
   }catch(e){status.textContent='⚠ '+(e.message||'Failed — data unchanged');}
   finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
 }
 
-// ─── Kalshi refresh ──────────────────────────────────────────────────────────
+// --- Kalshi refresh ──────────────────────────────────────────────────────────
 async function fetchKalshi(){
   const btn=document.getElementById('kal-btn'),icon=document.getElementById('kal-icon'),status=document.getElementById('kal-status');
   const key=document.getElementById('api-key-input').value.trim();
@@ -269,10 +276,108 @@ Return ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best av
   finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
 }
 
-// ─── FedWatch engine ─────────────────────────────────────────────────────────
+// --- Polymarket seed data ────────────────────────────────────────────────────
+// Prices from polymarket.com/economy/fed-rates as of 2026-03-17
+// Polymarket is crypto-native, global, retail-weighted — structural contrast to Kalshi
+let polyD={
+  fetched:false, asOf:'2026-03-17', source:'Seed data — click Fetch Polymarket',
+  // Per-meeting: P(cut of any size) — from /event/fed-decision-in-xxx
+  // Polymarket breaks out 25bp and 50+bp as separate binary markets; we store combined
+  meetings:{
+    'Apr 2026':{hold:.99, cut25:.005,cut50:.002,hike25:.003},
+    'Jun 2026':{hold:.72, cut25:.21, cut50:.04, hike25:.03},
+    'Jul 2026':{hold:.62, cut25:.27, cut50:.07, hike25:.04},
+    'Sep 2026':{hold:.53, cut25:.31, cut50:.11, hike25:.05},
+    'Oct 2026':{hold:.48, cut25:.31, cut50:.15, hike25:.06},
+    'Dec 2026':{hold:.44, cut25:.30, cut50:.18, hike25:.08},
+    'Jan 2027':{hold:.43, cut25:.31, cut50:.18, hike25:.08},
+    'Mar 2027':{hold:.41, cut25:.32, cut50:.19, hike25:.08},
+  },
+  // Cut count 2026 — /event/how-many-fed-rate-cuts-in-2026 (13 outcomes, $10M vol)
+  // From search: "26% for 2 cuts" at top; seed full distribution
+  cutCount:{'0':.05,'1':.09,'2':.26,'3':.22,'4':.17,'5':.12,'6':.06,'7+': .03},
+  // Terminal rate end-2026 — /event/what-will-the-fed-rate-be-at-the-end-of-2026
+  terminalRate:{
+    '4.00':.02,'3.75':.08,'3.50':.18,'3.25':.26,'3.00':.22,'2.75':.13,'2.50':.08,'2.25':.03
+  },
+  // Hike risk — /event/fed-rate-hike-in-2026 (~$190K vol)
+  hikeAny:.155, // "No" = 84.5% => hike = 15.5%
+  // Emergency cut — /event/fed-emergency-rate-cut-before-2027 (unique to Polymarket)
+  emergencyCut:.08,
+  // First cut timing — /event/fed-rate-cut-by-629 (8 outcomes, $1.9M vol)
+  cutByMeeting:{
+    'Apr 2026':.01,'Jun 2026':.22,'Jul 2026':.45,'Sep 2026':.68,
+    'Oct 2026':.78,'Dec 2026':.88,'end-2026':.88,'end-2027':.97,
+  },
+  // Fed Chair nomination — /event/who-will-trump-nominate-as-fed-chair ($230M vol)
+  fedChair:{
+    'Kevin Warsh':.47,'Rick Rieder':.26,'Other':.27
+  },
+};
+
+// --- Polymarket refresh ──────────────────────────────────────────────────────
+async function fetchPolymarket(){
+  const btn=document.getElementById('poly-btn'),icon=document.getElementById('poly-icon'),status=document.getElementById('poly-status');
+  const key=document.getElementById('api-key-input').value.trim();
+  btn.disabled=true;icon.className='spin';status.textContent='Searching Polymarket fed-rates…';
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Polymarket.com for current prices on these Fed-related markets:
+1. polymarket.com/event/fed-decision-in-march-885 and equivalent monthly markets — per-meeting probabilities for hold/25bp cut/50+bp cut/hike
+2. polymarket.com/event/how-many-fed-rate-cuts-in-2026 — cut count distribution (13 outcomes)
+3. polymarket.com/event/what-will-the-fed-rate-be-at-the-end-of-2026 — terminal rate distribution
+4. polymarket.com/event/fed-rate-hike-in-2026 — P(any hike in 2026)
+5. polymarket.com/event/fed-emergency-rate-cut-before-2027 — P(emergency cut before 2027)
+6. polymarket.com/event/fed-rate-cut-by-629 — first cut timing by meeting
+7. polymarket.com/event/who-will-trump-nominate-as-fed-chair — Fed Chair nominee odds
+Return ONLY raw JSON, no markdown, no fences:
+{
+  "asOf":"YYYY-MM-DD","source":"Polymarket",
+  "meetings":{
+    "Apr 2026":{"hold":0.99,"cut25":0.005,"cut50":0.002,"hike25":0.003},
+    "Jun 2026":{"hold":0.72,"cut25":0.21,"cut50":0.04,"hike25":0.03},
+    "Jul 2026":{"hold":0.62,"cut25":0.27,"cut50":0.07,"hike25":0.04},
+    "Sep 2026":{"hold":0.53,"cut25":0.31,"cut50":0.11,"hike25":0.05},
+    "Oct 2026":{"hold":0.48,"cut25":0.31,"cut50":0.15,"hike25":0.06},
+    "Dec 2026":{"hold":0.44,"cut25":0.30,"cut50":0.18,"hike25":0.08},
+    "Jan 2027":{"hold":0.43,"cut25":0.31,"cut50":0.18,"hike25":0.08},
+    "Mar 2027":{"hold":0.41,"cut25":0.32,"cut50":0.19,"hike25":0.08}
+  },
+  "cutCount":{"0":0.05,"1":0.09,"2":0.26,"3":0.22,"4":0.17,"5":0.12,"6":0.06,"7+":0.03},
+  "terminalRate":{"4.00":0.02,"3.75":0.08,"3.50":0.18,"3.25":0.26,"3.00":0.22,"2.75":0.13,"2.50":0.08,"2.25":0.03},
+  "hikeAny":0.155,
+  "emergencyCut":0.08,
+  "cutByMeeting":{"Apr 2026":0.01,"Jun 2026":0.22,"Jul 2026":0.45,"Sep 2026":0.68,"Oct 2026":0.78,"Dec 2026":0.88,"end-2026":0.88,"end-2027":0.97},
+  "fedChair":{"Kevin Warsh":0.47,"Rick Rieder":0.26,"Other":0.27}
+}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||`API ${res.status}`);
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    if(p.meetings)Object.assign(polyD.meetings,p.meetings);
+    if(p.cutCount)polyD.cutCount=p.cutCount;
+    if(p.terminalRate)polyD.terminalRate=p.terminalRate;
+    if(p.hikeAny!==undefined)polyD.hikeAny=p.hikeAny;
+    if(p.emergencyCut!==undefined)polyD.emergencyCut=p.emergencyCut;
+    if(p.cutByMeeting)Object.assign(polyD.cutByMeeting,p.cutByMeeting);
+    if(p.fedChair)polyD.fedChair=p.fedChair;
+    polyD.fetched=true;
+    polyD.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    polyD.source=p.source||'Polymarket (web search)';
+    status.textContent=`Polymarket updated · ${polyD.source} · ${polyD.asOf}`;
+    if(fwActive==='kalshi')fwRender();
+  }catch(e){status.textContent='⚠ Polymarket: '+(e.message||'Failed');}
+  finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
+}
+
+// --- FedWatch engine ─────────────────────────────────────────────────────────
 function fwSwitch(t,el){
   fwActive=t;
-  ['inputs','chain','tree','kalshi'].forEach(id=>document.getElementById('fw-'+id).style.display='none');
+  ['inputs','chain','tree','kalshi','sofr'].forEach(id=>document.getElementById('fw-'+id).style.display='none');
   document.getElementById('fw-'+t).style.display='block';
   document.querySelectorAll('.fw-tab').forEach(e=>e.classList.remove('act'));el.classList.add('act');
   fwRender();
@@ -317,9 +422,10 @@ function fwRender(){
   else if(fwActive==='chain')fwRenderChain(chain,meetings);
   else if(fwActive==='tree')fwRenderTree(meetings,states,final,lb);
   else if(fwActive==='kalshi')fwRenderKalshi(meetings,states,final,lb,chain);
+  else if(fwActive==='sofr')fwRenderSOFR(meetings,chain,lb);
 }
 
-// ─── Tab: Inputs ─────────────────────────────────────────────────────────────
+// --- Tab: Inputs ─────────────────────────────────────────────────────────────
 function fwRenderInputs(chain){
   let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--color-text-secondary)">Current target range lower bound:</span>
@@ -343,7 +449,7 @@ function fwRenderInputs(chain){
   document.getElementById('fw-inputs').innerHTML=h;
 }
 
-// ─── Tab: EFFR chain ─────────────────────────────────────────────────────────
+// --- Tab: EFFR chain ─────────────────────────────────────────────────────────
 function fwRenderChain(chain,meetings){
   let h=`<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt">
   <thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>Δ (bp)</th><th>25bp moves</th></tr></thead><tbody>`;
@@ -382,7 +488,7 @@ function fwRenderChain(chain,meetings){
   document.getElementById('fw-chain').innerHTML=h;
 }
 
-// ─── Tab: Probability tree ────────────────────────────────────────────────────
+// --- Tab: Probability tree ────────────────────────────────────────────────────
 function fwRenderTree(meetings,states,final,lb){
   if(!meetings.length){document.getElementById('fw-tree').innerHTML='<p style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</p>';return;}
   const cuts=Object.entries(final).map(([k,p])=>({k:parseInt(k),p})).sort((a,b)=>a.k-b.k);
@@ -438,21 +544,24 @@ function fwRenderTree(meetings,states,final,lb){
     </div>`;
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// ─── Tab: Kalshi compare — 6 panels ──────────────────────────────────────────
-// ═══════════════════════════════════════════════════════════════════════════════
+// ================================================================================
+// --- Tab: Kalshi compare — 6 panels ──────────────────────────────────────────
+// ================================================================================
 
 function fwRenderKalshi(meetings,states,final,lb,chain){
   const el=document.getElementById('fw-kalshi');
 
   // ── Fetch bar ──
-  let html=`<div class="k-fetch-bar">
-    <button class="refresh-btn" id="kal-btn" onclick="fetchKalshi()"><span id="kal-icon">⟳</span> Fetch Kalshi data</button>
+  let html=`<div class="k-fetch-bar" style="flex-wrap:wrap;gap:8px">
+    <button class="refresh-btn" id="kal-btn" onclick="fetchKalshi()"><span id="kal-icon">⟳</span> Fetch Kalshi</button>
     <span class="k-seed-note" id="kal-status">${kalshiD.source}</span>
-    <span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">
-      <span class="k-dot" style="background:var(--c-cme)"></span> CME futures &nbsp;
-      <span class="k-dot" style="background:var(--c-kal)"></span> Kalshi markets &nbsp;
-      <span class="k-dot" style="background:var(--c-dots)"></span> Fed dots (Dec 2025 SEP)
+    <button class="refresh-btn" id="poly-btn" onclick="fetchPolymarket()" style="margin-left:4px"><span id="poly-icon">⟳</span> Fetch Polymarket</button>
+    <span class="k-seed-note" id="poly-status">${polyD.source}</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary);display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span><span class="k-dot" style="background:var(--c-cme)"></span> CME</span>
+      <span><span class="k-dot" style="background:var(--c-kal)"></span> Kalshi</span>
+      <span><span class="k-dot" style="background:var(--c-poly)"></span> Polymarket</span>
+      <span><span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP</span>
     </span>
   </div>`;
 
@@ -460,9 +569,10 @@ function fwRenderKalshi(meetings,states,final,lb,chain){
   const comps=getMeetingComps(meetings);
   html+=`<div class="k-grid" style="margin-bottom:12px">
   <div class="k-panel k-full">
-    <div class="k-hdr"><span class="k-title">① Meeting-by-meeting divergence: P(cut) — CME vs Kalshi</span><span class="k-contract">kxfeddecision-26xxx</span></div>`;
+    <div class="k-hdr"><span class="k-title">① Meeting-by-meeting divergence: P(cut) — CME vs Kalshi vs Polymarket</span>
+    <span style="display:flex;gap:4px;flex-wrap:wrap"><span class="k-contract">kxfeddecision-26xxx</span><span class="k-contract">polymarket fed-decision</span></span></div>`;
   html+=panel1Svg(comps,lb);
-  html+=`<div class="k-note">Each pair of bars shows CME futures-implied vs Kalshi market-implied probability of <i>any</i> cut at that meeting. Where Kalshi > CME the market may be pricing extra tail risk; where CME > Kalshi retail sentiment may lag. The basis (Kalshi − CME) is shown as a pill above each pair.</div>
+  html+=`<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal−CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly−Kal</b> basis reveals the information spread between the two platforms — Kalshi skews institutional/domestic, Polymarket skews global/retail. Where Poly leads Kalshi, narrative momentum may be pricing in ahead of fundamentals.</div>
   </div></div>`;
 
   // ── Panels 2 + 3 ───────────────────────────────────────────────────────────
@@ -471,13 +581,19 @@ function fwRenderKalshi(meetings,states,final,lb,chain){
   // Panel 2: Cut count distribution basis
   const cmeCC=cmeCutCountDist(final);
   html+=`<div class="k-panel">
-    <div class="k-hdr"><span class="k-title">② Cut count distribution — 2026</span><span class="k-contract">kxratecutcount-26dec31</span></div>`;
-  html+=panel2Svg(cmeCC,kalshiD.cutCount);
+    <div class="k-hdr"><span class="k-title">② Cut count distribution — 2026</span>
+    <span style="display:flex;gap:4px"><span class="k-contract">kxratecutcount-26dec31</span><span class="k-contract">polymarket how-many-cuts</span></span></div>`;
+  html+=panel2Svg(cmeCC,kalshiD.cutCount,polyD.cutCount);
   const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
   const kalExpCC=Object.entries(kalshiD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
-  const basisCC=(kalExpCC-cmeExpCC).toFixed(2);
-  html+=`<div class="k-note">Expected 2026 cuts — CME: <b>${cmeExpCC.toFixed(2)}</b> · Kalshi: <b>${kalExpCC.toFixed(2)}</b> · Basis: <span class="k-pill ${parseFloat(basisCC)>0.05?'k-up':parseFloat(basisCC)<-0.05?'k-dn':'k-neu'}">${basisCC>0?'+':''}${basisCC}</span><br>
-    Kalshi assigns explicit probability mass to discrete cut counts; CME is derived from the cumulative futures chain ending in Dec 2026.
+  const polyExpCC=Object.entries(polyD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const bKC=(kalExpCC-cmeExpCC).toFixed(2),bPC=(polyExpCC-cmeExpCC).toFixed(2),bKP=(polyExpCC-kalExpCC).toFixed(2);
+  html+=`<div class="k-note">
+    Expected 2026 cuts — CME: <b>${cmeExpCC.toFixed(2)}</b> · Kalshi: <b>${kalExpCC.toFixed(2)}</b> · Polymarket: <b>${polyExpCC.toFixed(2)}</b><br>
+    Kal−CME <span class="k-pill ${parseFloat(bKC)>0.05?'k-up':parseFloat(bKC)<-0.05?'k-dn':'k-neu'}">${bKC>0?'+':''}${bKC}</span> &nbsp;
+    Poly−CME <span class="k-pill ${parseFloat(bPC)>0.05?'k-up':parseFloat(bPC)<-0.05?'k-dn':'k-neu'}">${bPC>0?'+':''}${bPC}</span> &nbsp;
+    Poly−Kal <span class="k-pill ${parseFloat(bKP)>0.05?'k-up':parseFloat(bKP)<-0.05?'k-dn':'k-neu'}">${bKP>0?'+':''}${bKP}</span><br>
+    Polymarket offers 13 discrete strikes (vs Kalshi's 5) — its finer granularity often captures tail outcomes earlier.
   </div></div>`;
 
   // Panel 3: Combo path decomposer
@@ -505,7 +621,7 @@ function fwRenderKalshi(meetings,states,final,lb,chain){
   html+=`<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">
     <div class="k-hdr"><span class="k-title">④ Market-implied dot plot — CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx · Dec 2025 SEP</span></div>`;
   html+=panel4Svg(meetings,states,lb);
-  html+=`<div class="k-note">Three implied rate paths on the same canvas. CME (blue): expected EFFR derived from the ZQ futures chain at each monthly node. Kalshi (orange): implied rate level from per-meeting decision market expectations. Fed dots (purple): December 2025 SEP medians at end-year horizons. Gaps between the curves reveal where futures, prediction markets, and the Fed itself disagree about the easing path.</div>
+  html+=`<div class="k-note">Three implied rate paths on the same canvas. CME (blue): expected EFFR derived from the ZQ futures chain. Kalshi (orange): implied rate from per-meeting decision markets. Fed dots (purple): December 2025 SEP medians. The Kalshi path can be compared with the Polymarket terminal rate distribution — see panel ⑦ — for a fuller cross-market view of the easing endpoint.</div>
   </div></div>`;
 
   // ── Panels 5 + 6 ───────────────────────────────────────────────────────────
@@ -515,35 +631,76 @@ function fwRenderKalshi(meetings,states,final,lb,chain){
   const cmeHike=getCmeHikeProb(meetings);
   kalshiD.cmeHikeAny=cmeHike;
   html+=`<div class="k-panel">
-    <div class="k-hdr"><span class="k-title">⑤ Hike risk monitor</span><span class="k-contract">kxfedhike · kxlargecut-26</span></div>`;
-  html+=panel5Svg(cmeHike,kalshiD.hikeAny,kalshiD.largeCutAny);
-  html+=`<div class="k-note">CME-implied max single-meeting hike probability (derived from the futures chain) vs Kalshi's explicit "any hike" contract. When Kalshi's hike probability exceeds ~10%, the ZQ chain's purely-cut-or-hold framing may understate tail risk. Also shown: Kalshi's implied probability of a single cut exceeding 25bp (jumbo cut).</div>
+    <div class="k-hdr"><span class="k-title">⑤ Hike risk monitor</span>
+    <span style="display:flex;gap:4px"><span class="k-contract">kxfedhike</span><span class="k-contract">polymarket fed-rate-hike-in-2026</span></span></div>`;
+  html+=panel5Svg(cmeHike,kalshiD.hikeAny,kalshiD.largeCutAny,polyD.hikeAny);
+  html+=`<div class="k-note">Semicircular gauge: CME max single-meeting hike probability (blue), Kalshi "any hike" (orange), Polymarket "hike in 2026" (cyan). Polymarket's market has $190K in volume and currently implies a notably higher hike probability (~15.5%) than Kalshi — a structural divergence consistent with Polymarket's global trader base pricing geopolitical/inflationary tail risk more aggressively. Also shown: Kalshi jumbo-cut probability.</div>
   </div>`;
 
   // Panel 6: First-cut timing
   html+=`<div class="k-panel">
-    <div class="k-hdr"><span class="k-title">⑥ First cut timing — cumulative P(cut has happened)</span><span class="k-contract">kxratecut-26dec31 · kxratecut-26dec31 (2027)</span></div>`;
+    <div class="k-hdr"><span class="k-title">⑥ First cut timing — cumulative P(cut has happened)</span>
+    <span style="display:flex;gap:4px"><span class="k-contract">kxratecut-26dec31</span><span class="k-contract">polymarket fed-rate-cut-by</span></span></div>`;
   html+=panel6Svg(meetings,states,lb);
-  html+=`<div class="k-note">CME (blue step curve): cumulative probability that <i>at least one</i> 25bp cut has occurred by each successive meeting, derived from the probability tree. Kalshi binary markers (orange ●): P(any cut by end-2026) = <b>${(kalshiD.cutBinary['end-2026']*100).toFixed(0)}%</b> and P(any cut by end-2027) = <b>${(kalshiD.cutBinary['end-2027']*100).toFixed(0)}%</b>. Divergence between the step curve and binary markers flags timing disagreement between futures and prediction markets.</div>
+  html+=`<div class="k-note">CME step curve (blue): cumulative P(≥1 cut) by meeting from the probability tree. Kalshi binary markers (orange ●): cut-by-end-2026 = <b>${(kalshiD.cutBinary['end-2026']*100).toFixed(0)}%</b>, cut-by-end-2027 = <b>${(kalshiD.cutBinary['end-2027']*100).toFixed(0)}%</b>. Polymarket per-meeting markers (cyan ◆): from the "Fed rate cut by…?" market with 8 outcomes and $1.9M volume. The Poly−Kal basis at year-end is the sharpest cross-platform timing signal.</div>
+  </div></div>`;
+
+  // ── Panel 7: Polymarket terminal rate distribution ──────────────────────────
+  html+=`<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">
+    <div class="k-hdr">
+      <span class="k-title">⑦ Terminal rate distribution end-2026 — CME tree vs Polymarket</span>
+      <span class="k-contract">polymarket what-will-the-fed-rate-be-at-the-end-of-2026</span>
+    </div>`;
+  html+=panel7Svg(final,lb);
+  // Compute CME expected terminal
+  const cmeTerm=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+  const polyTermExp=Object.entries(polyD.terminalRate).reduce((s,[r,p])=>s+parseFloat(r)*p,0);
+  html+=`<div class="k-note">CME probability-tree distribution over the lower bound of the target range at end-2026 (blue bars) vs Polymarket's discrete rate-level market (cyan outline bars). CME expected terminal rate: <b>${cmeTerm.toFixed(2)}%</b> · Polymarket expected terminal rate: <b>${polyTermExp.toFixed(2)}%</b>. The Polymarket market ($10M+ volume, 13 outcomes) resolves on the upper bound — so subtract 0.25% when comparing to CME lower-bound figures. Shape differences reveal where each market concentrates probability mass.</div>
+  </div></div>`;
+
+  // ── Panels 8a + 8b: Fed Chair + Emergency cut ──────────────────────────────
+  html+=`<div class="k-grid">`;
+
+  // Panel 8a: Fed Chair succession
+  html+=`<div class="k-panel">
+    <div class="k-hdr">
+      <span class="k-title">⑧ Fed Chair nomination — regime risk</span>
+      <span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair · $230M vol</span>
+    </div>`;
+  html+=panel8aHtml();
+  html+=`<div class="k-note">Polymarket's most liquid Fed markets ($230M volume). The nominee probabilities are a proxy for <i>policy regime risk</i>: Kevin Warsh is widely expected to be more hawkish than current policy, Rick Rieder more dovish. The probability-weighted "hawkishness premium" embedded here is structurally absent from both CME futures and Kalshi rate markets — it represents a second-order risk that could shift the entire easing path once the new chair is seated at the April 28–29 FOMC.</div>
+  </div>`;
+
+  // Panel 8b: Emergency cut
+  html+=`<div class="k-panel">
+    <div class="k-hdr">
+      <span class="k-title">⑨ Emergency cut gauge — unscheduled FOMC action</span>
+      <span class="k-contract">polymarket fed-emergency-rate-cut-before-2027</span>
+    </div>`;
+  html+=panel8bSvg(polyD.emergencyCut, polyD.hikeAny);
+  html+=`<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). This signal is absent from both CME futures and Kalshi's per-meeting markets, which only price <i>scheduled</i> FOMC outcomes. Historical context: the Fed made emergency cuts in Jan 2001, Sep 2001, Oct 2008, and Mar 2020. An 8% probability reflects meaningful tail risk — the Strait of Hormuz disruption and oil price surge currently active make this contract particularly worth monitoring.</div>
   </div></div>`;
 
   el.innerHTML=html;
 }
 
-// ─── Helper: CME vs Kalshi per-meeting comparisons ───────────────────────────
+// --- Helper: CME vs Kalshi vs Polymarket per-meeting comparisons ─────────────
 function getMeetingComps(meetings){
   const comps=[];
   meetings.forEach(m=>{
     const cmeCut=(m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0);
-    const cmeHold=1-cmeCut-(m.b0>0?m.p0:0)-(m.b1>0&&m.p1>0.001?m.p1:0);
     const kd=kalshiD.meetings[m.lb];
+    const pd=polyD.meetings[m.lb];
     const kCut=kd?(kd.cut25||0)+(kd.cut50||0):null;
-    comps.push({lb:m.lb,label:m.label,cmeCut,cmeHold,kCut,basis:kCut!==null?kCut-cmeCut:null});
+    const pCut=pd?(pd.cut25||0)+(pd.cut50||0):null;
+    comps.push({lb:m.lb,label:m.label,cmeCut,kCut,pCut,
+      basisKC:kCut!==null?kCut-cmeCut:null,
+      basisPK:pCut!==null&&kCut!==null?pCut-kCut:null});
   });
   return comps;
 }
 
-// ─── Helper: CME-implied cut count distribution for 2026 meetings ────────────
+// --- Helper: CME-implied cut count distribution for 2026 meetings ────────────
 function cmeCutCountDist(final){
   // final is the distribution after ALL 12 months; need subset up to Dec 2026
   // Re-compute with only 2026 meetings
@@ -556,7 +713,7 @@ function cmeCutCountDist(final){
   return out;
 }
 
-// ─── Helper: CME max single-meeting hike probability ────────────────────────
+// --- Helper: CME max single-meeting hike probability ────────────────────────
 function getCmeHikeProb(meetings){
   return meetings.reduce((mx,m)=>{
     const ph=(m.b0>0?m.p0:0)+(m.b1>0&&m.p1>0.001?m.p1:0);
@@ -564,7 +721,7 @@ function getCmeHikeProb(meetings){
   },0);
 }
 
-// ─── Helper: enumerate top N paths through first `depth` meetings ────────────
+// --- Helper: enumerate top N paths through first `depth` meetings ────────────
 function enumeratePaths(meetings,depth){
   const paths=[];
   const mSlice=meetings.slice(0,depth);
@@ -578,58 +735,79 @@ function enumeratePaths(meetings,depth){
   return paths.sort((a,b)=>b.prob-a.prob).slice(0,8);
 }
 
-// ─── SVG helpers ─────────────────────────────────────────────────────────────
+// --- SVG helpers ─────────────────────────────────────────────────────────────
 
-// Panel 1: grouped bars — CME vs Kalshi P(cut) per meeting
+// Panel 1: 3 bars per meeting — CME / Kalshi / Polymarket P(cut)
 function panel1Svg(comps,lb){
-  const W=680,H=130,ml=10,mr=10,mt=30,mb=25,cW=W-ml-mr;
-  const n=comps.length,grpW=cW/n,bW=Math.min(18,grpW*0.35),gap=4;
+  const W=720,H=130,ml=10,mr=10,mt=34,mb=28,cW=W-ml-mr;
+  const n=comps.length,grpW=cW/n,bW=Math.min(14,grpW*0.26),gap=3;
   let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
-  // y-axis: 0 to 1
   const ys=v=>mt+H*(1-v);
-  // grid lines
   [0.25,0.5,0.75,1.0].forEach(v=>{
     svg+=`<line x1="${ml}" y1="${ys(v).toFixed(1)}" x2="${W-mr}" y2="${ys(v).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
     svg+=`<text x="${ml}" y="${(ys(v)-2).toFixed(1)}" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;
   });
   comps.forEach((c,i)=>{
     const cx=ml+i*grpW+grpW/2;
-    const x0=cx-bW-gap/2,x1=cx+gap/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
     // CME bar
-    const hCme=H*c.cmeCut,yCme=mt+H-hCme;
-    svg+=`<rect x="${x0.toFixed(1)}" y="${yCme.toFixed(1)}" width="${bW}" height="${Math.max(1,hCme).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".8"/>`;
+    const hC=H*c.cmeCut,yC=mt+H-hC;
+    svg+=`<rect x="${x0.toFixed(1)}" y="${yC.toFixed(1)}" width="${bW}" height="${Math.max(1,hC).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".85"/>`;
     // Kalshi bar
+    let topY=yC;
     if(c.kCut!==null){
-      const hKal=H*c.kCut,yKal=mt+H-hKal;
-      svg+=`<rect x="${x1.toFixed(1)}" y="${yKal.toFixed(1)}" width="${bW}" height="${Math.max(1,hKal).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".8"/>`;
-      // Basis pill above bars
-      const bv=((c.kCut-c.cmeCut)*100).toFixed(1);
-      const pillCol=c.basis>0.02?'var(--color-text-info)':c.basis<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
-      svg+=`<text x="${cx.toFixed(1)}" y="${(Math.min(yCme,yKal)-4).toFixed(1)}" text-anchor="middle" font-size="8" font-weight="500" fill="${pillCol}" font-family="var(--font-mono)">${bv>0?'+':''}${bv}</text>`;
+      const hK=H*c.kCut,yK=mt+H-hK;
+      svg+=`<rect x="${x1.toFixed(1)}" y="${yK.toFixed(1)}" width="${bW}" height="${Math.max(1,hK).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".85"/>`;
+      topY=Math.min(topY,yK);
+      // Kal−CME basis
+      const bKC=((c.kCut-c.cmeCut)*100).toFixed(1);
+      const pillCol=c.basisKC>0.02?'var(--color-text-info)':c.basisKC<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+      svg+=`<text x="${(cx-bW/2-gap/2).toFixed(1)}" y="${(topY-14).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="${pillCol}" font-family="var(--font-mono)">${bKC>0?'+':''}${bKC}</text>`;
     }
-    // X label
+    // Polymarket bar
+    if(c.pCut!==null){
+      const hP=H*c.pCut,yP=mt+H-hP;
+      svg+=`<rect x="${x2.toFixed(1)}" y="${yP.toFixed(1)}" width="${bW}" height="${Math.max(1,hP).toFixed(1)}" rx="2" fill="var(--c-poly)" opacity=".85"/>`;
+      topY=Math.min(topY,yP);
+      // Poly−Kal basis
+      if(c.kCut!==null&&c.basisPK!==null){
+        const bPK=(c.basisPK*100).toFixed(1);
+        const pillColP=c.basisPK>0.02?'var(--color-text-info)':c.basisPK<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+        svg+=`<text x="${(cx+bW+gap).toFixed(1)}" y="${(topY-4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="${pillColP}" font-family="var(--font-mono)">${bPK>0?'+':''}${bPK}</text>`;
+      }
+    }
     const shortLbl=c.label.replace(/\d{4}/,'').trim()||c.lb.replace(/ 20\d\d/,'');
-    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${shortLbl}</text>`;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+16).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${shortLbl}</text>`;
   });
+  // Legend
+  svg+=`<text x="${ml}" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">■ CME</text>`;
+  svg+=`<text x="${ml+46}" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">■ Kalshi</text>`;
+  svg+=`<text x="${ml+102}" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">■ Polymarket</text>`;
+  svg+=`<text x="${ml+188}" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal−CME · right pill = Poly−Kal</text>`;
   svg+=`</svg>`;
   return svg;
 }
 
-// Panel 2: grouped bars — cut count distribution
-function panel2Svg(cme,kal){
-  const W=300,H=90,mt=16,mb=20,ml=6,mr=6,cW=W-ml-mr;
-  const keys=['0','1','2','3','4'];
-  const n=keys.length,grpW=cW/n,bW=Math.min(16,grpW*0.38),gap=3;
-  const maxV=Math.max(...keys.flatMap(k=>[cme[k]||0,kal[k]||0]));
+// Panel 2: 3 bars per bucket — CME / Kalshi / Polymarket cut count
+function panel2Svg(cme,kal,poly){
+  const W=340,H=90,mt=16,mb=24,ml=8,mr=8,cW=W-ml-mr;
+  // Merge keys: Kalshi goes 0-4, Polymarket 0-7+; show 0-5+
+  const keys=['0','1','2','3','4','5+'];
+  const cmeV=k=>k==='5+'?(cme[4]||0)*0.3:cme[parseInt(k)]||0; // rough tail
+  const kalV=k=>k==='5+'?0:kal[parseInt(k)]||0;
+  const polyV=k=>{if(k==='5+')return (poly['5']||0)+(poly['6']||0)+(poly['7+']||0);return poly[k]||0;};
+  const n=keys.length,grpW=cW/n,bW=Math.min(12,grpW*0.27),gap=2;
+  const maxV=Math.max(...keys.flatMap(k=>[cmeV(k),kalV(k),polyV(k)]));
   let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
-  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxV*maxV);if(v<=maxV){svg+=`<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;svg+=`<text x="${ml}" y="${(y-2).toFixed(1)}" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;}});
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxV*maxV);if(v<=maxV){svg+=`<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;svg+=`<text x="${(ml-1).toFixed(1)}" y="${(y-2).toFixed(1)}" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;}});
   keys.forEach((k,i)=>{
-    const cx=ml+i*grpW+grpW/2,x0=cx-bW-gap/2,x1=cx+gap/2;
-    const hC=H*(cme[k]||0)/maxV,yC=mt+H-hC;
-    svg+=`<rect x="${x0.toFixed(1)}" y="${yC.toFixed(1)}" width="${bW}" height="${Math.max(1,hC).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".8"/>`;
-    const hK=H*(kal[k]||0)/maxV,yK=mt+H-hK;
-    svg+=`<rect x="${x1.toFixed(1)}" y="${yK.toFixed(1)}" width="${bW}" height="${Math.max(1,hK).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".8"/>`;
-    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+13).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${k==='4'?'4+':k}</text>`;
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
+    const hC=H*cmeV(k)/maxV,hK=H*kalV(k)/maxV,hP=H*polyV(k)/maxV;
+    svg+=`<rect x="${x0.toFixed(1)}" y="${(mt+H-hC).toFixed(1)}" width="${bW}" height="${Math.max(1,hC).toFixed(1)}" rx="2" fill="var(--c-cme)" opacity=".85"/>`;
+    svg+=`<rect x="${x1.toFixed(1)}" y="${(mt+H-hK).toFixed(1)}" width="${bW}" height="${Math.max(1,hK).toFixed(1)}" rx="2" fill="var(--c-kal)" opacity=".85"/>`;
+    svg+=`<rect x="${x2.toFixed(1)}" y="${(mt+H-hP).toFixed(1)}" width="${bW}" height="${Math.max(1,hP).toFixed(1)}" rx="2" fill="var(--c-poly)" opacity=".85"/>`;
+    svg+=`<text x="${cx.toFixed(1)}" y="${(mt+H+14).toFixed(1)}" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${k}</text>`;
   });
   svg+=`</svg>`;
   return svg;
@@ -687,38 +865,36 @@ function panel4Svg(meetings,states,lb){
   return svg;
 }
 
-// Panel 5: hike gauge + risk bars
-function panel5Svg(cmeHike,kalHike,largeCut){
-  const W=280,HC=110;
+// Panel 5: hike gauge — CME / Kalshi / Polymarket + jumbo-cut bar
+function panel5Svg(cmeHike,kalHike,largeCut,polyHike){
+  const W=300,HC=118;
   let svg=`<svg viewBox="0 0 ${W} ${HC+20}" style="width:100%;display:block;overflow:visible">`;
-  // Semicircle gauge
-  const cx=W/2,cy=HC-10,r=64,sw=14;
-  // Background arc (full semicircle 180° to 0°)
-  function arc(pct,col,opacity){
-    const startA=Math.PI,endA=Math.PI-(pct*Math.PI),x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA),x2=cx+r*Math.cos(endA),y2=cy+r*Math.sin(endA),lg=pct>.5?1:0;
-    return `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${lg} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="${col}" stroke-width="${sw}" stroke-linecap="round" opacity="${opacity}"/>`;
+  const cx=W/2,cy=HC-10,r=60,sw=11;
+  function arc(pct,col,opacity,strokeW){
+    strokeW=strokeW||sw;
+    const startA=Math.PI,endA=Math.PI-(Math.min(1,pct)*Math.PI),
+          x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA),
+          x2=cx+r*Math.cos(endA),y2=cy+r*Math.sin(endA),lg=pct>.5?1:0;
+    return `<path d="M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${lg} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}" fill="none" stroke="${col}" stroke-width="${strokeW}" stroke-linecap="round" opacity="${opacity}"/>`;
   }
-  // Background track
+  // Track
   svg+=`<path d="M ${(cx-r).toFixed(2)} ${cy.toFixed(2)} A ${r} ${r} 0 0 1 ${(cx+r).toFixed(2)} ${cy.toFixed(2)}" fill="none" stroke="var(--color-border-tertiary)" stroke-width="${sw}"/>`;
-  // Danger zone (25%+) in red
-  const dangerFrac=Math.max(0,(1-0.25));
-  svg+=arc(dangerFrac*1,'#fee2e2',.6);
-  // CME arc
-  svg+=arc(Math.min(1,cmeHike),'var(--c-cme)',.9);
-  // Kalshi arc (thinner, on top)
-  svg+=arc(Math.min(1,kalHike),'var(--c-kal)',.85);
-  // Labels
-  svg+=`<text x="${cx}" y="${(cy-r/2).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Hike risk</text>`;
-  svg+=`<text x="${(cx-r-4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0%</text>`;
-  svg+=`<text x="${(cx+r+4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">100%</text>`;
-  // Central readout
-  svg+=`<text x="${cx}" y="${(cy+5).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--c-cme)" font-family="var(--font-mono)" font-weight="500">CME ${(cmeHike*100).toFixed(1)}%</text>`;
-  svg+=`<text x="${cx}" y="${(cy+18).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL ${(kalHike*100).toFixed(1)}%</text>`;
+  // Danger zone shading
+  svg+=arc(0.75,'#fee2e2',.5,sw);
+  // Three arcs at slightly different radii: CME outer, Kalshi mid, Poly inner
+  svg+=arc(cmeHike,'var(--c-cme)',.9,sw);
+  svg+=arc(kalHike,'var(--c-kal)',.88,sw-3);
+  if(polyHike!==undefined)svg+=arc(polyHike,'var(--c-poly)',.85,sw-6);
+  svg+=`<text x="${cx}" y="${(cy-r/2).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Hike risk</text>`;
+  svg+=`<text x="${(cx-r-4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0%</text>`;
+  svg+=`<text x="${(cx+r+4).toFixed(1)}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">100%</text>`;
+  svg+=`<text x="${cx}" y="${(cy+2).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--c-cme)" font-family="var(--font-mono)" font-weight="500">CME ${(cmeHike*100).toFixed(1)}%</text>`;
+  svg+=`<text x="${cx}" y="${(cy+14).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL ${(kalHike*100).toFixed(1)}%</text>`;
+  if(polyHike!==undefined)svg+=`<text x="${cx}" y="${(cy+26).toFixed(1)}" text-anchor="middle" font-size="10" fill="var(--c-poly)" font-family="var(--font-mono)" font-weight="500">POLY ${(polyHike*100).toFixed(1)}%</text>`;
   svg+=`</svg>`;
-  // Large-cut bar below gauge
-  svg+=`<div style="margin-top:8px">
-    <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut probability (>25bp at any meeting) — Kalshi kxlargecut-26</div>
-    <div style="height:18px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex">
+  svg+=`<div style="margin-top:6px">
+    <div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut (>25bp) — Kalshi kxlargecut-26</div>
+    <div style="height:16px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex">
       <div style="width:${(largeCut*100).toFixed(1)}%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">${(largeCut*100).toFixed(0)}%</div>
       <div style="flex:1;background:var(--color-background-primary)"></div>
     </div>
@@ -726,23 +902,26 @@ function panel5Svg(cmeHike,kalHike,largeCut){
   return svg;
 }
 
-// Panel 6: cumulative first-cut timing
+// Panel 6: cumulative first-cut timing — CME step + Kalshi binary + Polymarket per-meeting
 function panel6Svg(meetings,states,lb){
-  const W=340,H=100,mt=16,mb=28,ml=30,mr=10;
+  const W=380,H=100,mt=16,mb=32,ml=30,mr=10;
   const n=states.length;
   const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
   const ys=v=>mt+H*(1-v);
-  // CME cumulative P(at least one cut by step i)
   const cumCuts=states.map(s=>Object.entries(s).filter(([k])=>parseInt(k)<=-1).reduce((sum,[,p])=>sum+p,0));
-  // Kalshi binary points
-  // Map end-2026 and end-2027 to step indices
+  // Kalshi binary year-end points
+  const kalPoints=[];
   const dec2026Idx=meetings.findIndex(m=>m.lb==='Dec 2026');
   const mar2027Idx=meetings.findIndex(m=>m.lb==='Mar 2027');
-  const kalPoints=[];
-  if(dec2026Idx>=0&&kalshiD.cutBinary['end-2026'])kalPoints.push({i:dec2026Idx+1,v:kalshiD.cutBinary['end-2026'],label:'end-2026'});
-  if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'end-2027'});
+  if(dec2026Idx>=0&&kalshiD.cutBinary['end-2026'])kalPoints.push({i:dec2026Idx+1,v:kalshiD.cutBinary['end-2026'],label:'KAL\nend-26'});
+  if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'KAL\nend-27'});
+  // Polymarket per-meeting timing points
+  const polyPoints=meetings.map((m,i)=>{
+    const v=polyD.cutByMeeting[m.lb];
+    return v!==undefined?{i:i+1,v,label:m.label.split('–')[0]}:null;
+  }).filter(Boolean);
+
   let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
-  // Grid
   [.25,.5,.75,1.0].forEach(v=>{
     svg+=`<line x1="${ml}" y1="${ys(v).toFixed(1)}" x2="${W-mr}" y2="${ys(v).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
     svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;
@@ -754,21 +933,357 @@ function panel6Svg(meetings,states,lb){
     svg+=`<line x1="${x2.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="var(--c-cme)" stroke-width="2" stroke-dasharray="2,2"/>`;
   }
   cumCuts.forEach((v,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(v).toFixed(1)}" r="3" fill="var(--c-cme)" opacity=".8"/>`;});
-  // Kalshi points
+  // Polymarket diamonds (cyan) — plotted before Kalshi so Kalshi labels are on top
+  polyPoints.forEach(p=>{
+    const cx2=xs(p.i),cy2=ys(p.v),s=5;
+    svg+=`<polygon points="${cx2},${cy2-s} ${cx2+s},${cy2} ${cx2},${cy2+s} ${cx2-s},${cy2}" fill="var(--c-poly)" opacity=".85"/>`;
+    svg+=`<text x="${cx2.toFixed(1)}" y="${(ys(p.v)-9).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--c-poly)" font-family="var(--font-mono)">${(p.v*100).toFixed(0)}%</text>`;
+  });
+  // Kalshi circles (orange)
   kalPoints.forEach(p=>{
     svg+=`<circle cx="${xs(p.i).toFixed(1)}" cy="${ys(p.v).toFixed(1)}" r="6" fill="var(--c-kal)" opacity=".85"/>`;
     svg+=`<text x="${xs(p.i).toFixed(1)}" y="${(ys(p.v)-10).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-kal)" font-family="var(--font-mono)">${(p.v*100).toFixed(0)}%</text>`;
-    svg+=`<text x="${xs(p.i).toFixed(1)}" y="${(H+mt+mb-4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-kal)" font-family="var(--font-sans)">${p.label}</text>`;
+    svg+=`<text x="${xs(p.i).toFixed(1)}" y="${(H+mt+mb-4).toFixed(1)}" text-anchor="middle" font-size="7" fill="var(--c-kal)" font-family="var(--font-sans)">${p.label.replace('\n',' ')}</text>`;
   });
   // X labels
   meetings.forEach((m,i)=>{
     if(i%2===0)svg+=`<text x="${xs(i+1).toFixed(1)}" y="${(H+mt+16).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${m.label.split('–')[0]}</text>`;
   });
+  // Legend
+  svg+=`<text x="${ml}" y="${(H+mt+mb-3).toFixed(1)}" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">● CME</text>`;
+  svg+=`<text x="${ml+38}" y="${(H+mt+mb-3).toFixed(1)}" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">● Kalshi</text>`;
+  svg+=`<text x="${ml+90}" y="${(H+mt+mb-3).toFixed(1)}" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">◆ Polymarket</text>`;
   svg+=`</svg>`;
   return svg;
 }
 
-// ─── Init ─────────────────────────────────────────────────────────────────────
+// Panel 7: CME final rate distribution vs Polymarket terminal rate market
+function panel7Svg(final,lb){
+  const W=680,H=90,mt=22,mb=30,ml=10,mr=10;
+  // CME distribution (lower bound)
+  const cmeDist=Object.entries(final).map(([k,p])=>({rate:lb+parseInt(k)*.25,p})).sort((a,b)=>a.rate-b.rate);
+  // Polymarket terminal rate (upper bound — subtract 0.25 to compare with CME lower bound)
+  const polyDist=Object.entries(polyD.terminalRate).map(([r,p])=>({rate:parseFloat(r)-0.25,p})).sort((a,b)=>a.rate-b.rate);
+  const allRates=[...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)];
+  const minR=Math.min(...allRates),maxR=Math.max(...allRates);
+  const maxP=Math.max(...cmeDist.map(d=>d.p),...polyDist.map(d=>d.p));
+  const rRange=maxR-minR||1;
+  const xs=r=>ml+(r-minR)/rRange*(W-ml-mr);
+  const bW=Math.min(28,(W-ml-mr)/Math.max(allRates.length,1)*0.38);
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Grid lines
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxP*maxP);if(v<=maxP+0.05){svg+=`<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;svg+=`<text x="${(ml-1).toFixed(1)}" y="${(y-2).toFixed(1)}" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(v*100).toFixed(0)}%</text>`;}});
+  // CME bars (filled blue)
+  cmeDist.forEach(d=>{if(d.p<0.002)return;const x=xs(d.rate)-bW/2,h=H*(d.p/maxP),y=mt+H-h,fo=0.2+d.p*.7;svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(1,h).toFixed(1)}" rx="2" fill="var(--c-cme)" fill-opacity="${fo.toFixed(2)}" stroke="var(--c-cme)" stroke-width=".5"/>`;if(d.p>.04)svg+=`<text x="${(x+bW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">${(d.p*100).toFixed(0)}%</text>`;});
+  // Polymarket bars (cyan outline only, slightly offset)
+  polyDist.forEach(d=>{if(d.p<0.01)return;const x=xs(d.rate)-bW/2+2,h=H*(d.p/maxP),y=mt+H-h;svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(1,h).toFixed(1)}" rx="2" fill="var(--c-poly)" fill-opacity=".18" stroke="var(--c-poly)" stroke-width="1.5"/>`;if(d.p>.06)svg+=`<text x="${(x+bW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">${(d.p*100).toFixed(0)}%</text>`;});
+  // X-axis rate labels
+  const labelRates=[...new Set([...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)])].sort((a,b)=>a-b);
+  labelRates.forEach(r=>{svg+=`<text x="${xs(r).toFixed(1)}" y="${(mt+H+16).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${r.toFixed(2)}</text>`;});
+  // Legend
+  svg+=`<text x="${ml}" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">■ CME (lower bound)</text>`;
+  svg+=`<text x="${ml+140}" y="14" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">□ Polymarket (upper bound −0.25%)</text>`;
+  svg+=`</svg>`;
+  return svg;
+}
+
+// Panel 8a: Fed Chair nomination — Polymarket
+function panel8aHtml(){
+  const entries=Object.entries(polyD.fedChair).sort((a,b)=>b[1]-a[1]);
+  const hawkishness={'Kevin Warsh':'hawkish','Rick Rieder':'dovish','Other':'unknown'};
+  let h=`<div style="margin-bottom:8px">`;
+  entries.forEach(([name,p])=>{
+    const pct=(p*100).toFixed(0);
+    const tag=hawkishness[name]||'unknown';
+    const tagCol=tag==='hawkish'?'var(--color-text-danger)':tag==='dovish'?'var(--color-text-info)':'var(--color-text-tertiary)';
+    h+=`<div style="margin-bottom:7px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px">
+        <span style="font-size:12px;font-weight:500">${name}</span>
+        <span style="display:flex;gap:5px;align-items:center">
+          <span class="k-pill" style="background:var(--color-background-secondary);color:${tagCol};border:.5px solid ${tagCol}">${tag}</span>
+          <span style="font-size:12px;font-weight:500;font-family:var(--font-mono)">${pct}%</span>
+        </span>
+      </div>
+      <div style="height:16px;border-radius:3px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex">
+        <div style="width:${pct}%;background:var(--c-poly);opacity:.8"></div>
+        <div style="flex:1;background:var(--color-background-primary)"></div>
+      </div>
+    </div>`;
+  });
+  h+=`</div>
+  <div style="font-size:10px;color:var(--color-text-tertiary);border-top:.5px solid var(--color-border-tertiary);padding-top:6px">
+    Volume: $230M · Market: <a href="https://polymarket.com/event/who-will-trump-nominate-as-fed-chair" target="_blank" style="color:var(--c-poly);text-decoration:none">polymarket.com/…/fed-chair</a>
+  </div>`;
+  return h;
+}
+
+// Panel 8b: Emergency cut gauge (Polymarket-unique)
+function panel8bSvg(emergencyCut, polyHike){
+  const W=280,H=60,mt=10,mb=14,ml=10,mr=10;
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  const items=[
+    {label:'Emergency cut before 2027',v:emergencyCut,col:'var(--c-poly)'},
+    {label:'Any hike in 2026',v:polyHike,col:'var(--color-text-danger)'},
+  ];
+  items.forEach((item,i)=>{
+    const y=mt+i*(H/2+4);
+    const barW=(W-ml-mr-100)*Math.min(1,item.v);
+    svg+=`<text x="${ml}" y="${(y+11).toFixed(1)}" font-size="9" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${item.label}</text>`;
+    svg+=`<rect x="${ml}" y="${(y+14).toFixed(1)}" width="${(W-ml-mr-100).toFixed(1)}" height="14" rx="3" fill="var(--color-border-tertiary)" opacity=".4"/>`;
+    svg+=`<rect x="${ml}" y="${(y+14).toFixed(1)}" width="${Math.max(2,barW).toFixed(1)}" height="14" rx="3" fill="${item.col}" opacity=".8"/>`;
+    svg+=`<text x="${(ml+W-ml-mr-96).toFixed(1)}" y="${(y+25).toFixed(1)}" font-size="10" font-weight="500" fill="${item.col}" font-family="var(--font-mono)">${(item.v*100).toFixed(1)}%</text>`;
+  });
+  svg+=`</svg>`;
+  svg+=`<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">
+    Emergency cut: <a href="https://polymarket.com/event/fed-emergency-rate-cut-before-2027" target="_blank" style="color:var(--c-poly);text-decoration:none">polymarket.com/…/fed-emergency-rate-cut</a><br>
+    Historical precedent: Jan 2001, Sep 2001, Oct 2008, Mar 2020
+  </div>`;
+  return svg;
+}
+
+// ================================================================================
+// --- SOFR strip (SR3 quarterly futures) ──────────────────────────────────────
+// ================================================================================
+
+// SR3 quarterly contracts: price = 100 − implied avg 3-month SOFR
+// zqMonths: the three ZQ months whose average EFFR is comparable
+let srD=[
+  {lb:'Jun 2026',ticker:'SR3M6',price:96.35,qLabel:'Q2 2026',zqMonths:['Apr 2026','May 2026','Jun 2026']},
+  {lb:'Sep 2026',ticker:'SR3U6',price:96.53,qLabel:'Q3 2026',zqMonths:['Jul 2026','Aug 2026','Sep 2026']},
+  {lb:'Dec 2026',ticker:'SR3Z6',price:96.68,qLabel:'Q4 2026',zqMonths:['Oct 2026','Nov 2026','Dec 2026']},
+  {lb:'Mar 2027',ticker:'SR3H7',price:96.80,qLabel:'Q1 2027',zqMonths:['Jan 2027','Feb 2027','Mar 2027']},
+  {lb:'Jun 2027',ticker:'SR3M7',price:96.88,qLabel:'Q2 2027',zqMonths:[]},
+  {lb:'Sep 2027',ticker:'SR3U7',price:96.94,qLabel:'Q3 2027',zqMonths:[]},
+  {lb:'Dec 2027',ticker:'SR3Z7',price:96.99,qLabel:'Q4 2027',zqMonths:[]},
+];
+
+// --- SR3 refresh ─────────────────────────────────────────────────────────────
+async function fetchSOFR(){
+  const btn=document.getElementById('sofr-btn'),icon=document.getElementById('sofr-icon'),status=document.getElementById('sofr-status');
+  const key=document.getElementById('api-key-input').value.trim();
+  btn.disabled=true;icon.className='spin';status.textContent='Searching for SR3 futures prices…';
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest CME 3-Month SOFR futures (SR3) settlement or last-trade prices for these contract months: Jun 2026 (SR3M6), Sep 2026 (SR3U6), Dec 2026 (SR3Z6), Mar 2027 (SR3H7), Jun 2027 (SR3M7), Sep 2027 (SR3U7), Dec 2027 (SR3Z7). Also find the current SOFR fixing rate. Return ONLY raw JSON — no markdown, no fences:
+{"asOf":"YYYY-MM-DD","source":"source name","sofr":3.68,"prices":{"Jun 2026":96.35,"Sep 2026":96.53,"Dec 2026":96.68,"Mar 2027":96.80,"Jun 2027":96.88,"Sep 2027":96.94,"Dec 2027":96.99}}
+Prices follow the CME convention (100 minus implied rate). Keep fallback values shown if a contract is unavailable.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||`API ${res.status}`);
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    let up=0;
+    srD.forEach(row=>{if(p.prices?.[row.lb]!==undefined){const v=parseFloat(p.prices[row.lb]);if(v>90&&v<100){row.price=v;up++;}}});
+    status.textContent=`${up} SR3 contracts updated · ${p.source||'web'} · SOFR ${p.sofr||'—'}%`;
+    document.getElementById('version-badge').textContent='v2.0 · '+new Date().toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    if(fwActive==='sofr'){const chain=fwChain(fwD);const meetings=fwMeetings(fwD,chain);fwRenderSOFR(meetings,chain,parseFloat(document.getElementById('fw-lb-in')?.value)||3.50);}
+  }catch(e){status.textContent='⚠ '+(e.message||'Failed');}
+  finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
+}
+
+// --- Helpers: compute ZQ quarterly avg EFFR for comparison ──────────────────
+function zqQuarterlyAvg(months){
+  // Returns array aligned to srD — avg implied EFFR for matching ZQ months
+  return srD.map(s=>{
+    if(!s.zqMonths.length)return null;
+    const vals=s.zqMonths.map(lb2=>{const row=fwD.find(d=>d.lb===lb2);return row?100-row.price:null;}).filter(v=>v!==null);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+}
+
+// Instantaneous 3M forward rate derived from adjacent SR3 contracts
+// f(i→i+1) = 2 * r_{i+1} - r_i  (exact for equally-spaced quarterly contracts)
+function srInstFwd(){
+  const rates=srD.map(s=>100-s.price);
+  return rates.map((r,i)=>i===0?null:2*rates[i]-rates[i-1]);
+}
+
+// --- SOFR tab renderer ───────────────────────────────────────────────────────
+function fwRenderSOFR(meetings,chain,lb){
+  const el=document.getElementById('fw-sofr');
+  const zqAvgs=zqQuarterlyAvg();
+  const instFwd=srInstFwd();
+
+  // ── Fetch bar ──
+  let html=`<div class="k-fetch-bar">
+    <button class="refresh-btn" id="sofr-btn" onclick="fetchSOFR()"><span id="sofr-icon">⟳</span> Fetch SR3 data</button>
+    <span class="k-seed-note" id="sofr-status">Seed data — click to fetch live SR3 prices</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">
+      <span class="k-dot" style="background:var(--c-sofr)"></span> SR3 implied SOFR &nbsp;
+      <span class="k-dot" style="background:var(--c-cme)"></span> ZQ quarterly avg EFFR &nbsp;
+      <span class="k-dot" style="background:var(--c-sofr-fwd);border:1px dashed var(--c-sofr)"></span> 3M inst. forward &nbsp;
+      <span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP dots
+    </span>
+  </div>`;
+
+  // ── Panel A: contract table ──────────────────────────────────────────────────
+  html+=`<div class="k-panel" style="margin-bottom:12px">
+    <div class="k-hdr"><span class="k-title">SR3 contract strip — 3-month SOFR futures (CME)</span><span class="k-contract">SR3M6 → SR3Z7</span></div>
+    <div style="overflow-x:auto"><table class="fwt">
+    <thead><tr>
+      <th>Contract</th><th>Quarter</th><th>SR3 price</th>
+      <th>Impl. SOFR</th><th>ZQ avg EFFR</th><th>Basis (bp)</th><th>3M inst. fwd</th>
+    </tr></thead><tbody>`;
+  srD.forEach((s,i)=>{
+    const sofrRate=(100-s.price).toFixed(4);
+    const zqAvg=zqAvgs[i];
+    const basis=zqAvg!==null?((100-s.price-zqAvg)*100).toFixed(1):'—';
+    const bCol=basis!=='—'?(parseFloat(basis)>0?'var(--color-text-info)':'var(--color-text-danger)'):'var(--color-text-tertiary)';
+    const fwd=instFwd[i]!==null?instFwd[i].toFixed(4):'—';
+    html+=`<tr>
+      <td style="font-family:var(--font-mono);font-size:11px;color:var(--c-sofr)">${s.ticker}</td>
+      <td style="white-space:nowrap">${s.qLabel}</td>
+      <td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="${s.price}" style="width:72px"
+        onchange="srD[${i}].price=+this.value||srD[${i}].price;const c=fwChain(fwD);fwRenderSOFR(fwMeetings(fwD,c),c,parseFloat(document.getElementById('fw-lb-in')?.value)||3.50)">
+      </td>
+      <td style="font-family:var(--font-mono);color:var(--c-sofr)">${sofrRate}%</td>
+      <td style="font-family:var(--font-mono);color:var(--c-cme)">${zqAvg!==null?zqAvg.toFixed(4)+'%':'—'}</td>
+      <td style="font-family:var(--font-mono);font-weight:500;color:${bCol}">${basis!=='—'?(parseFloat(basis)>0?'+':'')+basis:basis}</td>
+      <td style="font-family:var(--font-mono);color:var(--c-sofr-fwd)">${fwd!=='—'?fwd+'%':fwd}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+    <div class="k-note">Basis = (SR3 implied SOFR − ZQ quarterly avg EFFR) × 100, in basis points. Historically 5–15bp reflecting the repo/deposit spread between SOFR and EFFR. Instantaneous forward = 2×r<sub>t+1</sub> − r<sub>t</sub> — the marginal rate the market prices for each successive quarter, stripping out the averaging effect of the futures contract.</div>
+  </div>`;
+
+  // ── Panel B: main chart ──────────────────────────────────────────────────────
+  html+=`<div class="k-panel k-full" style="margin-bottom:12px">
+    <div class="k-hdr">
+      <span class="k-title">Forward rate curves — SR3 SOFR strip vs ZQ EFFR chain vs Fed SEP</span>
+      <span class="k-contract">SR3 vs ZQ vs Dec 2025 SEP</span>
+    </div>`;
+  html+=sofrMainChart(zqAvgs,instFwd,lb);
+  html+=`<div class="k-note">Three forward rate curves on a common axis. The SR3 strip (green) typically trades a few basis points above the ZQ-derived EFFR path (blue) — this persistent basis reflects the credit/liquidity premium embedded in SOFR. The instantaneous forward curve (dashed green) extracts the marginal rate implied by each successive quarterly contract, removing the averaging effect; it will lead the SR3 rate lower at inflection points in the easing cycle. Purple circles: Fed December 2025 SEP median projections at year-end 2026 and 2027 horizons.</div>
+  </div>`;
+
+  // ── Panels C1 + C2 ──────────────────────────────────────────────────────────
+  html+=`<div class="k-grid">`;
+
+  // Basis bars
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">SOFR–EFFR basis by quarter (bp)</span><span class="k-contract">SR3 − ZQ avg</span></div>`;
+  html+=basisBarsSvg(zqAvgs);
+  html+=`<div class="k-note">Positive basis = SOFR trades above EFFR, as expected. A widening basis signals stress in overnight repo markets or increased demand for SOFR-linked instruments. A compression toward zero would suggest convergence of money market conditions.</div>
+  </div>`;
+
+  // Key stats panel
+  const currentBasis=zqAvgs[0]!==null?((100-srD[0].price-zqAvgs[0])*100).toFixed(1):'—';
+  const sofrTerminal=(100-srD[srD.length-1].price).toFixed(2);
+  const effrTerminal=fwD[fwD.length-1]?(100-fwD[fwD.length-1].price).toFixed(2):'—';
+  const stripSlope=((100-srD[srD.length-1].price)-(100-srD[0].price)).toFixed(2);
+  const fwdMin=instFwd.filter(v=>v!==null);
+  const troughFwd=fwdMin.length?Math.min(...fwdMin).toFixed(2):'—';
+  const troughQtr=fwdMin.length?srD[instFwd.indexOf(Math.min(...fwdMin))].qLabel:'—';
+
+  html+=`<div class="k-panel">
+    <div class="k-hdr"><span class="k-title">Strip summary statistics</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div class="fw-stat"><div class="fw-stat-l">Near-term basis</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">${currentBasis!=='—'?'+':''}${currentBasis} bp</div><div class="fw-stat-s">SR3M6 − ZQ Q2 avg</div></div>
+      <div class="fw-stat"><div class="fw-stat-l">SOFR terminal (Dec 27)</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">${sofrTerminal}%</div><div class="fw-stat-s">SR3Z7 implied</div></div>
+      <div class="fw-stat"><div class="fw-stat-l">EFFR terminal (Mar 27)</div><div class="fw-stat-v" style="color:var(--c-cme);font-size:16px">${effrTerminal}%</div><div class="fw-stat-s">ZQ Mar 2027 implied</div></div>
+      <div class="fw-stat"><div class="fw-stat-l">Strip slope</div><div class="fw-stat-v" style="color:${parseFloat(stripSlope)<0?'var(--color-text-info)':'var(--color-text-danger)'};font-size:16px">${stripSlope}%</div><div class="fw-stat-s">Dec 27 minus Jun 26</div></div>
+      <div class="fw-stat" style="grid-column:1/-1"><div class="fw-stat-l">Forward trough</div><div class="fw-stat-v" style="color:var(--c-sofr-fwd);font-size:16px">${troughFwd}%</div><div class="fw-stat-s">Inst. fwd minimum — ${troughQtr}</div></div>
+    </div>
+    <div class="k-note">The instantaneous forward trough marks the quarter where the SR3 strip prices the most aggressive easing — where the marginal rate bottoms before potentially rising toward neutral. This is distinct from the terminal rate level implied by the strip's endpoint.</div>
+  </div>`;
+  html+=`</div>`;
+
+  el.innerHTML=html;
+}
+
+// --- SOFR main chart SVG ─────────────────────────────────────────────────────
+function sofrMainChart(zqAvgs,instFwd,lb){
+  const W=680,H=140,mt=24,mb=28,ml=36,mr=12;
+  const n=srD.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  // All rate values
+  const sofrRates=srD.map(s=>100-s.price);
+  const validZQ=zqAvgs.map((v,i)=>({v,i})).filter(d=>d.v!==null);
+  const validFwd=instFwd.map((v,i)=>({v,i})).filter(d=>d.v!==null);
+  // Fed dots at Dec 2026 (i=2) and Dec 2027 (i=6) — approximate SR3 contract alignment
+  const fedDots=[{i:2,rate:3.375,label:'Dec 2026 SEP'},{i:6,rate:3.00,label:'Dec 2027 SEP'}];
+  const allV=[...sofrRates,...validZQ.map(d=>d.v),...validFwd.map(d=>d.v),...fedDots.map(d=>d.rate)];
+  const minR=Math.min(...allV)-0.08,maxR=Math.max(...allV)+0.08;
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Y grid
+  const step=0.25;
+  for(let y2=Math.ceil(minR/step)*step;y2<=maxR;y2+=step){
+    const y=ys(y2);
+    svg+=`<line x1="${ml}" y1="${y.toFixed(1)}" x2="${W-mr}" y2="${y.toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${(ml-4).toFixed(1)}" y="${y.toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${y2.toFixed(2)}</text>`;
+  }
+  // ZQ quarterly avg line (blue)
+  if(validZQ.length>1){
+    for(let k=0;k<validZQ.length-1;k++){
+      const a=validZQ[k],b=validZQ[k+1];
+      svg+=`<line x1="${xs(a.i).toFixed(1)}" y1="${ys(a.v).toFixed(1)}" x2="${xs(b.i).toFixed(1)}" y2="${ys(b.v).toFixed(1)}" stroke="var(--c-cme)" stroke-width="2" opacity=".8"/>`;
+    }
+    validZQ.forEach(d=>{svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.v).toFixed(1)}" r="4" fill="var(--c-cme)" opacity=".85"/>`;});
+  }
+  // Instantaneous forward line (dashed green)
+  if(validFwd.length>1){
+    for(let k=0;k<validFwd.length-1;k++){
+      const a=validFwd[k],b=validFwd[k+1];
+      svg+=`<line x1="${xs(a.i).toFixed(1)}" y1="${ys(a.v).toFixed(1)}" x2="${xs(b.i).toFixed(1)}" y2="${ys(b.v).toFixed(1)}" stroke="var(--c-sofr-fwd)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".85"/>`;
+    }
+    validFwd.forEach(d=>{svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.v).toFixed(1)}" r="3" fill="var(--c-sofr-fwd)" opacity=".8"/>`;});
+  }
+  // SR3 SOFR line (green, solid, on top)
+  for(let i=0;i<sofrRates.length-1;i++){
+    svg+=`<line x1="${xs(i).toFixed(1)}" y1="${ys(sofrRates[i]).toFixed(1)}" x2="${xs(i+1).toFixed(1)}" y2="${ys(sofrRates[i+1]).toFixed(1)}" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".9"/>`;
+  }
+  sofrRates.forEach((r,i)=>{
+    svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="5" fill="var(--c-sofr)" opacity=".9"/>`;
+    svg+=`<text x="${xs(i).toFixed(1)}" y="${(ys(r)-9).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--c-sofr)" font-family="var(--font-mono)">${r.toFixed(2)}</text>`;
+  });
+  // Fed dots
+  fedDots.forEach(d=>{
+    svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.rate).toFixed(1)}" r="6" fill="var(--c-dots)" opacity=".85"/>`;
+    svg+=`<text x="${xs(d.i).toFixed(1)}" y="${(ys(d.rate)+14).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">${d.label}</text>`;
+  });
+  // X labels
+  srD.forEach((s,i)=>{svg+=`<text x="${xs(i).toFixed(1)}" y="${(mt+H+16).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${s.qLabel}</text>`;});
+  svg+=`</svg>`;
+  return svg;
+}
+
+// --- Basis bars SVG ──────────────────────────────────────────────────────────
+function basisBarsSvg(zqAvgs){
+  const W=320,H=80,mt=18,mb=30,ml=26,mr=8;
+  const bases=srD.map((s,i)=>zqAvgs[i]!==null?((100-s.price)-zqAvgs[i])*100:null).filter(v=>v!==null);
+  const quarters=srD.filter((_,i)=>zqAvgs[i]!==null).map(s=>s.qLabel);
+  const maxB=Math.max(...bases.map(Math.abs),0.15);
+  const bW=Math.min(30,(W-ml-mr)/Math.max(bases.length,1)*0.65);
+  const xs=i=>ml+(i+0.5)*((W-ml-mr)/Math.max(bases.length,1));
+  const yMid=mt+H/2;
+  const ys=v=>yMid-(v/maxB)*(H/2);
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Zero line
+  svg+=`<line x1="${ml}" y1="${yMid.toFixed(1)}" x2="${W-mr}" y2="${yMid.toFixed(1)}" stroke="var(--color-border-secondary)" stroke-width="1"/>`;
+  // Grid
+  [maxB/2,maxB].forEach(v=>{
+    [v,-v].forEach(y2=>{
+      svg+=`<line x1="${ml}" y1="${ys(y2).toFixed(1)}" x2="${W-mr}" y2="${ys(y2).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    });
+    svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(v).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${v.toFixed(1)}</text>`;
+    svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(0).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>`;
+  });
+  bases.forEach((b,i)=>{
+    const x=xs(i)-bW/2,h=Math.abs(b/maxB)*(H/2),y=b>=0?ys(b):yMid;
+    const col=b>=0?'var(--c-sofr)':'var(--color-text-danger)';
+    svg+=`<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${bW}" height="${Math.max(1,h).toFixed(1)}" rx="2" fill="${col}" opacity=".8"/>`;
+    svg+=`<text x="${xs(i).toFixed(1)}" y="${(b>=0?ys(b)-4:ys(b)+h+10).toFixed(1)}" text-anchor="middle" font-size="8.5" fill="${col}" font-family="var(--font-mono)" font-weight="500">${b>0?'+':''}${b.toFixed(1)}</text>`;
+    svg+=`<text x="${xs(i).toFixed(1)}" y="${(mt+H+mb-6).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${quarters[i]}</text>`;
+  });
+  svg+=`</svg>`;
+  return svg;
+}
+
+// --- Init ─────────────────────────────────────────────────────────────────────
 fwRender();
 </script>
 </body>
