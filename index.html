@@ -1,11 +1,688 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="refresh" content="0; url=fed_funds_probability_tree.html">
-<title>Fed Funds Probability Tree</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fed Funds Probability Tree — David Bieri</title>
+<meta name="description" content="Interactive CME FedWatch methodology implementation with Kalshi, Polymarket, and SOFR strip overlay. 12 months forward, 5 tabs, 9 prediction market panels.">
+<link rel="canonical" href="https://davidbieri.github.io/fed-funds/">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --navy:#0d1929;
+  --surface:#1a2538;
+  --surface2:#22304a;
+  --border:#2a3d57;
+  --cme:#3b82f6;
+  --kal:#f97316;
+  --poly:#06b6d4;
+  --sofr:#10b981;
+  --text:#e8edf5;
+  --muted:#8899b4;
+  --faint:#4a5e7a;
+}
+
+body{
+  font-family:'DM Sans',sans-serif;
+  background:var(--navy);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+body::before{
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+  background-size:40px 40px;
+  pointer-events:none;
+  z-index:0;
+}
+
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px}
+
+/* NAV */
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 0;border-bottom:1px solid var(--border);
+}
+.nav-logo{
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
+  color:var(--cme);letter-spacing:.08em;text-transform:uppercase;
+}
+.nav-links{display:flex;gap:20px;align-items:center}
+.nav-link{
+  font-size:12px;color:var(--muted);text-decoration:none;
+  font-family:'JetBrains Mono',monospace;letter-spacing:.04em;
+  transition:color .2s;
+}
+.nav-link:hover{color:var(--text)}
+.nav-badge{
+  font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;
+  background:rgba(59,130,246,0.12);color:var(--cme);
+  padding:3px 8px;border-radius:3px;border:1px solid rgba(59,130,246,0.25);
+}
+
+/* HERO */
+.hero{padding:64px 0 48px;border-bottom:1px solid var(--border)}
+.hero-eyebrow{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.14em;
+  color:var(--cme);text-transform:uppercase;margin-bottom:20px;
+  display:flex;align-items:center;gap:8px;
+}
+.hero-eyebrow::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(59,130,246,.3),transparent)}
+.hero-title{
+  font-family:'Spectral',serif;font-size:clamp(32px,5vw,52px);
+  font-weight:300;line-height:1.15;color:var(--text);
+  margin-bottom:20px;letter-spacing:-.01em;
+}
+.hero-title em{font-style:italic;color:rgba(232,237,245,0.65)}
+.hero-sub{
+  font-size:15px;line-height:1.7;color:var(--muted);
+  max-width:600px;margin-bottom:36px;font-weight:300;
+}
+.hero-stats{display:flex;gap:32px;margin-bottom:40px;flex-wrap:wrap}
+.stat{display:flex;flex-direction:column;gap:3px}
+.stat-n{
+  font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:500;
+  color:var(--text);
+}
+.stat-l{font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em}
+.hero-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+.btn-launch{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--cme);color:#fff;
+  font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:12px 24px;border:none;border-radius:4px;cursor:pointer;
+  transition:background .2s,transform .15s;text-decoration:none;
+}
+.btn-launch:hover{background:#2563eb;transform:translateY(-1px)}
+
+.btn-gh{
+  display:inline-flex;align-items:center;gap:6px;
+  background:transparent;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;font-size:12px;
+  padding:11px 20px;border:1px solid var(--border);border-radius:4px;
+  cursor:pointer;transition:border-color .2s,color .2s;text-decoration:none;
+}
+.btn-gh:hover{border-color:var(--muted);color:var(--text)}
+
+/* SECTIONS */
+.section{padding:48px 0;border-bottom:1px solid var(--border)}
+.section-label{
+  font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.14em;
+  color:var(--faint);text-transform:uppercase;margin-bottom:24px;
+}
+
+/* TABS GRID */
+.tabs-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px}
+.tab-card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:6px;padding:20px;
+  transition:border-color .2s,transform .15s;
+}
+.tab-card:hover{border-color:var(--cme);transform:translateY(-2px)}
+.tab-num{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);
+  margin-bottom:8px;letter-spacing:.1em;
+}
+.tab-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:8px}
+.tab-desc{font-size:12px;color:var(--muted);line-height:1.6}
+
+/* MARKETS */
+.markets-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.mkt{
+  background:var(--surface);border-radius:6px;padding:16px 20px;
+  border-left:3px solid;display:flex;flex-direction:column;gap:6px;
+}
+.mkt.cme{border-color:var(--cme)}
+.mkt.kal{border-color:var(--kal)}
+.mkt.poly{border-color:var(--poly)}
+.mkt.sofr{border-color:var(--sofr)}
+.mkt-name{font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase}
+.mkt.cme .mkt-name{color:var(--cme)}
+.mkt.kal .mkt-name{color:var(--kal)}
+.mkt.poly .mkt-name{color:var(--poly)}
+.mkt.sofr .mkt-name{color:var(--sofr)}
+.mkt-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.mkt-tag{
+  display:inline-block;font-family:'JetBrains Mono',monospace;font-size:9px;
+  color:var(--faint);background:rgba(255,255,255,0.04);
+  padding:2px 6px;border-radius:2px;margin-top:2px;letter-spacing:.04em;
+}
+
+/* CITATION */
+.cite-tabs{display:flex;gap:0;border-bottom:1px solid var(--border)}
+.cite-tab{
+  font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;
+  color:var(--faint);padding:10px 18px;cursor:pointer;
+  border-bottom:2px solid transparent;transition:color .15s,border-color .15s;
+  background:none;border-top:none;border-left:none;border-right:none;
+}
+.cite-tab.act{color:var(--cme);border-bottom-color:var(--cme)}
+.cite-box{
+  background:var(--surface);border:1px solid var(--border);border-top:none;
+  border-radius:0 0 6px 6px;padding:20px;position:relative;
+}
+.cite-text{
+  font-family:'JetBrains Mono',monospace;font-size:11.5px;line-height:1.8;
+  color:var(--muted);white-space:pre-wrap;word-break:break-word;
+}
+.cite-copy{
+  position:absolute;top:14px;right:14px;
+  background:var(--surface2);border:1px solid var(--border);
+  color:var(--faint);font-family:'JetBrains Mono',monospace;font-size:10px;
+  padding:5px 10px;border-radius:3px;cursor:pointer;
+  transition:color .15s,border-color .15s;
+}
+.cite-copy:hover{color:var(--cme);border-color:var(--cme)}
+.cite-content{display:none}
+.cite-content.act{display:block}
+
+/* FOOTER */
+footer{
+  padding:32px 0;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+}
+.footer-left{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);line-height:1.8;
+}
+.footer-right{display:flex;gap:16px}
+.foot-link{
+  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);
+  text-decoration:none;transition:color .15s;
+}
+.foot-link:hover{color:var(--cme)}
+
+/* MODAL */
+.modal-backdrop{
+  display:none;position:fixed;inset:0;
+  background:rgba(9,18,31,0.92);z-index:100;
+  align-items:center;justify-content:center;
+  backdrop-filter:blur(4px);
+}
+.modal-backdrop.open{display:flex}
+.modal{
+  width:min(96vw,1100px);height:min(94vh,840px);
+  background:var(--navy);border:1px solid var(--border);
+  border-radius:8px;overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 40px 100px rgba(0,0,0,.7);
+}
+.modal-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;background:var(--surface);border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.modal-title{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.06em;
+}
+.modal-close{
+  background:none;border:none;color:var(--faint);font-size:18px;cursor:pointer;
+  line-height:1;padding:2px 6px;border-radius:3px;transition:color .15s;
+}
+.modal-close:hover{color:var(--text)}
+.modal iframe{flex:1;border:none;width:100%;height:100%}
+</style>
 </head>
 <body>
-<p>Redirecting to <a href="fed_funds_probability_tree.html">Fed Funds Probability Tree</a>…</p>
+
+<!-- Launch modal with iframe -->
+<div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-bar">
+      <span class="modal-title">FED FUNDS PROBABILITY TREE · v3.0</span>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <iframe src="fed_funds_probability_tree.html" title="Fed Funds Probability Tree"></iframe>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <nav>
+    <span class="nav-logo">davidbieri / fed-funds</span>
+    <div class="nav-links">
+      <span class="nav-badge">v3.0 · Mar 2026</span>
+      <a class="nav-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
+    </div>
+  </nav>
+
+  <div class="hero">
+    <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip</div>
+    <h1 class="hero-title">Fed Funds<br><em>Probability Tree</em></h1>
+    <p class="hero-sub">An interactive implementation of the CME FedWatch methodology — 30-day ZQ futures chain, unconditional probability lattice, and a three-way prediction market comparison across Kalshi, Polymarket, and the SOFR strip. No build step, no dependencies.</p>
+    <div class="hero-stats">
+      <div class="stat"><span class="stat-n">12</span><span class="stat-l">months forward</span></div>
+      <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
+      <div class="stat"><span class="stat-n">9</span><span class="stat-l">comparison panels</span></div>
+      <div class="stat"><span class="stat-n">7</span><span class="stat-l">SR3 contracts</span></div>
+    </div>
+    <div class="hero-actions">
+      <button class="btn-launch" onclick="openModal()">⟶ Launch Tool</button>
+      <a class="btn-gh" href="https://github.com/davidbieri/fed-funds" target="_blank">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Five tabs</div>
+    <div class="tabs-grid">
+      <div class="tab-card">
+        <div class="tab-num">01 — FUTURES INPUTS</div>
+        <div class="tab-name">ZQ Price Editor</div>
+        <div class="tab-desc">Editable table of CME 30-day Fed Funds futures prices (Apr 2026–Mar 2027), FOMC meeting flags, and N/M day splits. Refresh via live web search or edit manually.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">02 — EFFR CHAIN</div>
+        <div class="tab-name">Rate Propagation</div>
+        <div class="tab-desc">Full EFFR anchor chain: non-meeting months fix EFFR(End) = EFFR(Avg) = EFFR(Start+1); meeting months solved via the day-weighted CME FedWatch formula.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">03 — PROBABILITY TREE</div>
+        <div class="tab-name">Unconditional Lattice</div>
+        <div class="tab-desc">SVG probability lattice across all FOMC meetings. Node opacity ∝ probability. Summary: P(≥1/2/3 cuts), expected cuts, implied rate, final rate distribution.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">04 — PREDICTION MARKETS</div>
+        <div class="tab-name">9-Panel Comparison</div>
+        <div class="tab-desc">CME vs Kalshi vs Polymarket across 9 panels: meeting divergence, cut count distributions, combo paths, dot plots, hike risk, timing curves, terminal rates, Fed Chair regime risk, emergency cuts.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">05 — SOFR STRIP</div>
+        <div class="tab-name">SR3 Forward Curve</div>
+        <div class="tab-desc">7 quarterly SR3 contracts (SR3M6–SR3Z7, Jun 2026–Dec 2027). Three-curve chart: SOFR strip, ZQ quarterly EFFR, instantaneous 3M forwards. Per-quarter basis in bp.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">Data sources</div>
+    <div class="markets-row">
+      <div class="mkt cme">
+        <span class="mkt-name">CME Futures</span>
+        <span class="mkt-desc">30-day Fed Funds (ZQ) and 3-month SOFR (SR3) futures. FedWatch methodology from first principles.</span>
+        <span class="mkt-tag">ZQ · SR3M6–SR3Z7</span>
+      </div>
+      <div class="mkt kal">
+        <span class="mkt-name">Kalshi</span>
+        <span class="mkt-desc">Per-meeting decision markets, cut count distribution, hike risk, jumbo cut probability, implied rate levels.</span>
+        <span class="mkt-tag">kxfeddecision · kxfedhike · kxlargecut</span>
+      </div>
+      <div class="mkt poly">
+        <span class="mkt-name">Polymarket</span>
+        <span class="mkt-desc">Terminal rate distribution, Fed Chair nomination ($230M vol), emergency cut gauge, per-meeting timing.</span>
+        <span class="mkt-tag">fed-chair · emergency-cut · how-many-cuts</span>
+      </div>
+      <div class="mkt sofr">
+        <span class="mkt-name">Federal Reserve</span>
+        <span class="mkt-desc">EFFR daily publication (NY Fed), December 2025 SEP median dot plot projections.</span>
+        <span class="mkt-tag">EFFR · SOFR · Dec 2025 SEP</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-label">How it works</div>
+
+    <!-- User guide nav -->
+    <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
+      <button class="ug-ntab on" onclick="ugShow('overview',this)" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--faint);padding:10px 16px;cursor:pointer;border-bottom:2px solid var(--cme);color:var(--cme);background:none;border-top:none;border-left:none;border-right:none">Overview</button>
+      <button class="ug-ntab" onclick="ugShow('chain',this)">EFFR chain</button>
+      <button class="ug-ntab" onclick="ugShow('tree',this)">Probability tree</button>
+      <button class="ug-ntab" onclick="ugShow('prediction',this)">Prediction markets</button>
+      <button class="ug-ntab" onclick="ugShow('sofr',this)">SOFR strip</button>
+      <button class="ug-ntab" onclick="ugShow('scenarios',this)">Scenarios</button>
+      <button class="ug-ntab" onclick="ugShow('refresh',this)">Live data</button>
+    </div>
+
+    <style>
+    .ug-ntab{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--faint);padding:10px 16px;cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;transition:color .15s,border-color .15s}
+    .ug-ntab:hover{color:var(--text)}
+    .ug-ntab.on{color:var(--cme);border-bottom-color:var(--cme)}
+    .ug-page{display:none}.ug-page.on{display:block}
+    .ug-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:10px}
+    .ug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
+    .ug-body{font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px}
+    .ug-head{font-size:13px;font-weight:500;color:var(--text);margin:16px 0 6px}
+    .ug-formula{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 18px;margin:10px 0;line-height:1.9;overflow-x:auto}
+    .ug-formula .katex-display{margin:.4em 0}
+    .ug-steps{counter-reset:step;list-style:none;padding:0;margin:10px 0}
+    .ug-steps li{counter-increment:step;display:flex;gap:10px;margin-bottom:8px;font-size:13px;color:var(--muted);align-items:flex-start}
+    .ug-steps li::before{content:counter(step);min-width:20px;height:20px;background:rgba(59,130,246,.15);color:var(--cme);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;margin-top:2px}
+    .ug-pcard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px}
+    .ug-pnum{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);margin-bottom:4px}
+    .ug-ptitle{font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px}
+    .ug-pdesc{font-size:11px;color:var(--muted);line-height:1.55}
+    .ug-pills{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
+    .ug-pill{font-size:9px;padding:2px 7px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-weight:500}
+    .ug-pill-b{background:rgba(59,130,246,.15);color:var(--cme)}
+    .ug-pill-o{background:rgba(249,115,22,.15);color:var(--kal)}
+    .ug-pill-c{background:rgba(6,182,212,.15);color:var(--poly)}
+    .ug-pill-g{background:rgba(16,185,129,.15);color:var(--sofr)}
+    .ug-bar-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+    .ug-bar-track{flex:1;height:7px;background:rgba(255,255,255,.07);border-radius:4px;overflow:hidden}
+    .ug-bar-fill{height:100%;border-radius:4px}
+    .ug-nd{display:flex;align-items:center;flex-wrap:wrap;gap:0;margin:12px 0}
+    .ug-nd-node{background:rgba(59,130,246,.12);color:var(--cme);border:1px solid rgba(59,130,246,.25);border-radius:5px;padding:6px 11px;font-size:11px;font-family:'JetBrains Mono',monospace;white-space:nowrap}
+    .ug-nd-node.dim{background:rgba(255,255,255,.04);color:var(--faint);border-color:var(--border)}
+    .ug-nd-node.grn{background:rgba(16,185,129,.12);color:var(--sofr);border-color:rgba(16,185,129,.25)}
+    .ug-nd-arrow{font-size:14px;color:var(--faint);padding:0 6px}
+    .ug-tog-btn{font-family:'JetBrains Mono',monospace;font-size:11px;padding:5px 12px;border-radius:4px;cursor:pointer;border:1px solid var(--border);background:var(--surface);color:var(--muted);transition:all .15s}
+    .ug-tog-btn:hover{border-color:var(--muted);color:var(--text)}
+    .ug-tog-btn.on{background:var(--cme);color:#fff;border-color:var(--cme)}
+    .ug-tog-info{font-size:11px;color:var(--muted);font-style:italic;margin-top:6px;min-height:16px}
+    .ug-regime{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border-radius:4px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;margin:10px 0}
+    .ug-stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:12px 0}
+    .ug-stat{background:var(--surface);border-radius:5px;padding:10px 12px}
+    .ug-stat-l{font-size:9px;color:var(--faint);text-transform:uppercase;letter-spacing:.08em;margin-bottom:3px}
+    .ug-stat-v{font-size:18px;font-weight:500;color:var(--text);font-family:'JetBrains Mono',monospace}
+    .ug-stat-s{font-size:10px;color:var(--muted);margin-top:1px}
+    .ug-src-leg{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0}
+    .ug-src-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+    .ug-src-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+    </style>
+
+    <!-- OVERVIEW -->
+    <div class="ug-page on" id="pg-overview">
+      <p class="ug-body">The tool has five tabs, all driven from the same 12-month ZQ futures price table. Every input is editable — change any price, checkbox, or day count and all tabs update instantly.</p>
+      <div class="ug-nd">
+        <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node">EFFR chain<br><span style="font-size:9px;opacity:.7">anchor + solve</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node">Prob. tree<br><span style="font-size:9px;opacity:.7">lattice</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">overlay</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">independent</span></div>
+      </div>
+      <div class="ug-stat-row">
+        <div class="ug-stat"><div class="ug-stat-l">Source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Horizon</div><div class="ug-stat-v" style="font-size:14px">12 months</div><div class="ug-stat-s">Apr 2026 – Mar 2027</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">FOMC meetings</div><div class="ug-stat-v" style="font-size:14px">8 meetings</div><div class="ug-stat-s">4 anchor months</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Live refreshes</div><div class="ug-stat-v" style="font-size:14px">4 buttons</div><div class="ug-stat-s">ZQ · Kalshi · Poly · SR3</div></div>
+      </div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice, node opacity ∝ probability, summary stats, and final rate distribution.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
+      </div>
+    </div>
+
+    <!-- EFFR CHAIN -->
+    <div class="ug-page" id="pg-chain">
+      <p class="ug-body">The EFFR chain converts each month's ZQ futures price (the average EFFR for that whole month) into start-of-month and end-of-month rates — isolating the exact point where the Fed changes rates.</p>
+      <div class="ug-head">Anchor rule — non-meeting months</div>
+      <div class="ug-formula">
+        \[\text{EFFR}(\text{End})_{T-1} \;=\; \text{EFFR}(\text{Avg})_{T} \;=\; \text{EFFR}(\text{Start})_{T+1}\]
+        <div style="font-size:11px;margin-top:6px;color:var(--faint)">where \(T\) is any month without an FOMC meeting</div>
+      </div>
+      <div class="ug-head">Meeting month formula</div>
+      <div class="ug-formula">
+        \[\text{EFFR}(\text{Start}) \;=\; \frac{\text{EFFR}(\text{Avg}) \;-\; \dfrac{M}{N+M} \cdot \text{EFFR}(\text{End})}{\dfrac{N}{N+M}}\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">\(N\) = days from month start through meeting day &nbsp;·&nbsp; \(M\) = remaining days after the meeting</div>
+      </div>
+      <div class="ug-head">From chain to probabilities</div>
+      <ol class="ug-steps">
+        <li>Compute expected EFFR change: EFFR(End) − EFFR(Start)</li>
+        <li>Divide by 0.25 to get equivalent 25bp moves (e.g., 1.24×)</li>
+        <li>Split into whole integer (characteristic = 1) and decimal (mantissa = 0.24)</li>
+        <li>P(base move = 1 × 25bp) = 1 − mantissa = 76%</li>
+        <li>P(larger move = 2 × 25bp) = mantissa = 24%</li>
+      </ol>
+      <div class="ug-head">Example — Sep 2026 (ZQ 96.72)</div>
+      <div class="ug-card" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px">
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Avg EFFR</div><span style="color:var(--text)">3.2800%</span></div>
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">N (pre-mtg)</div><span style="color:var(--text)">16 days</span></div>
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">M (post-mtg)</div><span style="color:var(--text)">14 days</span></div>
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">EFFR(Start)</div><span style="color:var(--cme)">3.42%</span></div>
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">EFFR(End)</div><span style="color:var(--cme)">3.11%</span></div>
+        <div><div style="font-size:9px;color:var(--faint);margin-bottom:3px;text-transform:uppercase;letter-spacing:.05em">Δ</div><span style="color:var(--cme)">−31bp = 1.24×</span></div>
+      </div>
+    </div>
+
+    <!-- PROBABILITY TREE -->
+    <div class="ug-page" id="pg-tree">
+      <p class="ug-body">The probability tree compounds the per-meeting binary splits into unconditional cumulative probabilities. Each node shows the probability of being at that rate level at that point in time, accounting for all paths to get there.</p>
+      <div class="ug-formula">
+        \[P(\text{node at meeting } M,\; \text{rate } R) = \sum_{R'} P(\text{prior node at } R') \;\times\; P(R' \to R \mid M)\]
+        <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
+      </div>
+      <div class="ug-head">Reading the lattice</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">Node opacity</div><div class="ug-pdesc">More opaque = higher probability. Nodes below ~0.5% are hidden.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Edge width</div><div class="ug-pdesc">Thicker = higher probability weight for that transition.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Solid vs dashed</div><div class="ug-pdesc">Solid = base move. Dashed blue = additional 25bp cut (the mantissa branch).</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Rate label</div><div class="ug-pdesc">Shows the lower bound, e.g. "3.25%" means the 3.25–3.50% target range.</div></div>
+      </div>
+      <div class="ug-head">Summary statistics</div>
+      <div class="ug-stat-row">
+        <div class="ug-stat"><div class="ug-stat-l">P(≥1 cut)</div><div class="ug-stat-v" style="color:var(--cme)">~85%</div><div class="ug-stat-s">By Mar 2027 horizon</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Expected cuts</div><div class="ug-stat-v">~2.1</div><div class="ug-stat-s">Probability-weighted</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Implied rate</div><div class="ug-stat-v">~3.02%</div><div class="ug-stat-s">Expected lower bound</div></div>
+      </div>
+    </div>
+
+    <!-- PREDICTION MARKETS -->
+    <div class="ug-page" id="pg-prediction">
+      <p class="ug-body">Nine panels compare CME-derived probabilities against Kalshi and Polymarket. The key signal is the <em>basis</em> — the spread between markets — not the absolute level.</p>
+      <div class="ug-src-leg">
+        <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--cme)"></div>CME (institutional, futures-anchored)</div>
+        <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--kal)"></div>Kalshi (regulated, domestic/institutional)</div>
+        <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--poly)"></div>Polymarket (global, retail/crypto-native)</div>
+      </div>
+      <p class="ug-body" style="font-size:12px">Kalshi−CME basis = regulated vs futures spread. Poly−Kal basis = information gap between platforms. Where Polymarket leads Kalshi, narrative is pricing in ahead of fundamentals.</p>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-pnum">①</div><div class="ug-ptitle">Meeting divergence</div><div class="ug-pdesc">3 bars per meeting (CME/Kalshi/Poly). Left pill = Kal−CME, right pill = Poly−Kal basis in percentage points.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">②</div><div class="ug-ptitle">Cut count distribution</div><div class="ug-pdesc">P(0–5+ cuts in 2026) from all three sources. Polymarket has 13 discrete strikes vs Kalshi's 5.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">③</div><div class="ug-ptitle">Combo path decomposer</div><div class="ug-pdesc">Top 8 hold/cut sequences through first 3 meetings vs Kalshi kxfedcombo prices and basis.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">④</div><div class="ug-ptitle">Market-implied dot plot</div><div class="ug-pdesc">CME chain (solid) + Kalshi implied rates (dashed) + Fed Dec 2025 SEP dots — three paths on one chart.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill" style="background:rgba(139,92,246,.15);color:#8b5cf6">SEP</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑤</div><div class="ug-ptitle">Hike risk monitor</div><div class="ug-pdesc">Semicircular gauge with three arcs. Polymarket currently implies ~4× more hike risk than CME.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑥</div><div class="ug-ptitle">First-cut timing</div><div class="ug-pdesc">CME step curve + Kalshi year-end circles + Polymarket per-meeting diamonds from the "cut by?" market.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑦</div><div class="ug-ptitle">Terminal rate distribution</div><div class="ug-pdesc">CME final distribution vs Polymarket end-2026 market. Subtract 0.25% from Polymarket (upper bound convention).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑧</div><div class="ug-ptitle">Fed Chair regime risk</div><div class="ug-pdesc">Polymarket $230M nominee market — completely absent from CME futures. A second-order shift in the policy function itself.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑨</div><div class="ug-ptitle">Emergency cut gauge</div><div class="ug-pdesc">P(unscheduled FOMC cut before end-2026). Absent from Kalshi and CME — they only price scheduled outcomes.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
+      </div>
+    </div>
+
+    <!-- SOFR STRIP -->
+    <div class="ug-page" id="pg-sofr">
+      <p class="ug-body">The SOFR strip tab is independent of the ZQ chain. It uses CME 3-month SOFR futures (SR3) across 7 quarterly contracts from Jun 2026 to Dec 2027.</p>
+      <div class="ug-stat-row">
+        <div class="ug-stat"><div class="ug-stat-l">SR3 contracts</div><div class="ug-stat-v" style="font-size:14px">SR3M6–SR3Z7</div><div class="ug-stat-s">7 quarterly</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Typical basis</div><div class="ug-stat-v" style="font-size:14px">5–15 bp</div><div class="ug-stat-s">SOFR above EFFR</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Convention</div><div class="ug-stat-v" style="font-size:14px">100 − rate</div><div class="ug-stat-s">Same as ZQ</div></div>
+      </div>
+      <div class="ug-head">The three curves</div>
+      <div class="ug-grid">
+        <div class="ug-pcard" style="border-left:3px solid var(--sofr)"><div class="ug-ptitle" style="color:var(--sofr)">SR3 implied SOFR</div><div class="ug-pdesc">Quarterly-average 3-month SOFR from each SR3 contract. The primary secured lending rate curve.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-ptitle" style="color:var(--cme)">ZQ quarterly avg EFFR</div><div class="ug-pdesc">Average of the three ZQ monthly EFFRs within each quarter. The target rate comparison curve.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-ptitle" style="color:var(--poly)">Instantaneous 3M forward</div><div class="ug-pdesc">2×r(t+1) − r(t) — marginal rate for each quarter, stripping out averaging. Leads at inflection points.</div></div>
+      </div>
+      <div class="ug-formula">
+        \[f_t \;=\; 2\,r_{t+1} - r_t\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">Forward trough = \(\arg\min_t\; f_t\) &nbsp;→&nbsp; quarter where the market prices peak easing intensity</div>
+      </div>
+    </div>
+
+    <!-- SCENARIOS -->
+    <div class="ug-page" id="pg-scenarios">
+      <p class="ug-body">Scenario presets are named ZQ price configurations. Activating one reprices the entire chain — probability tree, regime bar, and all prediction market panels — in one click.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin:12px 0" id="ug-tog-row"></div>
+      <div class="ug-tog-info" id="ug-tog-info">Select a scenario to see its description</div>
+      <div class="ug-head">How activate / deactivate works</div>
+      <ol class="ug-steps">
+        <li>Before applying, your current manual prices are saved automatically</li>
+        <li>The scenario's ZQ price overrides are applied to all 12 months</li>
+        <li>Every tab updates instantly — chain, tree, regime bar, all panels</li>
+        <li>Click the active scenario again to restore your original prices</li>
+      </ol>
+      <div class="ug-grid" id="ug-scene-cards"></div>
+    </div>
+
+    <!-- LIVE DATA -->
+    <div class="ug-page" id="pg-refresh">
+      <p class="ug-body">Four independent refresh buttons fetch live market data. Each targets a different source — a Kalshi outage won't affect your ZQ prices.</p>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">Refresh ZQ</div><div class="ug-pdesc">CME 30-day Fed Funds futures settlement prices + FOMC meeting schedule (dates, N/M splits).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">ZQ · FOMC</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Fetch Kalshi</div><div class="ug-pdesc">Per-meeting decision probabilities, cut count, hike risk, jumbo-cut probability, implied rate levels.</div><div class="ug-pills"><span class="ug-pill ug-pill-o">kxfeddecision · kxfedhike</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Fetch Polymarket</div><div class="ug-pdesc">Per-meeting probs, terminal rate distribution, Fed Chair odds, cut count, emergency cut probability.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">7 markets · $230M+ vol</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Fetch SR3 data</div><div class="ug-pdesc">CME 3-month SOFR futures for all 7 SR3 contracts plus current SOFR fixing rate.</div><div class="ug-pills"><span class="ug-pill ug-pill-g">SR3M6 → SR3Z7</span></div></div>
+      </div>
+      <div class="ug-head">Regime bar — live after every refresh</div>
+      <div class="ug-regime">
+        <span style="font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint)">Market regime</span>
+        <span style="font-weight:500;color:var(--cme)">Moderate easing priced</span>
+        <span style="color:var(--faint)">·</span>
+        <span>12M slope −64bp</span>
+        <span style="color:var(--faint)">·</span>
+        <span>2.14 exp. cuts · P(≥1) 84%</span>
+      </div>
+      <div class="ug-head">Getting an API key (standalone use)</div>
+      <ol class="ug-steps">
+        <li>Go to <strong style="font-weight:500">console.anthropic.com</strong> and sign up</li>
+        <li>Add a small credit balance ($5 minimum) to activate API access</li>
+        <li>Generate a key under API Keys — starts with <span style="font-family:'JetBrains Mono',monospace;font-size:11px">sk-ant-...</span></li>
+        <li>Paste into the password field top-right when running the tool standalone</li>
+        <li>Inside claude.ai the key is injected automatically — leave the field blank</li>
+      </ol>
+    </div>
+
+  </div><!-- end How it works section -->
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+  <script>
+  function ugShow(id,btn){
+    document.querySelectorAll('.ug-page').forEach(p=>p.classList.remove('on'));
+    document.querySelectorAll('.ug-ntab').forEach(b=>b.classList.remove('on'));
+    document.getElementById('pg-'+id).classList.add('on');
+    btn.classList.add('on');
+  }
+  const ugScenarios=[
+    {id:'warsh',label:'Warsh pivot',tag:'hawkish',desc:'Hawkish new chair installed; easing priced out ~50bp across the strip.'},
+    {id:'emergency',label:'Emergency cut',tag:'tail risk',desc:'Unscheduled cut before May meeting; front-end repriced sharply.'},
+    {id:'stagflation',label:'Stagflation hold',tag:'hawkish',desc:'Oil shock + sticky inflation; no cuts priced through 2026.'},
+    {id:'june-liftoff',label:'June liftoff',tag:'base',desc:'First cut June 17-18; ~2 cuts in 2026.'},
+    {id:'delayed',label:'Delayed easing',tag:'base',desc:'First cut Sep 16-17; only ~1 cut in 2026.'},
+  ];
+  let ugActiveTog=null;
+  const ugTogRow=document.getElementById('ug-tog-row');
+  const ugTogInfo=document.getElementById('ug-tog-info');
+  const ugSceneCards=document.getElementById('ug-scene-cards');
+  ugScenarios.forEach(s=>{
+    const btn=document.createElement('button');
+    btn.className='ug-tog-btn';btn.textContent=s.label;
+    btn.onclick=()=>{
+      if(ugActiveTog===s.id){ugActiveTog=null;ugTogInfo.textContent='Select a scenario to see its description';document.querySelectorAll('.ug-tog-btn').forEach(b=>b.classList.remove('on'));}
+      else{ugActiveTog=s.id;ugTogInfo.textContent=s.desc;document.querySelectorAll('.ug-tog-btn').forEach(b=>b.classList.remove('on'));btn.classList.add('on');}
+    };
+    ugTogRow.appendChild(btn);
+    const tagCol=s.tag==='hawkish'?'background:rgba(192,57,43,.15);color:#f87171':s.tag==='tail risk'?'background:rgba(249,115,22,.15);color:var(--kal)':'background:rgba(59,130,246,.15);color:var(--cme)';
+    const card=document.createElement('div');card.className='ug-pcard';
+    card.innerHTML=`<div class="ug-ptitle">${s.label} <span class="ug-pill" style="${tagCol};font-size:9px;padding:1px 6px">${s.tag}</span></div><div class="ug-pdesc" style="margin-top:6px">${s.desc}</div>`;
+    ugSceneCards.appendChild(card);
+  });
+  // Render math in all visible/hidden pages on load, re-render on tab switch
+  function renderAllMath(){
+    if(typeof renderMathInElement!=='undefined'){
+      document.querySelectorAll('.ug-page').forEach(el=>{
+        renderMathInElement(el,{
+          delimiters:[
+            {left:'$$',right:'$$',display:true},
+            {left:'\\(',right:'\\)',display:false},
+            {left:'\\[',right:'\\]',display:true}
+          ],throwOnError:false
+        });
+      });
+    }
+  }
+  // Patch ugShow to re-render math when a tab becomes visible
+  const _ugShowOrig=ugShow;
+  // (renderAllMath runs once on load below; tabs already rendered)
+  document.addEventListener('DOMContentLoaded',renderAllMath);
+  // Fallback in case DOMContentLoaded already fired
+  if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(renderAllMath,0);
+  </script>
+
+  <div class="section">
+    <div class="section-label">Cite this tool</div>
+    <div class="cite-tabs">
+      <button class="cite-tab act" onclick="switchCite('apa',this)">APA</button>
+      <button class="cite-tab" onclick="switchCite('bib',this)">BibTeX</button>
+      <button class="cite-tab" onclick="switchCite('chi',this)">Chicago</button>
+    </div>
+    <div class="cite-box">
+      <button class="cite-copy" onclick="copyCite()">Copy</button>
+      <div class="cite-content act" id="cite-apa">
+        <pre class="cite-text">Bieri, D. (2026). <em>Fed Funds probability tree: CME FedWatch methodology with Kalshi and Polymarket overlay</em> (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds</pre>
+      </div>
+      <div class="cite-content" id="cite-bib">
+        <pre class="cite-text">@software{bieri2026fedfunds,
+  author    = {Bieri, David},
+  title     = {Fed Funds Probability Tree: {CME} {FedWatch} Methodology
+               with {Kalshi} and {Polymarket} Overlay},
+  year      = {2026},
+  version   = {3.0},
+  publisher = {GitHub},
+  url       = {https://github.com/davidbieri/fed-funds}
+}</pre>
+      </div>
+      <div class="cite-content" id="cite-chi">
+        <pre class="cite-text">Bieri, David. 2026. "Fed Funds Probability Tree: CME FedWatch Methodology with Kalshi and Polymarket Overlay." v3.0. Interactive tool. GitHub. https://github.com/davidbieri/fed-funds.</pre>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-left">
+      Fed Funds Probability Tree · v3.0 · MIT License<br>
+      Virginia Tech · School of Public &amp; International Affairs
+    </div>
+    <div class="footer-right">
+      <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
+      <a class="foot-link" href="fed_funds_probability_tree.html">Tool</a>
+      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
+      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+    </div>
+  </footer>
+
+</div>
+
+<script>
+function openModal(){document.getElementById('modal').classList.add('open')}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()})
+
+let activeCite='apa';
+function switchCite(id,btn){
+  document.querySelectorAll('.cite-content').forEach(el=>el.classList.remove('act'));
+  document.querySelectorAll('.cite-tab').forEach(el=>el.classList.remove('act'));
+  document.getElementById('cite-'+id).classList.add('act');
+  btn.classList.add('act');
+  activeCite=id;
+}
+function copyCite(){
+  const txt=document.getElementById('cite-'+activeCite).querySelector('.cite-text').textContent;
+  navigator.clipboard.writeText(txt).then(()=>{
+    const btn=document.querySelector('.cite-copy');
+    btn.textContent='Copied!';btn.style.color='var(--sofr)';btn.style.borderColor='var(--sofr)';
+    setTimeout(()=>{btn.textContent='Copy';btn.style.color='';btn.style.borderColor=''},1800);
+  });
+}
+</script>
 </body>
 </html>

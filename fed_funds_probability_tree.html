@@ -65,6 +65,17 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
 .k-neu{background:var(--color-background-secondary);color:var(--color-text-tertiary)}
 .k-fetch-bar{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:14px;flex-wrap:wrap}
 .k-seed-note{font-size:11px;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-radius:4px;padding:4px 10px;border:.5px solid var(--color-border-tertiary)}
+/* Compare/overlay scenario — amber */
+:root{--c-overlay:#f59e0b;--c-overlay-a:rgba(245,158,11,.13);}
+@media(prefers-color-scheme:dark){:root{--c-overlay:#fbbf24;--c-overlay-a:rgba(251,191,36,.13);}}
+/* ── Mobile responsive ───────────────────────────────────────────── */
+@media(max-width:640px){
+  body{padding:.75rem .75rem 1.5rem}
+  .fw-tab{font-size:11px;padding:4px 9px}
+  .k-grid{grid-template-columns:1fr !important}
+  #api-key-input{max-width:240px !important}
+  .fw-stat-v{font-size:17px !important}
+}
 </style>
 </head>
 <body>
@@ -102,6 +113,8 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
   <div class="fw-tab" onclick="fwSwitch('tree',this)">Probability tree</div>
   <div class="fw-tab" onclick="fwSwitch('kalshi',this)">⚖ Prediction markets</div>
   <div class="fw-tab" onclick="fwSwitch('sofr',this)">📈 SOFR strip</div>
+  <div class="fw-tab" onclick="fwSwitch('dashboard',this)">🗂 Dashboard</div>
+  <div class="fw-tab" onclick="fwSwitch('yieldcurve',this)">📐 Yield Curve</div>
 </div>
 
 <div id="fw-inputs"></div>
@@ -109,11 +122,18 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
 <div id="fw-tree" style="display:none"></div>
 <div id="fw-kalshi" style="display:none"></div>
 <div id="fw-sofr" style="display:none"></div>
+<div id="fw-dashboard" style="display:none"></div>
+<div id="fw-yieldcurve" style="display:none"></div>
 </div>
 
 <script>
 // --- ZQ seed data (12 months, corrected FOMC schedule) ─────────────────────
 let fwActive='inputs';
+let fwActiveScenario='';
+// Frozen seed prices — restored when a scenario is deactivated
+const FW_SEED_PRICES=[96.36,96.40,96.50,96.58,96.65,96.72,96.78,96.85,96.90,96.94,96.97,97.00];
+let fwLb=3.50;
+let fwCompareScenario='';
 let fwD=[
   {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28–29'},
   {lb:'May 2026',price:96.40,mtg:false,N:0, M:0, ml:''},
@@ -213,6 +233,7 @@ async function refreshData(){
     if(p.effr) document.getElementById('fw-effr').textContent=parseFloat(p.effr).toFixed(2)+'%';
     // Update version badge
     document.getElementById('version-badge').textContent='v2.0 · '+new Date().toLocaleDateString('en-US',{month:'short',year:'numeric'});
+    fwActiveScenario='';
     fwRender();
   }catch(e){status.textContent='⚠ '+(e.message||'Failed — data unchanged');}
   finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
@@ -374,14 +395,122 @@ Return ONLY raw JSON, no markdown, no fences:
   finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
 }
 
+// --- Historical scenario presets ────────────────────────────────────────────
+// ZQ prices computed from N/M weights; start EFFR 3.64% / target lower bound 3.50%
+const SCENARIOS={
+  'soft-landing-95':{
+    shortLabel:'Soft Landing \'95',era:'easing',totalBp:'-25bp',endRate:'3.39',
+    desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign — growth never faltered. The most benign plausible outcome.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61]},
+  'insurance-98':{
+    shortLabel:'Insurance \'98/\'19',era:'easing',totalBp:'-75bp',endRate:'2.89',
+    desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment — easing that stops once tail risk subsides.',
+    prices:[96.36,96.36,96.47,96.63,96.86,96.98,97.11,97.11,97.11,97.11,97.11,97.11]},
+  'measured-pace':{
+    shortLabel:'Measured Pace',era:'easing',totalBp:'-100bp',endRate:'2.64',
+    desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence — methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.73,96.86,96.86,97.04,97.11,97.11,97.22]},
+  'mild-recession-90':{
+    shortLabel:'Recession \'90-91',era:'easing',totalBp:'-150bp',endRate:'2.14',
+    desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession — persistent incremental pressure, no financial seizure.',
+    prices:[96.38,96.61,96.72,96.88,97.11,97.23,97.38,97.61,97.79,97.86,97.86,97.86]},
+  'dotcom-01':{
+    shortLabel:'Dot-com \'01',era:'easing',totalBp:'-225bp',endRate:'1.39',
+    desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure — 2001 dot-com collapse analog.',
+    prices:[96.36,96.36,96.58,96.91,97.36,97.59,97.88,98.11,98.29,98.39,98.61,98.61]},
+  'gfc-08':{
+    shortLabel:'GFC \'08',era:'crisis',totalBp:'-300bp',endRate:'0.64',
+    desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) — reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
+    prices:[96.38,96.61,96.83,97.18,97.86,98.21,98.66,99.11,99.29,99.36,99.36,99.36]},
+  'volcker-82':{
+    shortLabel:'Volcker \'82',era:'crisis',totalBp:'-350bp',endRate:'0.14',
+    desc:'Maximum historical easing velocity: 50+75+75+75+50+25bp. After Volcker broke inflation in 1981-82 the Fed cut ~1100bp from peak. A stress-test of the tree at the lower bound.',
+    prices:[96.39,96.86,97.19,97.68,98.36,98.71,99.16,99.61,99.79,99.86,99.86,99.86]},
+  'stagflation-70s':{
+    shortLabel:'Stagflation \'70s',era:'tightening',totalBp:'+100bp',endRate:'4.64',
+    desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era — premature loosening followed by stubborn inflation forcing re-tightening.',
+    prices:[96.36,96.36,96.36,96.34,96.11,95.99,95.86,95.86,95.68,95.61,95.61,95.50]},
+  'renorm-22':{
+    shortLabel:'Re-norm \'22',era:'tightening',totalBp:'+350bp',endRate:'7.14',
+    desc:'Full 2022 replay from today\'s starting rate: 50+75+75+75+50+25bp = +350bp driving EFFR to ~7.14%. Inflation re-accelerates or new Fed Chair abandons the easing path.',
+    prices:[96.33,95.86,95.54,95.04,94.36,94.01,93.56,93.11,92.93,92.86,92.86,92.86]},
+};
+
+function applyScenario(key){
+  fwActiveScenario=key;
+  const sc=SCENARIOS[key];
+  sc.prices.forEach((p,i)=>{fwD[i].price=p;});
+  fwRender();
+}
+
+function deactivateScenario(){
+  fwActiveScenario='';
+  FW_SEED_PRICES.forEach((p,i)=>{fwD[i].price=p;});
+  fwRender();
+}
+
+// Compute the compare-series object from the current fwCompareScenario
+function getCompareSeries(lb){
+  if(!fwCompareScenario||!SCENARIOS[fwCompareScenario])return null;
+  const sc=SCENARIOS[fwCompareScenario];
+  const cD=fwD.map((m,i)=>({...m,price:sc.prices[i]}));
+  const cChain=fwChain(cD),cMeetings=fwMeetings(cD,cChain);
+  const{states:cStates,final:cFinal}=fwDist(cMeetings);
+  return{label:sc.shortLabel,totalBp:sc.totalBp,endRate:sc.endRate,era:sc.era,
+    color:'var(--c-overlay)',colorA:'var(--c-overlay-a)',
+    chain:cChain,meetings:cMeetings,states:cStates,final:cFinal};
+}
+
+// Settings persistence
+function saveSettings(){
+  try{localStorage.setItem('fwCfg',JSON.stringify({lb:fwLb,scenario:fwActiveScenario,compare:fwCompareScenario}));}catch(e){}
+}
+function loadSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem('fwCfg')||'{}');
+    if(s.lb!==undefined&&s.lb>=0&&s.lb<=8)fwLb=parseFloat(s.lb);
+    if(s.scenario&&SCENARIOS[s.scenario]){
+      fwActiveScenario=s.scenario;
+      SCENARIOS[s.scenario].prices.forEach((p,i)=>{fwD[i].price=p;});
+    }
+    if(s.compare&&SCENARIOS[s.compare]&&s.compare!==fwActiveScenario)fwCompareScenario=s.compare;
+  }catch(e){}
+}
+
 // --- FedWatch engine ─────────────────────────────────────────────────────────
 function fwSwitch(t,el){
   fwActive=t;
-  ['inputs','chain','tree','kalshi','sofr'].forEach(id=>document.getElementById('fw-'+id).style.display='none');
+  ['inputs','chain','tree','kalshi','sofr','dashboard','yieldcurve'].forEach(id=>document.getElementById('fw-'+id).style.display='none');
   document.getElementById('fw-'+t).style.display='block';
   document.querySelectorAll('.fw-tab').forEach(e=>e.classList.remove('act'));el.classList.add('act');
   fwRender();
 }
+// ============================================================================
+// MATH LAYER — pure financial logic, no DOM dependencies
+// All functions below are side-effect-free and migrate directly to React hooks.
+// ============================================================================
+
+// MATH: fwChain(months) → chain[]
+// Implements the CME FedWatch N/M day-weighting identity to back out the
+// start and end EFFR for each month from its ZQ-implied average EFFR.
+//
+// Core identity (CME FedWatch methodology):
+//   avg_EFFR = (N × rate_before + M × rate_after) / (N + M)
+//   where N = days from month start through FOMC meeting day
+//         M = remaining days in month after meeting
+//         N + M = total days in month
+//
+// Solve for rate_after:  end = (avg - (N/(N+M))×start) / (M/(N+M))
+// Solve for rate_before: start = (avg - (M/(N+M))×end)  / (N/(N+M))
+//
+// Algorithm: three-pass propagation
+//   Pass 0: anchor non-meeting months (start = end = avg)
+//   Pass 1: backward sweep — propagate known ends back to starts
+//   Pass 2: forward sweep  — propagate known starts forward to ends
+//
+// Input:  months[] — array of fwD rows {price, mtg, N, M}
+// Output: chain[]  — array of {avg, start, end} aligned to input
+//                    start/end are null for months that can't be solved
 function fwChain(months){
   const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
   for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
@@ -389,6 +518,25 @@ function fwChain(months){
   for(let r=0;r<n;r++){for(let i=0;i<n;i++){const m=months[i];if(m.mtg&&c[i].start!==null&&c[i].end===null&&m.M>0)c[i].end=(c[i].avg-(m.N/(m.N+m.M))*c[i].start)/(m.M/(m.N+m.M));if(m.mtg&&c[i].end!==null&&i<n-1&&months[i+1].mtg&&c[i+1].start===null)c[i+1].start=c[i].end;}}
   return c;
 }
+
+// MATH: fwMeetings(months, chain) → meetings[]
+// Extracts per-meeting probability distributions from the EFFR chain.
+// Uses the FedWatch two-outcome approximation: any fractional number of
+// 25bp moves is decomposed into probability weights on the two adjacent
+// integer multiples of 25bp.
+//
+// Core decomposition:
+//   Δ = end - start  (signed rate change in %)
+//   moves = Δ / 0.25  (fractional 25bp units)
+//   p0 = 1 - frac(|moves|)  — probability of floor(|moves|) moves
+//   p1 =     frac(|moves|)  — probability of ceil(|moves|)  moves
+//
+// Example: Δ = -0.375% → moves = -1.5 → p0=50% chance of -25bp, p1=50% chance of -50bp
+//
+// Input:  months[], chain[] aligned arrays
+// Output: meetings[] — one entry per FOMC meeting month, fields:
+//   {lb, label, start, end, chg, moves, p0, p1, b0, b1, l0, l1, isCut, isHike}
+//   b0/b1 = integer 25bp move counts (negative = cut), l0/l1 = display labels
 function fwMeetings(months,chain){
   const res=[];
   months.forEach((m,i)=>{
@@ -402,6 +550,26 @@ function fwMeetings(months,chain){
   });
   return res;
 }
+
+// MATH: fwDist(meetings) → {states[], final{}}
+// Builds the unconditional probability lattice by multiplying per-meeting
+// two-outcome distributions forward across all FOMC meetings.
+//
+// State representation: a sparse map { cumulative_25bp_moves → probability }
+//   Negative keys = net cuts, positive keys = net hikes, 0 = unchanged
+//
+// Algorithm: forward product over meetings
+//   For each meeting m and each current state k with probability p:
+//     new_state[k + b0] += p × p0   (base outcome)
+//     new_state[k + b1] += p × p1   (alternate outcome, if p1 > 0.05%)
+//
+// states[0] = initial distribution {'0': 1.0}
+// states[i] = distribution AFTER meeting i-1 (i.e. states.length = meetings.length + 1)
+// final = states[meetings.length] = terminal distribution
+//
+// Input:  meetings[] from fwMeetings()
+// Output: {states: Array<{[moves]: prob}>, final: {[moves]: prob}}
+//   To convert moves→rate: rate = lb + moves × 0.25
 function fwDist(meetings){
   let d={'0':1.0};const states=[{'0':1.0}];
   meetings.forEach(m=>{
@@ -411,10 +579,17 @@ function fwDist(meetings){
   });
   return{states,final:d};
 }
+
+// MATH: getCompareSeries(lb) → series | null
+// Computes a complete parallel chain/meetings/states/final from the
+// fwCompareScenario price vector. Pure math — same pipeline as fwRender()
+// but over SCENARIOS[fwCompareScenario].prices instead of live fwD.
+// Returns null if no compare scenario is active.
+// Output shape mirrors what fwRender() passes to each tab renderer.
 function fwRender(){
   const chain=fwChain(fwD),meetings=fwMeetings(fwD,chain);
   const{states,final}=fwDist(meetings);
-  const lb=parseFloat(document.getElementById('fw-lb-in')?.value)||3.50;
+  const lb=fwLb;
   let se='3.64';for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start.toFixed(2);break;}}
   document.getElementById('fw-effr').textContent=se+'%';
   document.getElementById('fw-target').textContent=lb.toFixed(2)+'–'+(lb+0.25).toFixed(2)+'%';
@@ -423,13 +598,81 @@ function fwRender(){
   else if(fwActive==='tree')fwRenderTree(meetings,states,final,lb);
   else if(fwActive==='kalshi')fwRenderKalshi(meetings,states,final,lb,chain);
   else if(fwActive==='sofr')fwRenderSOFR(meetings,chain,lb);
+  else if(fwActive==='dashboard')fwRenderDashboard(chain,meetings,states,final,lb);
+  else if(fwActive==='yieldcurve')fwRenderYieldCurve();
+  saveSettings();
 }
 
 // --- Tab: Inputs ─────────────────────────────────────────────────────────────
 function fwRenderInputs(chain){
-  let h=`<div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;flex-wrap:wrap">
+  // ── Main scenario chips ────────────────────────────────────────────────────
+  const ERA={
+    easing:{label:'Easing',color:'var(--c-cme)',bg:'var(--color-background-info)',border:'var(--color-border-info)'},
+    crisis:{label:'Crisis',color:'var(--color-text-danger)',bg:'var(--color-background-danger)',border:'#fca5a5'},
+    tightening:{label:'Tightening',color:'var(--color-text-warning)',bg:'#fff7ed',border:'#fed7aa'},
+  };
+  let chips='';
+  ['easing','crisis','tightening'].forEach(era=>{
+    const grp=Object.entries(SCENARIOS).filter(([,s])=>s.era===era);
+    if(!grp.length)return;
+    const e=ERA[era];
+    chips+=`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:5px">
+      <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:${e.color};min-width:54px">${e.label}</span>`;
+    grp.forEach(([key,sc])=>{
+      const isActive=fwActiveScenario===key;
+      const bg=isActive?e.bg:'var(--color-background-secondary)';
+      const bdr=isActive?e.border:'var(--color-border-secondary)';
+      const col=isActive?e.color:'var(--color-text-secondary)';
+      const oc=isActive?`deactivateScenario()`:`applyScenario('${key}')`;
+      chips+=`<button onclick="${oc}" style="display:inline-flex;align-items:center;gap:4px;padding:3px 9px;font-size:11px;cursor:pointer;border-radius:20px;border:.5px solid ${bdr};background:${bg};color:${col};font-family:var(--font-sans);font-weight:${isActive?600:400}" title="${sc.desc}">
+        <span>${sc.shortLabel}</span><span style="font-size:9px;font-family:var(--font-mono);opacity:.75">${sc.totalBp}</span>${isActive?` <span style="font-size:9px;opacity:.7">✕</span>`:''}
+      </button>`;
+    });
+    chips+='</div>';
+  });
+  const activeSc=SCENARIOS[fwActiveScenario];
+  const descBanner=activeSc?`<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 10px;background:var(--color-background-info);border:.5px solid var(--color-border-info);border-radius:var(--border-radius-md);margin-top:4px;font-size:11px;color:var(--color-text-info);line-height:1.5;flex-wrap:wrap">
+    <span style="font-weight:600;white-space:nowrap">${activeSc.shortLabel} (${activeSc.totalBp} → ${activeSc.endRate}%)</span>
+    <span style="color:var(--color-text-secondary);flex:1">${activeSc.desc}</span>
+    <button onclick="deactivateScenario()" style="padding:1px 7px;font-size:10px;border-radius:10px;border:.5px solid var(--color-border-info);background:transparent;color:var(--color-text-info);cursor:pointer;white-space:nowrap">Restore seed ✕</button>
+  </div>`:'';
+
+  // ── Compare overlay chips ──────────────────────────────────────────────────
+  let cmpChips='';
+  ['easing','crisis','tightening'].forEach(era=>{
+    const grp=Object.entries(SCENARIOS).filter(([,s])=>s.era===era);
+    if(!grp.length)return;
+    const eLabel={easing:'Easing',crisis:'Crisis',tightening:'Tightening'}[era];
+    cmpChips+=`<div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:4px">
+      <span style="font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-tertiary);min-width:54px">${eLabel}</span>`;
+    grp.forEach(([key,sc])=>{
+      if(key===fwActiveScenario){
+        cmpChips+=`<button disabled style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:10px;border-radius:20px;border:.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-tertiary);font-family:var(--font-sans);opacity:.3;cursor:not-allowed"><span>${sc.shortLabel}</span></button>`;
+        return;
+      }
+      const isActive=fwCompareScenario===key;
+      const oc=isActive?`fwCompareScenario='';fwRender()`:`fwCompareScenario='${key}';fwRender()`;
+      cmpChips+=`<button onclick="${oc}" style="display:inline-flex;align-items:center;gap:3px;padding:2px 7px;font-size:10px;cursor:pointer;border-radius:20px;border:.5px solid ${isActive?'var(--c-overlay)':'var(--color-border-secondary)'};background:${isActive?'var(--c-overlay-a)':'transparent'};color:${isActive?'var(--c-overlay)':'var(--color-text-secondary)'};font-family:var(--font-sans);font-weight:${isActive?600:400}" title="${sc.desc}">
+        <span>${sc.shortLabel}</span><span style="font-size:9px;font-family:var(--font-mono);opacity:.7">${sc.totalBp}</span>${isActive?` <span style="font-size:9px;opacity:.7">✕</span>`:''}
+      </button>`;
+    });
+    cmpChips+='</div>';
+  });
+  const cmpSc=SCENARIOS[fwCompareScenario];
+  const cmpDesc=cmpSc?`<div style="margin-top:4px;font-size:10px;color:var(--c-overlay);line-height:1.4"><b>${cmpSc.shortLabel} (${cmpSc.totalBp} → ${cmpSc.endRate}%)</b> — ${cmpSc.desc}</div>`:'';
+
+  let h=`
+  <div style="padding:10px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:.5px solid var(--color-border-tertiary);margin-bottom:.5rem">
+    <div style="font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:7px">Historical scenario — click to apply · click active to deactivate</div>
+    ${chips}${descBanner}
+  </div>
+  <div style="padding:8px 12px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);border:.5px solid var(--c-overlay);margin-bottom:.75rem">
+    <div style="font-size:10px;font-weight:500;color:var(--c-overlay);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">↔ Compare overlay — amber on dot plot &amp; final distribution · click active to remove</div>
+    ${cmpChips}${cmpDesc}
+  </div>
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:.75rem;flex-wrap:wrap">
     <span style="font-size:12px;color:var(--color-text-secondary)">Current target range lower bound:</span>
-    <input id="fw-lb-in" class="fw-in" type="number" step="0.25" min="0" max="8" value="3.50" onchange="fwRender()" style="width:60px">
+    <input id="fw-lb-in" class="fw-in" type="number" step="0.25" min="0" max="8" value="${fwLb}" onchange="fwLb=parseFloat(this.value)||3.50;fwRender()" style="width:60px">
     <span style="font-size:12px;color:var(--color-text-secondary)">%</span>
   </div>
   <div style="overflow-x:auto"><table class="fwt">
@@ -437,15 +680,15 @@ function fwRenderInputs(chain){
   fwD.forEach((m,i)=>{
     const avg=(100-m.price).toFixed(4),dis=m.mtg?'':'disabled style="opacity:.3"';
     h+=`<tr><td style="white-space:nowrap;font-weight:${m.mtg?500:400}">${m.lb}${m.mtg?` <span style="font-size:9px;color:var(--color-text-warning)">●</span>`:''}</td>
-      <td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="${m.price}" style="width:72px" onchange="fwD[${i}].price=+this.value||fwD[${i}].price;fwRender()"></td>
+      <td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="${m.price}" style="width:72px" onchange="fwD[${i}].price=+this.value||fwD[${i}].price;fwActiveScenario='';fwRender()"></td>
       <td style="font-family:var(--font-mono);color:var(--color-text-secondary)">${avg}%</td>
-      <td style="text-align:center"><input type="checkbox" ${m.mtg?'checked':''} onchange="fwD[${i}].mtg=this.checked;fwRender()"></td>
+      <td style="text-align:center"><input type="checkbox" ${m.mtg?'checked':''} onchange="fwD[${i}].mtg=this.checked;fwActiveScenario='';fwRender()"></td>
       <td><input class="fw-in" type="text" value="${m.ml}" style="width:80px;${!m.mtg?'opacity:.3':''}" onchange="fwD[${i}].ml=this.value"></td>
-      <td><input class="fw-in" type="number" step="1" min="1" max="31" value="${m.N}" ${dis} style="width:40px" onchange="fwD[${i}].N=+this.value||1;fwRender()"></td>
-      <td><input class="fw-in" type="number" step="1" min="0" max="31" value="${m.M}" ${dis} style="width:40px" onchange="fwD[${i}].M=+this.value||0;fwRender()"></td>
+      <td><input class="fw-in" type="number" step="1" min="1" max="31" value="${m.N}" ${dis} style="width:40px" onchange="fwD[${i}].N=+this.value||1;fwActiveScenario='';fwRender()"></td>
+      <td><input class="fw-in" type="number" step="1" min="0" max="31" value="${m.M}" ${dis} style="width:40px" onchange="fwD[${i}].M=+this.value||0;fwActiveScenario='';fwRender()"></td>
     </tr>`;
   });
-  h+=`</tbody></table></div><p style="font-size:11px;color:var(--color-text-tertiary);margin-top:.5rem">N = days from month start through meeting day. M = remaining days. N+M = days in month. Unchecked months are anchors.</p>`;
+  h+=`</tbody></table></div><p style="font-size:11px;color:var(--color-text-tertiary);margin-top:.5rem">N = days from month start through meeting day. M = remaining days. N+M = days in month. Manual edits clear the active scenario.</p>`;
   document.getElementById('fw-inputs').innerHTML=h;
 }
 
@@ -492,6 +735,9 @@ function fwRenderChain(chain,meetings){
 function fwRenderTree(meetings,states,final,lb){
   if(!meetings.length){document.getElementById('fw-tree').innerHTML='<p style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</p>';return;}
   const cuts=Object.entries(final).map(([k,p])=>({k:parseInt(k),p})).sort((a,b)=>a.k-b.k);
+  // Build unified rate axis (include compare scenario rates so x-positions align)
+  const cSeries=getCompareSeries(lb);
+  const allRateKeys=[...new Set([...cuts.map(d=>d.k),...(cSeries?Object.keys(cSeries.final).map(Number):[])])].sort((a,b)=>a-b);
   const pC1=cuts.filter(d=>d.k<=-1).reduce((s,d)=>s+d.p,0),pC2=cuts.filter(d=>d.k<=-2).reduce((s,d)=>s+d.p,0),pC3=cuts.filter(d=>d.k<=-3).reduce((s,d)=>s+d.p,0);
   const expC=cuts.reduce((s,d)=>s+(-d.k)*d.p,0),expR=lb-expC*0.25;
   let cards=`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem">
@@ -525,22 +771,39 @@ function fwRenderTree(meetings,states,final,lb){
     });
   });
   for(let k=0;k>=minK;k--){const y=gyf(k);svg+=`<text x="0" y="${y.toFixed(1)}" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(lb+k*.25).toFixed(2)}%</text>`;}
-  const maxP=Math.max(...cuts.map(d=>d.p)),bW=Math.min(60,520/Math.max(cuts.length,1));
+  const maxP=Math.max(...cuts.map(d=>d.p),...(cSeries?Object.values(cSeries.final):[0]));
+  const bW=Math.min(60,520/Math.max(allRateKeys.length,1));
   let dSvg='';
-  cuts.slice().reverse().forEach((d,i)=>{const x=20+i*(bW+5),h=Math.max(2,(d.p/maxP)*52),y=60-h,fo=.2+d.p*.75;
-    dSvg+=`<rect x="${x}" y="${y}" width="${bW}" height="${h}" rx="2" fill="var(--color-background-info)" fill-opacity="${fo.toFixed(2)}" stroke="var(--color-border-info)" stroke-width=".5"/>`;
-    if(d.p>.02)dSvg+=`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${(d.p*100).toFixed(1)}%</text>`;
-    dSvg+=`<text x="${x+bW/2}" y="73" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(lb+d.k*.25).toFixed(2)}%</text>`;
+  // Compare distribution (amber, behind main)
+  if(cSeries){
+    const cCutsMap=Object.fromEntries(Object.entries(cSeries.final).map(([k,p])=>[parseInt(k),p]));
+    allRateKeys.slice().reverse().forEach((k,i)=>{
+      const p=cCutsMap[k];if(!p||p<0.002)return;
+      const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h;
+      dSvg+=`<rect x="${(x-2).toFixed(1)}" y="${y.toFixed(1)}" width="${(bW+4).toFixed(1)}" height="${Math.max(1,h).toFixed(1)}" rx="2" fill="var(--c-overlay-a)" stroke="var(--c-overlay)" stroke-width="1.5"/>`;
+      if(p>.03)dSvg+=`<text x="${(x+bW/2).toFixed(1)}" y="${(y-4).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-overlay)" font-family="var(--font-sans)">${(p*100).toFixed(1)}%</text>`;
+    });
+  }
+  // Main CME distribution (blue, on top)
+  const cutsMap=Object.fromEntries(cuts.map(d=>[d.k,d.p]));
+  allRateKeys.slice().reverse().forEach((k,i)=>{
+    const p=cutsMap[k];if(!p||p<0.002)return;
+    const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h,fo=.2+p*.75;
+    dSvg+=`<rect x="${x}" y="${y}" width="${bW}" height="${Math.max(1,h).toFixed(1)}" rx="2" fill="var(--color-background-info)" fill-opacity="${fo.toFixed(2)}" stroke="var(--color-border-info)" stroke-width=".5"/>`;
+    if(p>.02)dSvg+=`<text x="${x+bW/2}" y="${y-3}" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">${(p*100).toFixed(1)}%</text>`;
+    dSvg+=`<text x="${x+bW/2}" y="73" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${(lb+k*.25).toFixed(2)}%</text>`;
   });
+  const mainLabel=fwActiveScenario&&SCENARIOS[fwActiveScenario]?SCENARIOS[fwActiveScenario].shortLabel:'Baseline';
+  const cmpLabel=cSeries?` vs <span style="color:var(--c-overlay)">${cSeries.label} (${cSeries.totalBp})</span>`:'';
   document.getElementById('fw-tree').innerHTML=`${cards}
     <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice — ${meetings.length} meetings</div>
     <div style="overflow-x:auto"><svg viewBox="0 0 ${W} ${svgH}" style="min-width:500px;width:100%;display:block;height:${svgH}px">${svg}</svg></div>
     <div style="margin-top:1.25rem">
-      <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution — lower bound</div>
-      <div style="overflow-x:auto"><svg viewBox="0 0 ${Math.max(560,20+cuts.length*(bW+5)+20)} 80" style="min-width:400px;width:100%;display:block;height:80px">${dSvg}</svg></div>
+      <div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution — <span style="color:var(--c-cme)">${mainLabel}</span>${cmpLabel}</div>
+      <div style="overflow-x:auto"><svg viewBox="0 0 ${Math.max(560,20+allRateKeys.length*(bW+5)+20)} 80" style="min-width:400px;width:100%;display:block;height:80px">${dSvg}</svg></div>
     </div>
     <div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">
-      <span>Opacity ∝ probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width ∝ weight</span>
+      <span>Opacity ∝ probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width ∝ weight</span>${cSeries?`<span style="color:var(--c-overlay)">■ Amber = compare scenario</span>`:''}
     </div>`;
 }
 
@@ -832,6 +1095,20 @@ function panel4Svg(meetings,states,lb){
   const dots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
   // Scale
   const allV=[...cmeRates,...kalRates.filter(v=>v!==null),...dots.map(d=>d.rate)];
+  // Include compare series in scale so both paths stay on-screen
+  const cSeries4=getCompareSeries(lb);
+  let cmpRates4=null;
+  if(cSeries4){
+    let si2=0;const cr=[];
+    months.forEach((_,i)=>{
+      if(fwD[i].mtg&&si2<cSeries4.states.length-1){si2++;}
+      const s=cSeries4.states[Math.min(si2,cSeries4.states.length-1)];
+      const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+      cr.push(lb+ek*.25);
+    });
+    cmpRates4=cr;
+    allV.push(...cr);
+  }
   const minR=Math.min(...allV)-0.1,maxR=Math.max(...allV)+0.1;
   const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
   const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
@@ -841,6 +1118,12 @@ function panel4Svg(meetings,states,lb){
   for(let y2=ymin;y2<=ymax;y2+=step){
     svg+=`<line x1="${ml}" y1="${ys(y2).toFixed(1)}" x2="${W-mr}" y2="${ys(y2).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
     svg+=`<text x="${(ml-3).toFixed(1)}" y="${ys(y2).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${y2.toFixed(2)}</text>`;
+  }
+  // Compare line (amber, behind CME)
+  if(cmpRates4){
+    const oPts=cmpRates4.map((r,i)=>`${xs(i).toFixed(1)},${ys(r).toFixed(1)}`).join(' ');
+    svg+=`<polyline points="${oPts}" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="6,3" opacity=".8"/>`;
+    cmpRates4.forEach((r,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="2.5" fill="var(--c-overlay)" opacity=".75"/>`;});
   }
   // CME line
   const cPts=cmeRates.map((r,i)=>`${xs(i).toFixed(1)},${ys(r).toFixed(1)}`).join(' ');
@@ -861,6 +1144,7 @@ function panel4Svg(meetings,states,lb){
   });
   // X labels (every other month)
   months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+=`<text x="${xs(i).toFixed(1)}" y="${(mt+H+14).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${lb2.replace(/ 20\d\d/,'').replace(/ 20\d\d/,'')}</text>`;});
+  if(cSeries4)svg+=`<text x="${W-mr}" y="12" text-anchor="end" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">⸺ ${cSeries4.label} (${cSeries4.totalBp})</text>`;
   svg+=`</svg>`;
   return svg;
 }
@@ -1057,6 +1341,218 @@ let srD=[
   {lb:'Dec 2027',ticker:'SR3Z7',price:96.99,qLabel:'Q4 2027',zqMonths:[]},
 ];
 
+// ============================================================================
+// YIELD CURVE DATA (ycD) — Treasury CMT zero-coupon par rates
+// ============================================================================
+// Seven maturity points spanning the full curve.
+// Short end (≤1yr) can be derived from fwD; medium/long entered manually
+// or fetched via API. Used by: yield curve tab, NS model, riding calculator.
+//
+// MATH: Nelson-Siegel spot rate (to be fitted in yield curve tab):
+//   y(m) = β0 + β1·[(1-exp(-m/τ))/(m/τ)] + β2·[(1-exp(-m/τ))/(m/τ) - exp(-m/τ)]
+//   β0 = long-run level (≈ 10yr rate)
+//   β1 = slope factor  (≈ short minus long; negative = normal curve)
+//   β2 = curvature     (hump; positive = concave, negative = convex)
+//   τ  = decay parameter (fit to maximize curvature at ~2–3yr point)
+//
+// MATH: HPR building blocks for riding calculator (Bieri-Chincarini 2005):
+//   Money-market ride HPR [m,h]: H = [1 + y_{m-h}·(m-h)/z] / [1 + y_m·m/z] - 1
+//   Bond ride HPR [m,h]:         H = [(1+y_m)^{m/z} / (1+y_{m-h})^{(m-h)/z}] - 1
+//   Excess HPR:                  XH[m,h] = H[m,h] - H[h]  (vs buy-and-hold)
+//   Cushion (break-even Δy):     C = y*_{m-h} - y_{m-h}   (see Eq. 15/16)
+//   Duration-neutral weight:     ω = (D_H - D_O) / (D_R - D_O)  (Eq. 29)
+//
+// MATH: Taylor rule (Atlanta Fed generalized form):
+//   FFR̂_t = ρ·FFR_{t-1} + (1-ρ)·[(r*+π*) + 1.5·(π_t-π*) + β·gap_t]
+//   ρ = smoothing (0=no inertia, 0.85=Greenspan-style), β = gap weight
+//   TaylorSignal = sign(ΔFFRᴿ): +1=hike prescribed, -1=cut, 0=neutral
+// ============================================================================
+
+// Maturity in years → label mapping
+// z (day-count basis): 360 for money-market, 365 for bonds
+let ycD=[
+  {mat:0.25, label:'3mo',  rate:3.64, src:'zq',     editable:false, ticker:'CMT 3M'},
+  {mat:0.50, label:'6mo',  rate:3.60, src:'zq',     editable:false, ticker:'CMT 6M'},
+  {mat:1.00, label:'1yr',  rate:3.55, src:'zq',     editable:false, ticker:'CMT 1Y'},
+  {mat:2.00, label:'2yr',  rate:3.84, src:'manual',  editable:true,  ticker:'CMT 2Y'},
+  {mat:5.00, label:'5yr',  rate:4.04, src:'manual',  editable:true,  ticker:'CMT 5Y'},
+  {mat:10.0, label:'10yr', rate:4.31, src:'manual',  editable:true,  ticker:'CMT 10Y'},
+  {mat:30.0, label:'30yr', rate:4.61, src:'manual',  editable:true,  ticker:'CMT 30Y'},
+];
+// Sync short end of ycD from live fwD chain on render
+function ycSyncShortEnd(){
+  const chain=fwChain(fwD);
+  let se=3.64;
+  for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start;break;}}
+  ycD[0].rate=parseFloat((se).toFixed(4));
+  // 6mo ≈ avg of implied EFFR over 6 months; 1yr ≈ 12-month avg
+  const avg6=fwD.slice(0,6).reduce((s,d)=>s+(100-d.price),0)/6;
+  const avg12=fwD.reduce((s,d)=>s+(100-d.price),0)/fwD.length;
+  ycD[1].rate=parseFloat(avg6.toFixed(4));
+  ycD[2].rate=parseFloat(avg12.toFixed(4));
+}
+
+// --- Treasury CMT fetch ───────────────────────────────────────────────────────
+async function fetchYieldCurve(){
+  const btn=document.getElementById('yc-btn'),icon=document.getElementById('yc-icon'),status=document.getElementById('yc-status');
+  const key=document.getElementById('api-key-input').value.trim();
+  btn.disabled=true;icon.className='spin';status.textContent='Fetching Treasury CMT rates…';
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest U.S. Treasury constant-maturity (CMT) par rates from the Federal Reserve H.15 release or Treasury.gov. Find the most recent daily values for: 3-month, 6-month, 1-year, 2-year, 5-year, 10-year, and 30-year. Return ONLY raw JSON, no markdown, no fences:
+{"asOf":"YYYY-MM-DD","source":"Federal Reserve H.15","rates":{"3mo":3.64,"6mo":3.60,"1yr":3.55,"2yr":3.84,"5yr":4.04,"10yr":4.31,"30yr":4.61}}
+Use null for any maturity not available. Keep fallback values shown if search fails.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||`API ${res.status}`);
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    const keyMap={'3mo':0,'6mo':1,'1yr':2,'2yr':3,'5yr':4,'10yr':5,'30yr':6};
+    let up=0;
+    Object.entries(p.rates||{}).forEach(([k,v])=>{
+      const idx=keyMap[k];
+      if(idx!==undefined&&v!==null&&v>0&&v<20){ycD[idx].rate=parseFloat(v.toFixed(4));ycD[idx].src='live';up++;}
+    });
+    status.textContent=`${up} CMT rates updated · ${p.source||'H.15'} · ${p.asOf||today}`;
+    if(fwActive==='yieldcurve')fwRenderYieldCurve();
+  }catch(e){status.textContent='⚠ '+(e.message||'Failed — rates unchanged');}
+  finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
+}
+
+// --- Yield curve tab renderer ────────────────────────────────────────────────
+function fwRenderYieldCurve(){
+  ycSyncShortEnd();
+  const el=document.getElementById('fw-yieldcurve');
+
+  // ── Fetch bar ──
+  let html=`<div class="k-fetch-bar">
+    <button class="refresh-btn" id="yc-btn" onclick="fetchYieldCurve()"><span id="yc-icon">⟳</span> Fetch CMT rates</button>
+    <span class="k-seed-note" id="yc-status">Seed data — 3mo/6mo/1yr derived from ZQ chain · 2yr–30yr enter manually or fetch</span>
+    <span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary);display:flex;gap:10px;flex-wrap:wrap">
+      <span><span class="k-dot" style="background:var(--c-cme)"></span>ZQ-derived</span>
+      <span><span class="k-dot" style="background:var(--c-sofr)"></span>CMT manual/live</span>
+      <span><span class="k-dot" style="background:var(--c-overlay)"></span>NS fit</span>
+    </span>
+  </div>`;
+
+  // ── CMT input table ──────────────────────────────────────────────────────────
+  html+=`<div class="k-panel" style="margin-bottom:12px">
+    <div class="k-hdr">
+      <span class="k-title">Treasury CMT par rates — input grid</span>
+      <span class="k-contract">Federal Reserve H.15 · daily</span>
+    </div>
+    <div style="overflow-x:auto"><table class="fwt">
+    <thead><tr>
+      <th>Tenor</th><th>Rate (%)</th><th>Source</th>
+      <th>Spread vs 3mo (bp)</th><th>Slope contribution</th>
+    </tr></thead><tbody>`;
+  const short=ycD[0].rate;
+  ycD.forEach((row,i)=>{
+    const spread=((row.rate-short)*100).toFixed(1);
+    const spreadCol=parseFloat(spread)>0?'var(--color-text-success)':parseFloat(spread)<0?'var(--color-text-danger)':'var(--color-text-tertiary)';
+    const srcBadge=row.src==='live'
+      ?`<span class="k-pill k-up">live</span>`
+      :row.src==='zq'
+        ?`<span class="k-pill" style="background:var(--c-cme-a);color:var(--c-cme)">ZQ</span>`
+        :`<span class="k-pill k-neu">manual</span>`;
+    const slope10_2=(ycD[5].rate-ycD[3].rate)*100;
+    const slopeContrib=i>=3&&i<=5?((row.rate-ycD[i>0?i-1:0].rate)*100).toFixed(1):'—';
+    html+=`<tr>
+      <td style="font-weight:500;font-family:var(--font-mono)">${row.label}</td>
+      <td><input class="fw-in" type="number" step="0.01" min="0" max="20"
+        value="${row.rate.toFixed(2)}"
+        ${row.editable?'':`disabled style="opacity:.6"`}
+        style="width:68px"
+        onchange="ycD[${i}].rate=parseFloat(this.value)||ycD[${i}].rate;if(fwActive==='yieldcurve')fwRenderYieldCurve()">
+        <span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">%</span>
+      </td>
+      <td>${srcBadge}</td>
+      <td style="font-family:var(--font-mono);color:${spreadCol}">${parseFloat(spread)>0?'+':''}${spread} bp</td>
+      <td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">${slopeContrib!=='—'?(parseFloat(slopeContrib)>0?'+':'')+slopeContrib+' bp':'—'}</td>
+    </tr>`;
+  });
+  // Key curve stats
+  const slope10_2=((ycD[5].rate-ycD[3].rate)*100).toFixed(1);
+  const slope2_3mo=((ycD[3].rate-ycD[0].rate)*100).toFixed(1);
+  const curveShape=parseFloat(slope10_2)>50?'Normal / steep':parseFloat(slope10_2)>0?'Normal / flat':parseFloat(slope10_2)>-20?'Flat / near-inverted':'Inverted';
+  html+=`</tbody></table></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <div class="fw-stat" style="padding:6px 10px">
+        <div class="fw-stat-l">10yr−2yr slope</div>
+        <div class="fw-stat-v" style="font-size:15px;color:${parseFloat(slope10_2)>0?'var(--color-text-success)':'var(--color-text-danger)'}">${parseFloat(slope10_2)>0?'+':''}${slope10_2} bp</div>
+      </div>
+      <div class="fw-stat" style="padding:6px 10px">
+        <div class="fw-stat-l">2yr−3mo slope</div>
+        <div class="fw-stat-v" style="font-size:15px;color:${parseFloat(slope2_3mo)>0?'var(--color-text-success)':'var(--color-text-danger)'}">${parseFloat(slope2_3mo)>0?'+':''}${slope2_3mo} bp</div>
+      </div>
+      <div class="fw-stat" style="padding:6px 10px">
+        <div class="fw-stat-l">Curve shape</div>
+        <div class="fw-stat-v" style="font-size:13px">${curveShape}</div>
+      </div>
+      <div class="fw-stat" style="padding:6px 10px">
+        <div class="fw-stat-l">Bieri-Chincarini slope sensitivity</div>
+        <div class="fw-stat-v" style="font-size:13px">−25bp / +100bp FFTR</div>
+        <div class="fw-stat-s">10−2yr spread flattens 25bp per 100bp hike</div>
+      </div>
+    </div>
+    <div class="k-note" style="margin-top:8px">3-month, 6-month, and 1-year rates are derived automatically from the ZQ futures chain — they update when scenarios change. 2yr–30yr rates are editable here or fetched from the Federal Reserve H.15 release. These rates seed the Nelson-Siegel term structure model (implemented in the next phase) and the riding calculator's HPR/cushion computations.</div>
+  </div>`;
+
+  // ── Yield curve chart ────────────────────────────────────────────────────────
+  html+=`<div class="k-panel k-full" style="margin-bottom:12px">
+    <div class="k-hdr">
+      <span class="k-title">Current yield curve — par rates + Nelson-Siegel basis (placeholder)</span>
+      <span class="k-contract">H.15 CMT · NS fit pending</span>
+    </div>`;
+  html+=ycCurveChart();
+  html+=`<div class="k-note">Blue circles: ZQ-derived short end (3mo–1yr). Green circles: CMT medium/long end (2yr–30yr). The Nelson-Siegel fit (β₀, β₁, β₂, τ — amber curve) will be overlaid in the next implementation phase using Nelder-Mead optimization. The fitted curve populates y_{m-h,t+h} for the riding calculator. Scenario-shocked curves (one per FOMC meeting) will animate as a forward path.</div>
+  </div>`;
+
+  el.innerHTML=html;
+}
+
+// --- Yield curve SVG chart ────────────────────────────────────────────────────
+function ycCurveChart(){
+  const W=720,H=160,mt=24,mb=28,ml=38,mr=16;
+  const mats=ycD.map(d=>d.mat);
+  const rates=ycD.map(d=>d.rate);
+  const minM=0,maxM=31,minR=Math.min(...rates)-0.15,maxR=Math.max(...rates)+0.15;
+  const xs=m=>ml+(m-minM)/(maxM-minM)*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Y grid
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+=`<line x1="${ml}" y1="${ys(y).toFixed(1)}" x2="${W-mr}" y2="${ys(y).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${(ml-4).toFixed(1)}" y="${ys(y).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${y.toFixed(2)}</text>`;
+  }
+  // X-axis maturity labels
+  [0.25,0.5,1,2,5,10,30].forEach(m=>{
+    const lbl=m<1?(m*12).toFixed(0)+'mo':m+'yr';
+    svg+=`<text x="${xs(m).toFixed(1)}" y="${(mt+H+16).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${lbl}</text>`;
+    svg+=`<line x1="${xs(m).toFixed(1)}" y1="${mt}" x2="${xs(m).toFixed(1)}" y2="${(mt+H).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".3" stroke-dasharray="2,3"/>`;
+  });
+  // Connect dots with line
+  for(let i=0;i<ycD.length-1;i++){
+    const a=ycD[i],b=ycD[i+1];
+    svg+=`<line x1="${xs(a.mat).toFixed(1)}" y1="${ys(a.rate).toFixed(1)}" x2="${xs(b.mat).toFixed(1)}" y2="${ys(b.rate).toFixed(1)}" stroke="var(--color-border-secondary)" stroke-width="1.2" opacity=".6"/>`;
+  }
+  // Plot points — ZQ-derived (blue) vs manual/live (green)
+  ycD.forEach(d=>{
+    const col=d.src==='zq'?'var(--c-cme)':'var(--c-sofr)';
+    svg+=`<circle cx="${xs(d.mat).toFixed(1)}" cy="${ys(d.rate).toFixed(1)}" r="6" fill="${col}" opacity=".9"/>`;
+    svg+=`<text x="${xs(d.mat).toFixed(1)}" y="${(ys(d.rate)-10).toFixed(1)}" text-anchor="middle" font-size="8" fill="${col}" font-family="var(--font-mono)">${d.rate.toFixed(2)}</text>`;
+    svg+=`<text x="${xs(d.mat).toFixed(1)}" y="${(ys(d.rate)+18).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${d.label}</text>`;
+  });
+  // NS placeholder label
+  svg+=`<text x="${(W/2).toFixed(1)}" y="${(mt+H/2).toFixed(1)}" text-anchor="middle" font-size="11" fill="var(--c-overlay)" opacity=".4" font-family="var(--font-sans)">Nelson-Siegel fit — Phase 2</text>`;
+  svg+=`</svg>`;
+  return svg;
+}
+
 // --- SR3 refresh ─────────────────────────────────────────────────────────────
 async function fetchSOFR(){
   const btn=document.getElementById('sofr-btn'),icon=document.getElementById('sofr-icon'),status=document.getElementById('sofr-status');
@@ -1079,7 +1575,7 @@ Prices follow the CME convention (100 minus implied rate). Keep fallback values 
     srD.forEach(row=>{if(p.prices?.[row.lb]!==undefined){const v=parseFloat(p.prices[row.lb]);if(v>90&&v<100){row.price=v;up++;}}});
     status.textContent=`${up} SR3 contracts updated · ${p.source||'web'} · SOFR ${p.sofr||'—'}%`;
     document.getElementById('version-badge').textContent='v2.0 · '+new Date().toLocaleDateString('en-US',{month:'short',year:'numeric'});
-    if(fwActive==='sofr'){const chain=fwChain(fwD);const meetings=fwMeetings(fwD,chain);fwRenderSOFR(meetings,chain,parseFloat(document.getElementById('fw-lb-in')?.value)||3.50);}
+    if(fwActive==='sofr'){const chain=fwChain(fwD);const meetings=fwMeetings(fwD,chain);fwRenderSOFR(meetings,chain,fwLb);}
   }catch(e){status.textContent='⚠ '+(e.message||'Failed');}
   finally{btn.disabled=false;icon.className='';icon.textContent='⟳';}
 }
@@ -1137,7 +1633,7 @@ function fwRenderSOFR(meetings,chain,lb){
       <td style="font-family:var(--font-mono);font-size:11px;color:var(--c-sofr)">${s.ticker}</td>
       <td style="white-space:nowrap">${s.qLabel}</td>
       <td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="${s.price}" style="width:72px"
-        onchange="srD[${i}].price=+this.value||srD[${i}].price;const c=fwChain(fwD);fwRenderSOFR(fwMeetings(fwD,c),c,parseFloat(document.getElementById('fw-lb-in')?.value)||3.50)">
+        onchange="srD[${i}].price=+this.value||srD[${i}].price;const c=fwChain(fwD);fwRenderSOFR(fwMeetings(fwD,c),c,fwLb)">
       </td>
       <td style="font-family:var(--font-mono);color:var(--c-sofr)">${sofrRate}%</td>
       <td style="font-family:var(--font-mono);color:var(--c-cme)">${zqAvg!==null?zqAvg.toFixed(4)+'%':'—'}</td>
@@ -1283,7 +1779,228 @@ function basisBarsSvg(zqAvgs){
   return svg;
 }
 
+// ================================================================================
+// --- Tab: Dashboard (cross-cutting — fwD + kalshiD + polyD + srD) ────────────
+// ================================================================================
+function fwRenderDashboard(chain,meetings,states,final,lb){
+  const el=document.getElementById('fw-dashboard');
+  const cSeries=getCompareSeries(lb);
+
+  // ── 1. Summary stat bar ──────────────────────────────────────────────────────
+  let se='3.64';for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start.toFixed(2);break;}}
+  const pC1=Object.entries(final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+  const expC=Object.entries(final).reduce((s,[k,p])=>s+(-parseInt(k))*p,0);
+  const expR=(lb-expC*.25).toFixed(2);
+  const cmeExpCC=Object.entries(cmeCutCountDist(final)).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kalshiD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const polyExpCC=Object.entries(polyD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const sofrNear=(100-srD[0].price).toFixed(2);
+  const sofrTerm=(100-srD[srD.length-1].price).toFixed(2);
+  const zqAvgs=zqQuarterlyAvg();
+  const nearBasis=zqAvgs[0]!==null?((100-srD[0].price-zqAvgs[0])*100).toFixed(1):'—';
+  const activeName=fwActiveScenario&&SCENARIOS[fwActiveScenario]?SCENARIOS[fwActiveScenario].shortLabel:'Baseline (seed)';
+
+  let html=`
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">
+    <div class="fw-stat"><div class="fw-stat-l">EFFR start</div><div class="fw-stat-v">${se}%</div><div class="fw-stat-s">Current effective</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">P(≥1 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">${(pC1*100).toFixed(1)}%</div><div class="fw-stat-s">CME 12-month</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">Exp. terminal</div><div class="fw-stat-v">${expR}%</div><div class="fw-stat-s">CME implied lb</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">Exp. cuts 2026</div><div class="fw-stat-v" style="font-size:15px">
+      <span style="color:var(--c-cme)">${cmeExpCC.toFixed(1)}</span>&thinsp;·&thinsp;
+      <span style="color:var(--c-kal)">${kalExpCC.toFixed(1)}</span>&thinsp;·&thinsp;
+      <span style="color:var(--c-poly)">${polyExpCC.toFixed(1)}</span>
+    </div><div class="fw-stat-s">CME · Kal · Poly</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">SOFR near-term</div><div class="fw-stat-v" style="color:var(--c-sofr)">${sofrNear}%</div><div class="fw-stat-s">SR3M6 (Q2 2026)</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">SOFR terminal</div><div class="fw-stat-v" style="color:var(--c-sofr)">${sofrTerm}%</div><div class="fw-stat-s">SR3Z7 (Q4 2027)</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">SOFR–EFFR basis</div><div class="fw-stat-v" style="color:${nearBasis!=='—'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)'};font-size:15px">${nearBasis!=='—'?'+':''}${nearBasis} bp</div><div class="fw-stat-s">Near-term Q2</div></div>
+    <div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">${activeName}</div>${cSeries?`<div class="fw-stat-s" style="color:var(--c-overlay)">vs ${cSeries.label}</div>`:'<div class="fw-stat-s">No compare</div>'}</div>
+  </div>`;
+
+  // ── 2. Unified rate path chart (CME + Kalshi + SOFR + compare) ────────────────
+  html+=`<div class="k-panel k-full" style="margin-bottom:12px">
+    <div class="k-hdr">
+      <span class="k-title">Unified rate path — CME EFFR chain · Kalshi implied · SR3 SOFR strip · Compare scenario</span>
+      <span style="display:flex;gap:8px;font-size:10px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap">
+        <span><span class="k-dot" style="background:var(--c-cme)"></span>CME</span>
+        <span><span class="k-dot" style="background:var(--c-kal)"></span>Kalshi</span>
+        <span><span class="k-dot" style="background:var(--c-sofr)"></span>SR3 SOFR</span>
+        <span><span class="k-dot" style="background:var(--c-dots)"></span>Fed SEP</span>
+        ${cSeries?`<span><span class="k-dot" style="background:var(--c-overlay)"></span>${cSeries.label}</span>`:''}
+      </span>
+    </div>`;
+  // Build unified rate path SVG
+  html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs);
+  html+=`<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026–Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. ${cSeries?`Compare scenario (amber dashed): ${cSeries.label} (${cSeries.totalBp} → ${cSeries.endRate}%).`:'Set a compare scenario in Futures Inputs to add a fourth path.'}</div>
+  </div>`;
+
+  // ── 3. Cross-market divergence table ─────────────────────────────────────────
+  const comps=getMeetingComps(meetings);
+  html+=`<div class="k-panel k-full" style="margin-bottom:12px">
+    <div class="k-hdr"><span class="k-title">Cross-market divergence — all sources per meeting</span></div>
+    <div style="overflow-x:auto"><table class="fwt">
+    <thead><tr>
+      <th>Meeting</th><th>CME exp. rate</th><th>Kalshi imp.</th><th>Kal−CME</th>
+      <th>CME P(cut)</th><th>Kal P(cut)</th><th>Poly P(cut)</th><th>SOFR (qtr)</th><th>Basis bp</th>
+    </tr></thead><tbody>`;
+  let si3=0;
+  meetings.forEach((m,mi)=>{
+    while(si3<fwD.length&&fwD[si3].lb!==m.lb)si3++;
+    const s=states[mi+1]||states[states.length-1];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    const cmeRate=(lb+ek*.25).toFixed(2);
+    const kalRate=kalshiD.kalshiRate[m.lb]?kalshiD.kalshiRate[m.lb].toFixed(2):'—';
+    const kalDiff=kalshiD.kalshiRate[m.lb]?((kalshiD.kalshiRate[m.lb]-(lb+ek*.25))*100).toFixed(0)+'bp':'—';
+    const kd=kalshiD.meetings[m.lb],pd=polyD.meetings[m.lb];
+    const cmeCut=((m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0));
+    const kCut=kd?(kd.cut25||0)+(kd.cut50||0):null;
+    const pCut=pd?(pd.cut25||0)+(pd.cut50||0):null;
+    const srRow=srD.find(s2=>s2.lb===m.lb);
+    const zqAvgIdx=srD.findIndex(s2=>s2.lb===m.lb);
+    const basis=srRow&&zqAvgs[zqAvgIdx]!==null?((100-srRow.price-zqAvgs[zqAvgIdx])*100).toFixed(1)+'bp':'—';
+    const sofrR=srRow?(100-srRow.price).toFixed(2)+'%':'—';
+    const diffCol=kalshiD.kalshiRate[m.lb]?(parseFloat(kalDiff)>5?'var(--c-kal)':parseFloat(kalDiff)<-5?'var(--color-text-danger)':'var(--color-text-tertiary)'):'var(--color-text-tertiary)';
+    html+=`<tr>
+      <td style="white-space:nowrap;font-weight:500">${m.label||m.lb}</td>
+      <td style="font-family:var(--font-mono);color:var(--c-cme)">${cmeRate}%</td>
+      <td style="font-family:var(--font-mono);color:var(--c-kal)">${kalRate}${kalRate!=='—'?'%':''}</td>
+      <td style="font-family:var(--font-mono);font-weight:500;color:${diffCol}">${kalDiff}</td>
+      <td style="font-family:var(--font-mono)">${(cmeCut*100).toFixed(1)}%</td>
+      <td style="font-family:var(--font-mono);color:var(--c-kal)">${kCut!==null?(kCut*100).toFixed(1)+'%':'—'}</td>
+      <td style="font-family:var(--font-mono);color:var(--c-poly)">${pCut!==null?(pCut*100).toFixed(1)+'%':'—'}</td>
+      <td style="font-family:var(--font-mono);color:var(--c-sofr)">${sofrR}</td>
+      <td style="font-family:var(--font-mono);color:${basis!=='—'&&parseFloat(basis)>0?'var(--c-sofr)':'var(--color-text-danger)'}">${basis}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>
+  <div class="k-note">Single table reading all four live data stores simultaneously. Kal−CME in bp: the spread between Kalshi's implied rate and the CME-derived expected EFFR at that meeting date — the key cross-market dislocation signal. SOFR column and basis only shown for quarterly contract dates (SR3 alignment).</div>
+  </div>`;
+
+  // ── 4. Regime summary box ────────────────────────────────────────────────────
+  const hikeRisk=getCmeHikeProb(meetings);
+  const regimeColor=hikeRisk>0.10?'var(--color-text-danger)':pC1>0.70?'var(--color-text-info)':'var(--color-text-secondary)';
+  const regimeLabel=hikeRisk>0.15?'Re-tightening risk':hikeRisk>0.08?'Elevated hike tail':pC1>0.85?'Strong easing path':pC1>0.50?'Moderate easing bias':'Policy on hold';
+  const warshP=(polyD.fedChair['Kevin Warsh']||0),riederP=(polyD.fedChair['Rick Rieder']||0);
+  const regimeRisk=warshP>0.40?'High hawkish regime-change risk':warshP>0.25?'Moderate regime-change risk':'Low regime-change risk';
+  html+=`<div class="k-grid">
+  <div class="k-panel">
+    <div class="k-hdr"><span class="k-title">Policy regime summary</span></div>
+    <div style="font-size:22px;font-weight:500;color:${regimeColor};margin-bottom:8px">${regimeLabel}</div>
+    <div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">
+      <div>CME hike tail: <b style="color:var(--color-text-warning)">${(hikeRisk*100).toFixed(1)}%</b></div>
+      <div>Kalshi hike any: <b style="color:var(--c-kal)">${(kalshiD.hikeAny*100).toFixed(1)}%</b></div>
+      <div>Poly hike 2026: <b style="color:var(--c-poly)">${(polyD.hikeAny*100).toFixed(1)}%</b></div>
+      <div>Emergency cut: <b style="color:var(--c-poly)">${(polyD.emergencyCut*100).toFixed(1)}%</b></div>
+      <div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">
+        Chair regime risk: <b>${regimeRisk}</b><br>
+        <span style="font-size:10px;color:var(--color-text-tertiary)">Warsh ${(warshP*100).toFixed(0)}% · Rieder ${(riederP*100).toFixed(0)}%</span>
+      </div>
+    </div>
+  </div>
+  <div class="k-panel">
+    <div class="k-hdr"><span class="k-title">Scenario delta — compare vs active</span></div>
+    ${cSeries?`
+    <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>${activeName}</b> · Compare: <b style="color:var(--c-overlay)">${cSeries.label}</b></div>
+    ${(()=>{
+      const actFinal=final;
+      const cFinal=cSeries.final;
+      const actExp=Object.entries(actFinal).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+      const cExp=Object.entries(cFinal).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+      const delta=((cExp-actExp)*100).toFixed(0);
+      const deltaCol=parseInt(delta)<0?'var(--color-text-info)':parseInt(delta)>0?'var(--color-text-danger)':'var(--color-text-secondary)';
+      const actP1=Object.entries(actFinal).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+      const cP1=Object.entries(cFinal).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+      return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div class="fw-stat"><div class="fw-stat-l">Rate delta</div><div class="fw-stat-v" style="font-size:16px;color:${deltaCol}">${parseInt(delta)>0?'+':''}${delta} bp</div><div class="fw-stat-s">Compare vs active terminal</div></div>
+        <div class="fw-stat"><div class="fw-stat-l">P(≥1 cut) delta</div><div class="fw-stat-v" style="font-size:16px;color:var(--c-overlay)">${((cP1-actP1)*100).toFixed(1)}pp</div><div class="fw-stat-s">Compare minus active</div></div>
+      </div>`;
+    })()}`
+    :`<div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Set a compare scenario in the Futures Inputs tab to see the cross-scenario delta here — terminal rate difference in bp, P(≥1 cut) spread, and path divergence.</div>`}
+  </div></div>`;
+
+  el.innerHTML=html;
+}
+
+// Unified rate path SVG for Dashboard
+function dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs){
+  const W=760,H=150,mt=24,mb=28,ml=38,mr=12;
+  const months=fwD.map(d=>d.lb);
+  // CME expected rate per month
+  let si=0;
+  const cmeRates=months.map((_,i)=>{
+    if(fwD[i].mtg&&si<states.length-1)si++;
+    const s=states[Math.min(si,states.length-1)];
+    return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+  });
+  // Kalshi meeting-month rates
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  // SR3 quarterly rates (plot at their quarter-end month index)
+  const sofrPts=srD.map(s=>{
+    const idx=months.indexOf(s.lb);
+    return idx>=0?{i:idx,r:100-s.price}:null;
+  }).filter(Boolean);
+  // Compare rates
+  let cmpRates=null;
+  if(cSeries){
+    let si2=0;
+    cmpRates=months.map((_,i)=>{
+      if(fwD[i].mtg&&si2<cSeries.states.length-1)si2++;
+      const s=cSeries.states[Math.min(si2,cSeries.states.length-1)];
+      return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+    });
+  }
+  // Fed SEP dots
+  const fedDots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  // Scale
+  const allV=[...cmeRates,...kalRates.filter(Boolean),...sofrPts.map(d=>d.r),...fedDots.map(d=>d.rate),...(cmpRates||[])];
+  const minR=Math.min(...allV)-0.12,maxR=Math.max(...allV)+0.12;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg=`<svg viewBox="0 0 ${W} ${H+mt+mb}" style="width:100%;display:block;overflow:visible">`;
+  // Grid
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+=`<line x1="${ml}" y1="${ys(y).toFixed(1)}" x2="${W-mr}" y2="${ys(y).toFixed(1)}" stroke="var(--color-border-tertiary)" stroke-width=".5"/>`;
+    svg+=`<text x="${(ml-4).toFixed(1)}" y="${ys(y).toFixed(1)}" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">${y.toFixed(2)}</text>`;
+  }
+  // Compare path (amber, behind everything)
+  if(cmpRates){
+    const pts=cmpRates.map((r,i)=>`${xs(i).toFixed(1)},${ys(r).toFixed(1)}`).join(' ');
+    svg+=`<polyline points="${pts}" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="7,3" opacity=".75"/>`;
+    cmpRates.forEach((r,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="2" fill="var(--c-overlay)" opacity=".7"/>`;});
+  }
+  // SR3 SOFR (green, larger circles, quarterly)
+  if(sofrPts.length>1){
+    for(let k=0;k<sofrPts.length-1;k++){
+      const a=sofrPts[k],b=sofrPts[k+1];
+      svg+=`<line x1="${xs(a.i).toFixed(1)}" y1="${ys(a.r).toFixed(1)}" x2="${xs(b.i).toFixed(1)}" y2="${ys(b.r).toFixed(1)}" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".85"/>`;
+    }
+    sofrPts.forEach(d=>{svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.r).toFixed(1)}" r="5" fill="var(--c-sofr)" opacity=".9"/>`;svg+=`<text x="${xs(d.i).toFixed(1)}" y="${(ys(d.r)-9).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-sofr)" font-family="var(--font-mono)">${d.r.toFixed(2)}</text>`;});
+  }
+  // CME line (blue, solid, on top)
+  const cPts=cmeRates.map((r,i)=>`${xs(i).toFixed(1)},${ys(r).toFixed(1)}`).join(' ');
+  svg+=`<polyline points="${cPts}" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".9"/>`;
+  cmeRates.forEach((r,i)=>{svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="3" fill="var(--c-cme)" opacity=".8"/>`;});
+  // Kalshi dots (orange, meeting months only)
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev)svg+=`<line x1="${xs(kPrev.i).toFixed(1)}" y1="${ys(kPrev.r).toFixed(1)}" x2="${xs(i).toFixed(1)}" y2="${ys(r).toFixed(1)}" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".75"/>`;
+    svg+=`<circle cx="${xs(i).toFixed(1)}" cy="${ys(r).toFixed(1)}" r="4" fill="var(--c-kal)" opacity=".85"/>`;
+    kPrev={i,r};
+  });
+  // Fed SEP (purple)
+  fedDots.forEach(d=>{
+    svg+=`<circle cx="${xs(d.i).toFixed(1)}" cy="${ys(d.rate).toFixed(1)}" r="6" fill="var(--c-dots)" opacity=".85"/>`;
+    svg+=`<text x="${xs(d.i).toFixed(1)}" y="${(ys(d.rate)+14).toFixed(1)}" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">SEP</text>`;
+  });
+  // X labels
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+=`<text x="${xs(i).toFixed(1)}" y="${(mt+H+16).toFixed(1)}" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">${lb2.replace(/ 20\d\d/,'')}</text>`;});
+  svg+=`</svg>`;
+  return svg;
+}
+
 // --- Init ─────────────────────────────────────────────────────────────────────
+loadSettings();
 fwRender();
 </script>
 </body>
