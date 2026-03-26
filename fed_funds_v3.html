@@ -1030,6 +1030,165 @@ function SvgPanel({html}) {
 }
 
 // ============================================================================
+// TAB COMPONENTS
+// ============================================================================
+
+function FuturesInputsTab({state, dispatch, finance}) {
+  const ERA = {
+    easing:     {label:'Easing',     color:'var(--c-cme)',             bg:'var(--color-background-info)',    border:'var(--color-border-info)'},
+    crisis:     {label:'Crisis',     color:'var(--color-text-danger)', bg:'var(--color-background-danger)',  border:'#fca5a5'},
+    tightening: {label:'Tightening', color:'var(--color-text-warning)',bg:'#fff7ed',                         border:'#fed7aa'},
+  };
+  const activeSc = SCENARIOS[state.fwActiveScenario];
+  const cmpSc = SCENARIOS[state.fwCompareScenario];
+  return (
+    <div>
+      <div style={{padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.5rem'}}>
+        <div style={{fontSize:'10px',fontWeight:500,color:'var(--color-text-tertiary)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'7px'}}>
+          Historical scenario &mdash; click to apply &middot; click active to deactivate
+        </div>
+        {['easing','crisis','tightening'].map(era=>{
+          const e=ERA[era];
+          return (
+            <div key={era} style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',marginBottom:'5px'}}>
+              <span style={{fontSize:'9px',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',color:e.color,minWidth:'54px'}}>{e.label}</span>
+              {Object.entries(SCENARIOS).filter(([,s])=>s.era===era).map(([key,sc])=>{
+                const isActive=state.fwActiveScenario===key;
+                return (
+                  <button key={key} title={sc.desc}
+                    onClick={()=>dispatch({type:isActive?'DEACTIVATE':'SET_SCENARIO',key})}
+                    style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 9px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?e.border:'var(--color-border-secondary)'),background:isActive?e.bg:'var(--color-background-secondary)',color:isActive?e.color:'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
+                    <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.75}}>{sc.totalBp}</span>
+                    {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+        {activeSc&&(
+          <div style={{display:'flex',alignItems:'flex-start',gap:'8px',padding:'7px 10px',background:'var(--color-background-info)',border:'.5px solid var(--color-border-info)',borderRadius:'var(--border-radius-md)',marginTop:'4px',fontSize:'11px',color:'var(--color-text-info)',lineHeight:1.5,flexWrap:'wrap'}}>
+            <span style={{fontWeight:600,whiteSpace:'nowrap'}}>{activeSc.shortLabel} ({activeSc.totalBp} &rarr; {activeSc.endRate}%)</span>
+            <span style={{color:'var(--color-text-secondary)',flex:1}}>{activeSc.desc}</span>
+            <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'\u2715'}</button>
+          </div>
+        )}
+      </div>
+      <div style={{padding:'8px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--c-overlay)',marginBottom:'.75rem'}}>
+        <div style={{fontSize:'10px',fontWeight:500,color:'var(--c-overlay)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'6px'}}>
+          {'\u2194'} Compare overlay &mdash; amber on dot plot &amp; final distribution &middot; click active to remove
+        </div>
+        {['easing','crisis','tightening'].map(era=>(
+          <div key={era} style={{display:'flex',alignItems:'center',gap:'5px',flexWrap:'wrap',marginBottom:'4px'}}>
+            <span style={{fontSize:'9px',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--color-text-tertiary)',minWidth:'54px'}}>{ERA[era].label}</span>
+            {Object.entries(SCENARIOS).filter(([,s])=>s.era===era).map(([key,sc])=>{
+              if(key===state.fwActiveScenario) return (
+                <button key={key} disabled style={{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 7px',fontSize:'10px',borderRadius:'20px',border:'.5px solid var(--color-border-tertiary)',background:'transparent',color:'var(--color-text-tertiary)',fontFamily:'var(--font-sans)',opacity:.3,cursor:'not-allowed'}}>
+                  <span>{sc.shortLabel}</span>
+                </button>
+              );
+              const isActive=state.fwCompareScenario===key;
+              return (
+                <button key={key} title={sc.desc}
+                  onClick={()=>dispatch({type:isActive?'CLEAR_COMPARE':'SET_COMPARE',key})}
+                  style={{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?'var(--c-overlay)':'var(--color-border-secondary)'),background:isActive?'var(--c-overlay-a)':'transparent',color:isActive?'var(--c-overlay)':'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
+                  <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.7}}>{sc.totalBp}</span>
+                  {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        {cmpSc&&<div style={{marginTop:'4px',fontSize:'10px',color:'var(--c-overlay)',lineHeight:1.4}}><b>{cmpSc.shortLabel} ({cmpSc.totalBp} &rarr; {cmpSc.endRate}%)</b> &mdash; {cmpSc.desc}</div>}
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'.75rem',flexWrap:'wrap'}}>
+        <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>Current target range lower bound:</span>
+        <input className="fw-in" type="number" step="0.25" min="0" max="8"
+          key={'lb-'+state.fwLb} defaultValue={state.fwLb} style={{width:'60px'}}
+          onBlur={e=>dispatch({type:'SET_LB',lb:parseFloat(e.target.value)||3.50})}/>
+        <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>%</span>
+      </div>
+      <div style={{overflowX:'auto'}}>
+        <table className="fwt">
+          <thead><tr><th>Month</th><th>ZQ price</th><th>Impl. avg EFFR</th><th>FOMC mtg</th><th>Label</th><th>N (to mtg)</th><th>M (after)</th></tr></thead>
+          <tbody>
+            {state.fwD.map((m,i)=>(
+              <tr key={m.lb}>
+                <td style={{whiteSpace:'nowrap',fontWeight:m.mtg?500:400}}>
+                  {m.lb}{m.mtg&&<span style={{fontSize:'9px',color:'var(--color-text-warning)'}}> {'\u25cf'}</span>}
+                </td>
+                <td>
+                  <input className="fw-in" type="number" step="0.005" min="90" max="100"
+                    key={m.lb+'-'+m.price} defaultValue={m.price} style={{width:'72px'}}
+                    onBlur={e=>{const v=parseFloat(e.target.value);if(v&&v>90&&v<100)dispatch({type:'UPDATE_ZQ_PRICE',i,value:v});}}/>
+                </td>
+                <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-secondary)'}}>{(100-m.price).toFixed(4)}%</td>
+                <td style={{textAlign:'center'}}>
+                  <input type="checkbox" checked={m.mtg}
+                    onChange={e=>dispatch({type:'UPDATE_ZQ_MTG',i,value:e.target.checked})}/>
+                </td>
+                <td><span style={{fontFamily:'var(--font-mono)',fontSize:'11px',opacity:m.mtg?1:.3}}>{m.ml}</span></td>
+                <td>
+                  <input className="fw-in" type="number" step="1" min="1" max="31"
+                    key={m.lb+'-N-'+m.N} defaultValue={m.N} disabled={!m.mtg} style={{width:'40px',opacity:m.mtg?1:.3}}
+                    onBlur={e=>dispatch({type:'UPDATE_ZQ_N',i,value:parseInt(e.target.value)||1})}/>
+                </td>
+                <td>
+                  <input className="fw-in" type="number" step="1" min="0" max="31"
+                    key={m.lb+'-M-'+m.M} defaultValue={m.M} disabled={!m.mtg} style={{width:'40px',opacity:m.mtg?1:.3}}
+                    onBlur={e=>dispatch({type:'UPDATE_ZQ_M',i,value:parseInt(e.target.value)||0})}/>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{fontSize:'11px',color:'var(--color-text-tertiary)',marginTop:'.5rem'}}>N = days from month start through meeting day. M = remaining days. N+M = days in month. Manual edits clear the active scenario.</p>
+    </div>
+  );
+}
+
+function ChainTab({state, finance}) {
+  const {chain, meetings} = finance;
+  const fwD = state.fwD;
+  let h='<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt"><thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>\u0394 (bp)</th><th>25bp moves</th></tr></thead><tbody>';
+  fwD.forEach((m,i)=>{
+    const c=chain[i],chg=(c.start!==null&&c.end!==null)?(c.end-c.start)*100:null;
+    const cc=chg!==null?(chg<-0.01?'var(--color-text-info)':chg>0.01?'var(--color-text-danger)':'var(--color-text-secondary)'):'var(--color-text-secondary)';
+    h+='<tr><td style="white-space:nowrap">'+(m.mtg?'<span style="color:var(--color-text-warning);font-size:9px">\u25cf </span>':'')+m.lb+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+m.price+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+c.avg.toFixed(4)+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.start!==null?c.start.toFixed(4):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.end!==null?c.end.toFixed(4):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(chg!==null?chg.toFixed(2):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(m.mtg&&chg!==null?(chg/25).toFixed(4):'\u2014')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(meetings.length){
+    h+='<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Per-meeting probability breakdown</div>';
+    meetings.forEach(m=>{
+      const p0=+(m.p0*100).toFixed(1),p1=+(m.p1*100).toFixed(1);
+      const col=m.isCut?'var(--color-background-info)':'var(--color-background-danger)';
+      const tcol=m.isCut?'var(--color-text-info)':'var(--color-text-danger)';
+      h+='<div style="margin-bottom:.7rem">';
+      h+='<div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">';
+      h+='<span style="font-size:12px;font-weight:500">'+m.label+'</span>';
+      h+='<span style="font-size:11px;color:var(--color-text-tertiary)">'+m.start.toFixed(3)+'% \u2192 '+m.end.toFixed(3)+'% (\u0394 '+(m.chg*100).toFixed(2)+' bp)</span>';
+      h+='</div>';
+      h+='<div style="display:flex;height:22px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary)">';
+      h+='<div style="width:'+p0+'%;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--color-text-secondary)">'+(p0>15?p0+'%':'')+'</div>';
+      if(m.p1>0.001) h+='<div style="width:'+p1+'%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:'+tcol+'">'+(p1>8?p1+'%':'')+'</div>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:1.25rem;margin-top:3px;font-size:10px;color:var(--color-text-tertiary)">';
+      h+='<span>'+p0+'% '+m.l0+'</span>';
+      if(m.p1>0.001) h+='<span style="color:'+tcol+'">'+p1+'% '+m.l1+'</span>';
+      h+='</div></div>';
+    });
+  }
+  return <SvgPanel html={h}/>;
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -1100,9 +1259,10 @@ function App() {
         ))}
       </div>
 
-      <div style={{color:'var(--color-text-secondary)',fontSize:'13px'}}>
-        Active tab: {state.fwActive} &mdash; content rendering in next steps
-      </div>
+      {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='chain'  && <ChainTab state={state} finance={finance}/>}
+      {!['inputs','chain'].includes(state.fwActive) &&
+        <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
 }
