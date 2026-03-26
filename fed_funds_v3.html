@@ -370,14 +370,139 @@ const INITIAL_STATE = {
   rideSelected: {matIdx:3, hIdx:1},
 };
 
-function reducer(state, action){ return state; }
+function reducer(state, action){
+  switch(action.type){
+    case 'SET_TAB':
+      return {...state, fwActive: action.tab};
+    case 'SET_LB':
+      return {...state, fwLb: action.lb};
+    case 'SET_SCENARIO':{
+      const sc=SCENARIOS[action.key];
+      if(!sc) return state;
+      return {...state, fwActiveScenario: action.key,
+        fwD: state.fwD.map((r,i)=>({...r, price: sc.prices[i]}))};
+    }
+    case 'DEACTIVATE':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>({...r, price: FW_SEED_PRICES[i]}))};
+    case 'SET_COMPARE':
+      return {...state, fwCompareScenario: action.key};
+    case 'CLEAR_COMPARE':
+      return {...state, fwCompareScenario: ''};
+    case 'UPDATE_ZQ_PRICE':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, price: action.value}:r)};
+    case 'UPDATE_ZQ_MTG':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, mtg: action.value}:r)};
+    case 'UPDATE_ZQ_N':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, N: action.value}:r)};
+    case 'UPDATE_ZQ_M':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, M: action.value}:r)};
+    case 'UPDATE_SR_PRICE':
+      return {...state,
+        srD: state.srD.map((r,i)=>i===action.i?{...r, price: action.value}:r)};
+    case 'UPDATE_YC_RATE':
+      return {...state,
+        ycD: state.ycD.map((r,i)=>i===action.i?{...r, rate: action.value, src:'manual'}:r)};
+    case 'APPLY_LIVE_ZQ':{
+      const d=action.data;
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map(r=>{
+          const nr={...r};
+          if(d.prices&&d.prices[r.lb]!==undefined){const v=parseFloat(d.prices[r.lb]);if(v>90&&v<100)nr.price=v;}
+          if(d.meetings&&d.meetings[r.lb]){const mt=d.meetings[r.lb];nr.mtg=!!mt.hasMeeting;if(mt.label)nr.ml=mt.label;if(mt.hasMeeting&&mt.N>0){nr.N=mt.N;nr.M=mt.M;}if(!mt.hasMeeting){nr.N=0;nr.M=0;}}
+          return nr;
+        })};
+    }
+    case 'APPLY_LIVE_KALSHI':
+      return {...state, kalshiD: {...state.kalshiD, ...action.data, fetched:true}};
+    case 'APPLY_LIVE_POLY':
+      return {...state, polyD: {...state.polyD, ...action.data, fetched:true}};
+    case 'APPLY_LIVE_SOFR':{
+      const prices=action.prices;
+      return {...state,
+        srD: state.srD.map(r=>{
+          if(prices[r.lb]!==undefined){const v=parseFloat(prices[r.lb]);if(v>90&&v<100)return{...r, price:v};}
+          return r;
+        })};
+    }
+    case 'APPLY_LIVE_YC':{
+      const rates=action.rates;
+      const keyMap={'3mo':0,'6mo':1,'1yr':2,'2yr':3,'5yr':4,'10yr':5,'30yr':6};
+      const next=state.ycD.map(r=>({...r}));
+      Object.entries(rates).forEach(([k,v])=>{
+        const idx=keyMap[k];
+        if(idx!==undefined&&v!==null&&v>0&&v<20){next[idx].rate=parseFloat(v.toFixed(4));next[idx].src='live';}
+      });
+      return {...state, ycD: next};
+    }
+    case 'LOAD_SETTINGS':{
+      const s=action.settings;
+      let next={...state};
+      if(s.lb!==undefined&&s.lb>=0&&s.lb<=8) next.fwLb=parseFloat(s.lb);
+      if(s.scenario&&SCENARIOS[s.scenario]){
+        next.fwActiveScenario=s.scenario;
+        next.fwD=next.fwD.map((r,i)=>({...r, price: SCENARIOS[s.scenario].prices[i]}));
+      }
+      if(s.compare&&SCENARIOS[s.compare]&&s.compare!==next.fwActiveScenario) next.fwCompareScenario=s.compare;
+      return next;
+    }
+    default:
+      return state;
+  }
+}
+
+// ============================================================================
+// DERIVED COMPUTATION HOOK
+// ============================================================================
+
+function useFinance(state) {
+  return useMemo(() => {
+    const syncedYcD = ycSyncShortEnd(state.fwD, state.ycD);
+    const chain = fwChain(state.fwD);
+    const meetings = fwMeetings(state.fwD, chain);
+    const {states, final} = fwDist(meetings);
+    const zqAvgs = zqQuarterlyAvg(state.fwD, state.srD);
+    const instFwd = srInstFwd(state.srD);
+    const compareSeries = getCompareSeries(state.fwCompareScenario, state.fwD, state.fwLb);
+    let effrStart = 3.64;
+    for(let i=0;i<state.fwD.length;i++){
+      if(state.fwD[i].mtg && chain[i].start !== null){effrStart=chain[i].start; break;}
+    }
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb]);
+}
 
 // ============================================================================
 // REACT APP
 // ============================================================================
 
 function App() {
-  return <div>Loading...</div>;
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const finance = useFinance(state);
+
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('fwCfg') || '{}');
+      if(s.lb || s.scenario || s.compare) dispatch({type:'LOAD_SETTINGS', settings:s});
+    } catch(e) {}
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem('fwCfg', JSON.stringify({lb:state.fwLb, scenario:state.fwActiveScenario, compare:state.fwCompareScenario})); }
+    catch(e) {}
+  }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
+
+  return (
+    <div>
+      <p>EFFR: {finance.effrStart.toFixed(2)}%</p>
+      <p>Meetings: {finance.meetings.length}</p>
+      <p>Tab: {state.fwActive}</p>
+    </div>
+  );
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
