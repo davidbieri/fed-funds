@@ -477,12 +477,144 @@ function useFinance(state) {
 }
 
 // ============================================================================
+// ASYNC FETCH FUNCTIONS (Anthropic API + web_search)
+// ============================================================================
+
+async function refreshData(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, zq:true}));
+  setRefreshStatus(s=>({...s, zq:'Searching for ZQ futures and FOMC schedule\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Return ONLY raw JSON \u2014 no markdown, no fences \u2014 for CME 30-Day Fed Funds (ZQ) futures prices Apr 2026\u2013Mar 2027 and FOMC meeting dates. Shape:\n{"asOf":"YYYY-MM-DD","source":"name","effr":3.64,"prices":{"Apr 2026":96.36,"May 2026":96.40,"Jun 2026":96.50,"Jul 2026":96.58,"Aug 2026":96.65,"Sep 2026":96.72,"Oct 2026":96.78,"Nov 2026":96.85,"Dec 2026":96.90,"Jan 2027":96.94,"Feb 2027":96.97,"Mar 2027":97.00},"meetings":{"Apr 2026":{"hasMeeting":true,"label":"Apr 28-29","N":28,"M":2},"May 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Jun 2026":{"hasMeeting":true,"label":"Jun 17-18","N":17,"M":13},"Jul 2026":{"hasMeeting":true,"label":"Jul 28-29","N":28,"M":3},"Aug 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Sep 2026":{"hasMeeting":true,"label":"Sep 16-17","N":16,"M":14},"Oct 2026":{"hasMeeting":true,"label":"Oct 28-29","N":28,"M":3},"Nov 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Dec 2026":{"hasMeeting":true,"label":"Dec 9-10","N":9,"M":22},"Jan 2027":{"hasMeeting":true,"label":"Jan 27-28","N":27,"M":4},"Feb 2027":{"hasMeeting":false,"label":"","N":0,"M":0},"Mar 2027":{"hasMeeting":true,"label":"Mar 17-18","N":17,"M":14}}}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON in response');
+    const p=JSON.parse(m[0]);
+    dispatch({type:'APPLY_LIVE_ZQ', data:p});
+    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' \u00b7 EFFR '+(p.effr||'\u2014')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, zq:'\u26a0 '+(e.message||'Failed \u2014 data unchanged')}));}
+  finally{setFetching(f=>({...f, zq:false}));}
+}
+
+async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, kal:true}));
+  setRefreshStatus(s=>({...s, kal:'Searching Kalshi markets\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Kalshi.com for current market prices on these contracts:\n1. kxfeddecision-26mar, kxfeddecision-26jun, kxfeddecision-26jul, kxfeddecision-26sep, kxfeddecision-26oct, kxfeddecision-26dec, kxfeddecision-27jan, kxfeddecision-27mar \u2014 per-meeting Fed decision markets (hold/cut/hike probabilities)\n2. kxfedhike / fedhike \u2014 next Fed rate hike probability\n3. kxlargecut-26 \u2014 large cut (>25bp) probability this year\n4. kxratecutcount-26dec31 \u2014 number of rate cuts in 2026\n5. kxratecut-26dec31 \u2014 P(any cut by end 2026)\n6. kxfed-26mar, kxfed-26jun, kxfed-26sep, kxfed-26dec \u2014 implied rate level after each meeting\nReturn ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best available data, keep shown fallbacks where unavailable):\n{\n  "asOf":"YYYY-MM-DD","source":"Kalshi",\n  "meetings":{\n    "Apr 2026":{"hold":0.992,"cut25":0.005,"cut50":0.001,"hike25":0.002},\n    "Jun 2026":{"hold":0.74,"cut25":0.22,"cut50":0.02,"hike25":0.02},\n    "Jul 2026":{"hold":0.64,"cut25":0.28,"cut50":0.05,"hike25":0.03},\n    "Sep 2026":{"hold":0.55,"cut25":0.32,"cut50":0.09,"hike25":0.04},\n    "Oct 2026":{"hold":0.50,"cut25":0.32,"cut50":0.13,"hike25":0.05},\n    "Dec 2026":{"hold":0.46,"cut25":0.31,"cut50":0.16,"hike25":0.07},\n    "Jan 2027":{"hold":0.44,"cut25":0.32,"cut50":0.17,"hike25":0.07},\n    "Mar 2027":{"hold":0.42,"cut25":0.33,"cut50":0.18,"hike25":0.07}\n  },\n  "cutCount":{"0":0.15,"1":0.32,"2":0.30,"3":0.15,"4":0.08},\n  "hikeAny":0.04,\n  "largeCutAny":0.11,\n  "cutBinary":{"end-2026":0.85,"end-2027":0.97},\n  "kalshiRate":{"Apr 2026":3.625,"Jun 2026":3.54,"Jul 2026":3.47,"Sep 2026":3.38,"Oct 2026":3.30,"Dec 2026":3.22,"Jan 2027":3.16,"Mar 2027":3.10}\n}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    const merged={};
+    if(p.meetings) merged.meetings={...state.kalshiD.meetings,...p.meetings};
+    if(p.cutCount) merged.cutCount=p.cutCount;
+    if(p.hikeAny!==undefined) merged.hikeAny=p.hikeAny;
+    if(p.largeCutAny!==undefined) merged.largeCutAny=p.largeCutAny;
+    if(p.cutBinary) merged.cutBinary={...state.kalshiD.cutBinary,...p.cutBinary};
+    if(p.kalshiRate) merged.kalshiRate={...state.kalshiD.kalshiRate,...p.kalshiRate};
+    merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    merged.source=p.source||'Kalshi (web search)';
+    merged.kBadge='Live';
+    dispatch({type:'APPLY_LIVE_KALSHI', data:merged});
+    setRefreshStatus(s=>({...s, kal:'Kalshi data updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+  }catch(e){setRefreshStatus(s=>({...s, kal:'\u26a0 Kalshi: '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, kal:false}));}
+}
+
+async function fetchPolymarket(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, poly:true}));
+  setRefreshStatus(s=>({...s, poly:'Searching Polymarket fed-rates\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Polymarket.com for current prices on these Fed-related markets:\n1. polymarket.com/event/fed-decision-in-march-885 and equivalent monthly markets \u2014 per-meeting probabilities for hold/25bp cut/50+bp cut/hike\n2. polymarket.com/event/how-many-fed-rate-cuts-in-2026 \u2014 cut count distribution (13 outcomes)\n3. polymarket.com/event/what-will-the-fed-rate-be-at-the-end-of-2026 \u2014 terminal rate distribution\n4. polymarket.com/event/fed-rate-hike-in-2026 \u2014 P(any hike in 2026)\n5. polymarket.com/event/fed-emergency-rate-cut-before-2027 \u2014 P(emergency cut before 2027)\n6. polymarket.com/event/fed-rate-cut-by-629 \u2014 first cut timing by meeting\n7. polymarket.com/event/who-will-trump-nominate-as-fed-chair \u2014 Fed Chair nominee odds\nReturn ONLY raw JSON, no markdown, no fences:\n{\n  "asOf":"YYYY-MM-DD","source":"Polymarket",\n  "meetings":{\n    "Apr 2026":{"hold":0.99,"cut25":0.005,"cut50":0.002,"hike25":0.003},\n    "Jun 2026":{"hold":0.72,"cut25":0.21,"cut50":0.04,"hike25":0.03},\n    "Jul 2026":{"hold":0.62,"cut25":0.27,"cut50":0.07,"hike25":0.04},\n    "Sep 2026":{"hold":0.53,"cut25":0.31,"cut50":0.11,"hike25":0.05},\n    "Oct 2026":{"hold":0.48,"cut25":0.31,"cut50":0.15,"hike25":0.06},\n    "Dec 2026":{"hold":0.44,"cut25":0.30,"cut50":0.18,"hike25":0.08},\n    "Jan 2027":{"hold":0.43,"cut25":0.31,"cut50":0.18,"hike25":0.08},\n    "Mar 2027":{"hold":0.41,"cut25":0.32,"cut50":0.19,"hike25":0.08}\n  },\n  "cutCount":{"0":0.05,"1":0.09,"2":0.26,"3":0.22,"4":0.17,"5":0.12,"6":0.06,"7+":0.03},\n  "terminalRate":{"4.00":0.02,"3.75":0.08,"3.50":0.18,"3.25":0.26,"3.00":0.22,"2.75":0.13,"2.50":0.08,"2.25":0.03},\n  "hikeAny":0.155,\n  "emergencyCut":0.08,\n  "cutByMeeting":{"Apr 2026":0.01,"Jun 2026":0.22,"Jul 2026":0.45,"Sep 2026":0.68,"Oct 2026":0.78,"Dec 2026":0.88,"end-2026":0.88,"end-2027":0.97},\n  "fedChair":{"Kevin Warsh":0.47,"Rick Rieder":0.26,"Other":0.27}\n}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    const merged={};
+    if(p.meetings) merged.meetings={...state.polyD.meetings,...p.meetings};
+    if(p.cutCount) merged.cutCount=p.cutCount;
+    if(p.terminalRate) merged.terminalRate=p.terminalRate;
+    if(p.hikeAny!==undefined) merged.hikeAny=p.hikeAny;
+    if(p.emergencyCut!==undefined) merged.emergencyCut=p.emergencyCut;
+    if(p.cutByMeeting) merged.cutByMeeting={...state.polyD.cutByMeeting,...p.cutByMeeting};
+    if(p.fedChair) merged.fedChair=p.fedChair;
+    merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    merged.source=p.source||'Polymarket (web search)';
+    dispatch({type:'APPLY_LIVE_POLY', data:merged});
+    setRefreshStatus(s=>({...s, poly:'Polymarket updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+  }catch(e){setRefreshStatus(s=>({...s, poly:'\u26a0 Polymarket: '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, poly:false}));}
+}
+
+async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, sofr:true}));
+  setRefreshStatus(s=>({...s, sofr:'Searching for SR3 futures prices\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest CME 3-Month SOFR futures (SR3) settlement or last-trade prices for these contract months: Jun 2026 (SR3M6), Sep 2026 (SR3U6), Dec 2026 (SR3Z6), Mar 2027 (SR3H7), Jun 2027 (SR3M7), Sep 2027 (SR3U7), Dec 2027 (SR3Z7). Also find the current SOFR fixing rate. Return ONLY raw JSON \u2014 no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"source name","sofr":3.68,"prices":{"Jun 2026":96.35,"Sep 2026":96.53,"Dec 2026":96.68,"Mar 2027":96.80,"Jun 2027":96.88,"Sep 2027":96.94,"Dec 2027":96.99}}\nPrices follow the CME convention (100 minus implied rate). Keep fallback values shown if a contract is unavailable.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    if(p.prices) dispatch({type:'APPLY_LIVE_SOFR', prices:p.prices});
+    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' \u00b7 SOFR '+(p.sofr||'\u2014')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, sofr:'\u26a0 '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, sofr:false}));}
+}
+
+async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, yc:true}));
+  setRefreshStatus(s=>({...s, yc:'Fetching Treasury CMT rates\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest U.S. Treasury constant-maturity (CMT) par rates from the Federal Reserve H.15 release or Treasury.gov. Find the most recent daily values for: 3-month, 6-month, 1-year, 2-year, 5-year, 10-year, and 30-year. Return ONLY raw JSON, no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"Federal Reserve H.15","rates":{"3mo":3.64,"6mo":3.60,"1yr":3.55,"2yr":3.84,"5yr":4.04,"10yr":4.31,"30yr":4.61}}\nUse null for any maturity not available. Keep fallback values shown if search fails.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    if(p.rates) dispatch({type:'APPLY_LIVE_YC', rates:p.rates});
+    setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' \u00b7 '+(p.asOf||today)}));
+  }catch(e){setRefreshStatus(s=>({...s, yc:'\u26a0 '+(e.message||'Failed \u2014 rates unchanged')}));}
+  finally{setFetching(f=>({...f, yc:false}));}
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
 function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const finance = useFinance(state);
+  const [apiKey, setApiKey] = useState('');
+  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:''});
+  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false});
 
   useEffect(() => {
     try {
@@ -496,11 +628,57 @@ function App() {
     catch(e) {}
   }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
 
+  const TABS = [
+    {id:'inputs',     label:'Futures inputs'},
+    {id:'chain',      label:'EFFR chain'},
+    {id:'tree',       label:'Probability tree'},
+    {id:'kalshi',     label:'\u2696 Prediction markets'},
+    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
+    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
+    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
+  ];
+
   return (
-    <div>
-      <p>EFFR: {finance.effrStart.toFixed(2)}%</p>
-      <p>Meetings: {finance.meetings.length}</p>
-      <p>Tab: {state.fwActive}</p>
+    <div style={{padding:'1rem 0 .5rem'}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'6px'}}>
+        <div>
+          <h2 style={{fontSize:'18px',fontWeight:500,margin:'0 0 2px'}}>Fed Funds probability tree</h2>
+          <div style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>
+            Target: <b style={{color:'var(--color-text-primary)'}}>{state.fwLb.toFixed(2)}&ndash;{(state.fwLb+0.25).toFixed(2)}%</b>
+            &nbsp;&middot;&nbsp;EFFR: <b style={{color:'var(--color-text-primary)'}}>{finance.effrStart.toFixed(2)}%</b>
+          </div>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'4px'}}>
+          <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+            <input type="password" className="fw-in" placeholder="sk-ant-... (standalone only)"
+              style={{width:'195px',fontSize:'11px'}} value={apiKey}
+              onChange={e=>setApiKey(e.target.value)}/>
+            <button className="refresh-btn" disabled={fetching.zq}
+              onClick={()=>refreshData(state,dispatch,apiKey,setFetching,setRefreshStatus)}>
+              <span className={fetching.zq?'spin':''}>&#x27f3;</span> Refresh ZQ
+            </button>
+          </div>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',textAlign:'right',maxWidth:'400px',minHeight:'14px'}}>{refreshStatus.zq}</div>
+        </div>
+      </div>
+
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 7 tabs.</p>
+      <div className="api-note">
+        <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
+      </div>
+
+      <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
+        {TABS.map(t=>(
+          <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
+            onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
+            {t.label}
+          </div>
+        ))}
+      </div>
+
+      <div style={{color:'var(--color-text-secondary)',fontSize:'13px'}}>
+        Active tab: {state.fwActive} &mdash; content rendering in next steps
+      </div>
     </div>
   );
 }
