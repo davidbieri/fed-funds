@@ -236,6 +236,123 @@ const ycD=[
 ];
 
 // ============================================================================
+// PURE FUNCTIONS --- math layer + helpers (no globals, explicit args only)
+// ============================================================================
+
+function fwChain(months){
+  const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
+  for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
+  for(let r=0;r<n;r++){for(let i=n-1;i>=0;i--){const m=months[i];if(m.mtg&&c[i].end!==null&&c[i].start===null&&m.N>0)c[i].start=(c[i].avg-(m.M/(m.N+m.M))*c[i].end)/(m.N/(m.N+m.M));if(m.mtg&&c[i].start!==null&&i>0&&months[i-1].mtg&&c[i-1].end===null)c[i-1].end=c[i].start;}}
+  for(let r=0;r<n;r++){for(let i=0;i<n;i++){const m=months[i];if(m.mtg&&c[i].start!==null&&c[i].end===null&&m.M>0)c[i].end=(c[i].avg-(m.N/(m.N+m.M))*c[i].start)/(m.M/(m.N+m.M));if(m.mtg&&c[i].end!==null&&i<n-1&&months[i+1].mtg&&c[i+1].start===null)c[i+1].start=c[i].end;}}
+  return c;
+}
+
+function fwMeetings(months,chain){
+  const res=[];
+  months.forEach((m,i)=>{
+    if(!m.mtg||chain[i].start===null||chain[i].end===null)return;
+    const chg=chain[i].end-chain[i].start,moves=chg/0.25,abs=Math.abs(moves),char=Math.floor(abs),mant=abs-char;
+    const isCut=chg<-0.0001,isHike=chg>0.0001,p0=1-mant,p1=mant;
+    const b0=isCut?-char:isHike?char:0,b1=isCut?-(char+1):isHike?(char+1):0;
+    const l0=b0===0?'hold':(b0>0?`+${b0*25}bp`:`${b0*25}bp`);
+    const l1=b1===0?'hold':(b1>0?`+${b1*25}bp`:`${b1*25}bp`);
+    res.push({lb:m.lb,label:m.ml||m.lb,start:chain[i].start,end:chain[i].end,chg,moves,p0,p1,b0,b1,l0,l1,isCut,isHike});
+  });
+  return res;
+}
+
+function fwDist(meetings){
+  let d={'0':1.0};const states=[{'0':1.0}];
+  meetings.forEach(m=>{
+    const nd={};
+    for(const[k,p]of Object.entries(d)){const ki=parseInt(k);nd[ki+m.b0]=(nd[ki+m.b0]||0)+p*m.p0;if(m.p1>0.0005)nd[ki+m.b1]=(nd[ki+m.b1]||0)+p*m.p1;}
+    d=nd;states.push({...d});
+  });
+  return{states,final:d};
+}
+
+function cmeCutCountDist(final,fwD){
+  const chain2=fwChain(fwD);
+  const m2026=fwMeetings(fwD.filter(d=>d.lb.includes('2026')&&d.mtg),chain2.filter((_,i)=>fwD[i].lb.includes('2026')));
+  const {final:f26}=fwDist(m2026);
+  const out={0:0,1:0,2:0,3:0,4:0};
+  Object.entries(f26).forEach(([k,p])=>{const ki=Math.max(0,Math.min(4,-parseInt(k)));out[ki]=(out[ki]||0)+p;});
+  return out;
+}
+
+function getMeetingComps(meetings,kalshiD,polyD){
+  const comps=[];
+  meetings.forEach(m=>{
+    const cmeCut=(m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0);
+    const kd=kalshiD.meetings[m.lb];
+    const pd=polyD.meetings[m.lb];
+    const kCut=kd?(kd.cut25||0)+(kd.cut50||0):null;
+    const pCut=pd?(pd.cut25||0)+(pd.cut50||0):null;
+    comps.push({lb:m.lb,label:m.label,cmeCut,kCut,pCut,
+      basisKC:kCut!==null?kCut-cmeCut:null,
+      basisPK:pCut!==null&&kCut!==null?pCut-kCut:null});
+  });
+  return comps;
+}
+
+function getCmeHikeProb(meetings){
+  return meetings.reduce((mx,m)=>{
+    const ph=(m.b0>0?m.p0:0)+(m.b1>0&&m.p1>0.001?m.p1:0);
+    return Math.max(mx,ph);
+  },0);
+}
+
+function enumeratePaths(meetings,depth){
+  const paths=[];
+  const mSlice=meetings.slice(0,depth);
+  function dfs(idx,seq,prob){
+    if(idx===mSlice.length){paths.push({key:seq.join('\u2192'),prob});return;}
+    const m=mSlice[idx];
+    dfs(idx+1,[...seq,m.l0],prob*m.p0);
+    if(m.p1>0.005)dfs(idx+1,[...seq,m.l1],prob*m.p1);
+  }
+  dfs(0,[],1);
+  return paths.sort((a,b)=>b.prob-a.prob).slice(0,8);
+}
+
+function zqQuarterlyAvg(fwD,srD){
+  return srD.map(s=>{
+    if(!s.zqMonths.length)return null;
+    const vals=s.zqMonths.map(lb2=>{const row=fwD.find(d=>d.lb===lb2);return row?100-row.price:null;}).filter(v=>v!==null);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+}
+
+function srInstFwd(srD){
+  const rates=srD.map(s=>100-s.price);
+  return rates.map((r,i)=>i===0?null:2*rates[i]-rates[i-1]);
+}
+
+function ycSyncShortEnd(fwD,ycD){
+  const result=ycD.map(d=>({...d}));
+  const chain=fwChain(fwD);
+  let se=3.64;
+  for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start;break;}}
+  result[0].rate=parseFloat((se).toFixed(4));
+  const avg6=fwD.slice(0,6).reduce((s,d)=>s+(100-d.price),0)/6;
+  const avg12=fwD.reduce((s,d)=>s+(100-d.price),0)/fwD.length;
+  result[1].rate=parseFloat(avg6.toFixed(4));
+  result[2].rate=parseFloat(avg12.toFixed(4));
+  return result;
+}
+
+function getCompareSeries(fwCompareScenario,fwD,fwLb){
+  if(!fwCompareScenario||!SCENARIOS[fwCompareScenario])return null;
+  const sc=SCENARIOS[fwCompareScenario];
+  const cD=fwD.map((m,i)=>({...m,price:sc.prices[i]}));
+  const cChain=fwChain(cD),cMeetings=fwMeetings(cD,cChain);
+  const{states:cStates,final:cFinal}=fwDist(cMeetings);
+  return{label:sc.shortLabel,totalBp:sc.totalBp,endRate:sc.endRate,era:sc.era,
+    color:'var(--c-overlay)',colorA:'var(--c-overlay-a)',
+    chain:cChain,meetings:cMeetings,states:cStates,final:cFinal};
+}
+
+// ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
 
