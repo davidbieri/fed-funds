@@ -86,6 +86,179 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
 <script type="text/babel">
 const {useState, useReducer, useEffect, useMemo, useCallback} = React;
 
+// ============================================================================
+// SEED DATA --- copied verbatim from fed_funds_probability_tree.html
+// ============================================================================
+
+const FW_SEED_PRICES=[96.36,96.40,96.50,96.58,96.65,96.72,96.78,96.85,96.90,96.94,96.97,97.00];
+
+const FW_SEED=[
+  {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28\u201329'},
+  {lb:'May 2026',price:96.40,mtg:false,N:0, M:0, ml:''},
+  {lb:'Jun 2026',price:96.50,mtg:true, N:17,M:13,ml:'Jun 17\u201318'},
+  {lb:'Jul 2026',price:96.58,mtg:true, N:28,M:3, ml:'Jul 28\u201329'},
+  {lb:'Aug 2026',price:96.65,mtg:false,N:0, M:0, ml:''},
+  {lb:'Sep 2026',price:96.72,mtg:true, N:16,M:14,ml:'Sep 16\u201317'},
+  {lb:'Oct 2026',price:96.78,mtg:true, N:28,M:3, ml:'Oct 28\u201329'},
+  {lb:'Nov 2026',price:96.85,mtg:false,N:0, M:0, ml:''},
+  {lb:'Dec 2026',price:96.90,mtg:true, N:9, M:22,ml:'Dec 9\u201310'},
+  {lb:'Jan 2027',price:96.94,mtg:true, N:27,M:4, ml:'Jan 27\u201328'},
+  {lb:'Feb 2027',price:96.97,mtg:false,N:0, M:0, ml:''},
+  {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17\u201318'},
+];
+
+const SCENARIOS={
+  'soft-landing-95':{
+    shortLabel:'Soft Landing \'95',era:'easing',totalBp:'-25bp',endRate:'3.39',
+    desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign \u2014 growth never faltered. The most benign plausible outcome.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61]},
+  'insurance-98':{
+    shortLabel:'Insurance \'98/\'19',era:'easing',totalBp:'-75bp',endRate:'2.89',
+    desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment \u2014 easing that stops once tail risk subsides.',
+    prices:[96.36,96.36,96.47,96.63,96.86,96.98,97.11,97.11,97.11,97.11,97.11,97.11]},
+  'measured-pace':{
+    shortLabel:'Measured Pace',era:'easing',totalBp:'-100bp',endRate:'2.64',
+    desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence \u2014 methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.73,96.86,96.86,97.04,97.11,97.11,97.22]},
+  'mild-recession-90':{
+    shortLabel:'Recession \'90-91',era:'easing',totalBp:'-150bp',endRate:'2.14',
+    desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession \u2014 persistent incremental pressure, no financial seizure.',
+    prices:[96.38,96.61,96.72,96.88,97.11,97.23,97.38,97.61,97.79,97.86,97.86,97.86]},
+  'dotcom-01':{
+    shortLabel:'Dot-com \'01',era:'easing',totalBp:'-225bp',endRate:'1.39',
+    desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure \u2014 2001 dot-com collapse analog.',
+    prices:[96.36,96.36,96.58,96.91,97.36,97.59,97.88,98.11,98.29,98.39,98.61,98.61]},
+  'gfc-08':{
+    shortLabel:'GFC \'08',era:'crisis',totalBp:'-300bp',endRate:'0.64',
+    desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) \u2014 reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
+    prices:[96.38,96.61,96.83,97.18,97.86,98.21,98.66,99.11,99.29,99.36,99.36,99.36]},
+  'volcker-82':{
+    shortLabel:'Volcker \'82',era:'crisis',totalBp:'-350bp',endRate:'0.14',
+    desc:'Maximum historical easing velocity: 50+75+75+75+50+25bp. After Volcker broke inflation in 1981-82 the Fed cut ~1100bp from peak. A stress-test of the tree at the lower bound.',
+    prices:[96.39,96.86,97.19,97.68,98.36,98.71,99.16,99.61,99.79,99.86,99.86,99.86]},
+  'stagflation-70s':{
+    shortLabel:'Stagflation \'70s',era:'tightening',totalBp:'+100bp',endRate:'4.64',
+    desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era \u2014 premature loosening followed by stubborn inflation forcing re-tightening.',
+    prices:[96.36,96.36,96.36,96.34,96.11,95.99,95.86,95.86,95.68,95.61,95.61,95.50]},
+  'renorm-22':{
+    shortLabel:'Re-norm \'22',era:'tightening',totalBp:'+350bp',endRate:'7.14',
+    desc:'Full 2022 replay from today\'s starting rate: 50+75+75+75+50+25bp = +350bp driving EFFR to ~7.14%. Inflation re-accelerates or new Fed Chair abandons the easing path.',
+    prices:[96.33,95.86,95.54,95.04,94.36,94.01,93.56,93.11,92.93,92.86,92.86,92.86]},
+};
+
+const kalshiD={
+  fetched:false, asOf:null, source:'Seed data \u2014 click Fetch Kalshi',
+  kBadge:'Seed',
+  meetings:{
+    'Apr 2026':{hold:.992,cut25:.005,cut50:.001,hike25:.002},
+    'Jun 2026':{hold:.74, cut25:.22, cut50:.02, hike25:.02},
+    'Jul 2026':{hold:.64, cut25:.28, cut50:.05, hike25:.03},
+    'Sep 2026':{hold:.55, cut25:.32, cut50:.09, hike25:.04},
+    'Oct 2026':{hold:.50, cut25:.32, cut50:.13, hike25:.05},
+    'Dec 2026':{hold:.46, cut25:.31, cut50:.16, hike25:.07},
+    'Jan 2027':{hold:.44, cut25:.32, cut50:.17, hike25:.07},
+    'Mar 2027':{hold:.42, cut25:.33, cut50:.18, hike25:.07},
+  },
+  cutCount:{
+    0:.15, 1:.32, 2:.30, 3:.15, 4:.08
+  },
+  comboPrices:{
+    'hold\u2192hold\u2192hold':'\u2014',
+    'hold\u2192hold\u2192cut':'\u2014',
+    'hold\u2192cut\u2192hold':'\u2014',
+    'hold\u2192cut\u2192cut':'\u2014',
+    'cut\u2192hold\u2192hold':'\u2014',
+    'cut\u2192cut\u2192hold':'\u2014',
+    'cut\u2192cut\u2192cut':'\u2014',
+  },
+  kalshiRate:{
+    'Apr 2026':3.625,'Jun 2026':3.54,'Jul 2026':3.47,'Sep 2026':3.38,
+    'Oct 2026':3.30,'Dec 2026':3.22,'Jan 2027':3.16,'Mar 2027':3.10,
+  },
+  fedDots:[
+    {lb:'Jun 2026',rate:3.75},{lb:'Dec 2026',rate:3.375},{lb:'Mar 2027',rate:3.25},
+  ],
+  fedDotsNote:'Dec 2025 SEP median: 3.375% end-2026, 3.125% end-2027',
+  hikeAny:.04,
+  cutBinary:{
+    'end-2026':.85,
+    'end-2027':.97,
+  },
+  cmeHikeAny:null,
+  largeCutAny:.11,
+};
+
+const polyD={
+  fetched:false, asOf:'2026-03-17', source:'Seed data \u2014 click Fetch Polymarket',
+  meetings:{
+    'Apr 2026':{hold:.99, cut25:.005,cut50:.002,hike25:.003},
+    'Jun 2026':{hold:.72, cut25:.21, cut50:.04, hike25:.03},
+    'Jul 2026':{hold:.62, cut25:.27, cut50:.07, hike25:.04},
+    'Sep 2026':{hold:.53, cut25:.31, cut50:.11, hike25:.05},
+    'Oct 2026':{hold:.48, cut25:.31, cut50:.15, hike25:.06},
+    'Dec 2026':{hold:.44, cut25:.30, cut50:.18, hike25:.08},
+    'Jan 2027':{hold:.43, cut25:.31, cut50:.18, hike25:.08},
+    'Mar 2027':{hold:.41, cut25:.32, cut50:.19, hike25:.08},
+  },
+  cutCount:{'0':.05,'1':.09,'2':.26,'3':.22,'4':.17,'5':.12,'6':.06,'7+':.03},
+  terminalRate:{
+    '4.00':.02,'3.75':.08,'3.50':.18,'3.25':.26,'3.00':.22,'2.75':.13,'2.50':.08,'2.25':.03
+  },
+  hikeAny:.155,
+  emergencyCut:.08,
+  cutByMeeting:{
+    'Apr 2026':.01,'Jun 2026':.22,'Jul 2026':.45,'Sep 2026':.68,
+    'Oct 2026':.78,'Dec 2026':.88,'end-2026':.88,'end-2027':.97,
+  },
+  fedChair:{
+    'Kevin Warsh':.47,'Rick Rieder':.26,'Other':.27
+  },
+};
+
+const srD=[
+  {lb:'Jun 2026',ticker:'SR3M6',price:96.35,qLabel:'Q2 2026',zqMonths:['Apr 2026','May 2026','Jun 2026']},
+  {lb:'Sep 2026',ticker:'SR3U6',price:96.53,qLabel:'Q3 2026',zqMonths:['Jul 2026','Aug 2026','Sep 2026']},
+  {lb:'Dec 2026',ticker:'SR3Z6',price:96.68,qLabel:'Q4 2026',zqMonths:['Oct 2026','Nov 2026','Dec 2026']},
+  {lb:'Mar 2027',ticker:'SR3H7',price:96.80,qLabel:'Q1 2027',zqMonths:['Jan 2027','Feb 2027','Mar 2027']},
+  {lb:'Jun 2027',ticker:'SR3M7',price:96.88,qLabel:'Q2 2027',zqMonths:[]},
+  {lb:'Sep 2027',ticker:'SR3U7',price:96.94,qLabel:'Q3 2027',zqMonths:[]},
+  {lb:'Dec 2027',ticker:'SR3Z7',price:96.99,qLabel:'Q4 2027',zqMonths:[]},
+];
+
+const ycD=[
+  {mat:0.25, label:'3mo',  rate:3.64, src:'zq',     editable:false, ticker:'CMT 3M'},
+  {mat:0.50, label:'6mo',  rate:3.60, src:'zq',     editable:false, ticker:'CMT 6M'},
+  {mat:1.00, label:'1yr',  rate:3.55, src:'zq',     editable:false, ticker:'CMT 1Y'},
+  {mat:2.00, label:'2yr',  rate:3.84, src:'manual',  editable:true,  ticker:'CMT 2Y'},
+  {mat:5.00, label:'5yr',  rate:4.04, src:'manual',  editable:true,  ticker:'CMT 5Y'},
+  {mat:10.0, label:'10yr', rate:4.31, src:'manual',  editable:true,  ticker:'CMT 10Y'},
+  {mat:30.0, label:'30yr', rate:4.61, src:'manual',  editable:true,  ticker:'CMT 30Y'},
+];
+
+// ============================================================================
+// INITIAL STATE + REDUCER STUB
+// ============================================================================
+
+const INITIAL_STATE = {
+  fwActive: 'inputs',
+  fwLb: 3.50,
+  fwActiveScenario: '',
+  fwCompareScenario: '',
+  fwD: FW_SEED.map(r=>({...r})),
+  kalshiD: kalshiD,
+  polyD: polyD,
+  srD: srD.map(r=>({...r})),
+  ycD: ycD.map(r=>({...r})),
+  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  rideSelected: {matIdx:3, hIdx:1},
+};
+
+function reducer(state, action){ return state; }
+
+// ============================================================================
+// REACT APP
+// ============================================================================
+
 function App() {
   return <div>Loading...</div>;
 }
