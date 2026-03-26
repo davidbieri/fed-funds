@@ -17,7 +17,7 @@
   --border-radius-md:8px;
   --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
-  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;
+  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;--c-taylor:#e11d48;--c-taylor-mod:#f43f5e;
   --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
 }
 @media(prefers-color-scheme:dark){
@@ -27,7 +27,7 @@
     --color-background-primary:#18181b;--color-background-secondary:#27272a;
     --color-background-info:#1e3a5f;--color-background-danger:#450a0a;--color-background-success:#14532d;
     --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
-    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;
+    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;--c-taylor:#fb7185;--c-taylor-mod:#fda4af;
     --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
   }
 }
@@ -353,6 +353,45 @@ function getCompareSeries(fwCompareScenario,fwD,fwLb){
 }
 
 // ============================================================================
+// TAYLOR RULE PURE FUNCTIONS
+// ============================================================================
+
+function taylorRate(pi, piStar, y, yStar, rStar, alpha, beta) {
+  // r = rStar + piStar + alpha*(pi - piStar) + beta*(y - yStar)
+  // Equivalently: r = rStar + pi + (alpha-1)*(pi - piStar) + beta*(y - yStar)
+  return rStar + piStar + alpha * (pi - piStar) + beta * (y - yStar);
+}
+
+function taylorInertial(prescribed, prevRate, rho) {
+  // Clarida-Gali-Gertler: r_t = rho * r_{t-1} + (1 - rho) * r_taylor
+  return rho * prevRate + (1 - rho) * prescribed;
+}
+
+function taylorMeetingPath(taylor, meetings, effrStart, lb) {
+  const {piStar, piNow, piEnd, yStar, yNow, yEnd, rStar,
+         alphaClassic, betaClassic, alphaBalanced, betaBalanced, inertia} = taylor;
+  const n = meetings.length;
+  const classic = [], balanced = [], inertialC = [], inertialB = [];
+  let prevC = effrStart, prevB = effrStart;
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) : 0;
+    const pi = piNow + t * (piEnd - piNow);
+    const y = yNow + t * (yEnd - yNow);
+    const rc = taylorRate(pi, piStar, y, yStar, rStar, alphaClassic, betaClassic);
+    const rb = taylorRate(pi, piStar, y, yStar, rStar, alphaBalanced, betaBalanced);
+    classic.push(rc);
+    balanced.push(rb);
+    const ic = taylorInertial(rc, prevC, inertia);
+    const ib = taylorInertial(rb, prevB, inertia);
+    inertialC.push(ic);
+    inertialB.push(ib);
+    prevC = ic;
+    prevB = ib;
+  }
+  return {classic, balanced, inertialC, inertialB};
+}
+
+// ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
 
@@ -368,6 +407,20 @@ const INITIAL_STATE = {
   ycD: ycD.map(r=>({...r})),
   rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
   rideSelected: {matIdx:3, hIdx:1},
+  taylor: {
+    piStar: 2.0,       // inflation target (%)
+    piNow: 2.8,        // current PCE inflation (%)
+    piEnd: 2.4,        // end-of-horizon PCE forecast (%)
+    yStar: 1.8,        // potential GDP growth (%)
+    yNow: 2.3,         // current GDP growth (%)
+    yEnd: 1.9,         // end-of-horizon GDP forecast (%)
+    rStar: 0.5,        // neutral real rate (%)
+    alphaClassic: 1.5, // Taylor 1993 inflation coefficient
+    betaClassic: 0.5,  // Taylor 1993 output gap coefficient
+    alphaBalanced: 1.0,// balanced-approach (Yellen) inflation coeff
+    betaBalanced: 1.0, // balanced-approach output gap coeff
+    inertia: 0.85,     // Clarida-Gali-Gertler smoothing coefficient
+  },
 };
 
 function reducer(state, action){
@@ -450,6 +503,8 @@ function reducer(state, action){
       if(s.compare&&SCENARIOS[s.compare]&&s.compare!==next.fwActiveScenario) next.fwCompareScenario=s.compare;
       return next;
     }
+    case 'UPDATE_TAYLOR':
+      return {...state, taylor: {...state.taylor, [action.key]: action.value}};
     default:
       return state;
   }
@@ -1025,6 +1080,137 @@ function ycCurveChart(ycD){
   return svg;
 }
 
+function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
+  const W=720, H=180, mt=28, mb=32, ml=38, mr=14;
+  const n=meetings.length;
+  if(n===0) return '<div style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</div>';
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+
+  // CME expected rate path
+  const cmeRates=[];
+  let si=0;
+  const allMonths=meetings.map(m=>m.lb);
+  for(let i=0;i<n;i++){
+    const s=states[i+1]||states[states.length-1];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    cmeRates.push(lb+ek*.25);
+  }
+
+  const {classic, balanced, inertialC, inertialB}=taylorPaths;
+  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB];
+  const minR=Math.min(...allV)-0.15, maxR=Math.max(...allV)+0.15;
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+
+  // Grid
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'%</text>';
+  }
+
+  // Neutral rate band
+  const rNeutral=taylor.rStar+taylor.piStar;
+  if(rNeutral>=minR&&rNeutral<=maxR){
+    svg+='<line x1="'+ml+'" y1="'+ys(rNeutral).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(rNeutral).toFixed(1)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="8,4" opacity=".5"/>';
+    svg+='<text x="'+(W-mr-2).toFixed(1)+'" y="'+(ys(rNeutral)-5).toFixed(1)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">r* neutral '+rNeutral.toFixed(2)+'%</text>';
+  }
+
+  // Classic Taylor (solid rose)
+  const cPts=classic.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2.5" opacity=".9"/>';
+  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-taylor)" opacity=".9"/>';});
+
+  // Balanced approach (dashed rose lighter)
+  const bPts=balanced.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+bPts+'" fill="none" stroke="var(--c-taylor-mod)" stroke-width="2" stroke-dasharray="7,4" opacity=".85"/>';
+  balanced.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-taylor-mod)" opacity=".8"/>';});
+
+  // Inertial classic (thin dotted)
+  const icPts=inertialC.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+icPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="3,3" opacity=".6"/>';
+
+  // CME implied path (blue)
+  const cmePts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cmePts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".85"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-cme)" opacity=".85"/>';});
+
+  // Current EFFR marker
+  svg+='<circle cx="'+ml+'" cy="'+ys(effrStart).toFixed(1)+'" r="5" fill="var(--color-text-primary)" opacity=".6"/>';
+  svg+='<text x="'+(ml+8).toFixed(1)+'" y="'+(ys(effrStart)-6).toFixed(1)+'" font-size="8" fill="var(--color-text-secondary)" font-family="var(--font-mono)">EFFR '+effrStart.toFixed(2)+'%</text>';
+
+  // X-axis labels
+  meetings.forEach((m,i)=>{
+    const shortLbl=m.label.replace(/\d{4}/,'').trim()||m.lb.replace(/ 20\d\d/,'');
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+
+  // Legend
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="500">--- Classic Taylor</text>';
+  svg+='<text x="'+(ml+105)+'" y="14" font-size="8.5" fill="var(--c-taylor-mod)" font-family="var(--font-sans)" font-weight="500">- - Balanced</text>';
+  svg+='<text x="'+(ml+185)+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".6">... Inertial</text>';
+  svg+='<text x="'+(ml+250)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">--- CME implied</text>';
+
+  svg+='</svg>';
+  return svg;
+}
+
+function taylorGapSvg(meetings, cmeRates, classic, balanced) {
+  const W=720, H=80, mt=20, mb=28, ml=38, mr=14;
+  const n=meetings.length;
+  if(n===0) return '';
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const gapsC=classic.map((r,i)=>r-cmeRates[i]);
+  const gapsB=balanced.map((r,i)=>r-cmeRates[i]);
+  const maxG=Math.max(...gapsC.map(Math.abs),...gapsB.map(Math.abs),0.15);
+  const yMid=mt+H/2;
+  const ys=v=>yMid-(v/maxG)*(H/2);
+
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  svg+='<line x1="'+ml+'" y1="'+yMid.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+yMid.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+yMid.toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>';
+  [maxG/2, maxG].forEach(v=>{
+    [v,-v].forEach(g=>{
+      svg+='<line x1="'+ml+'" y1="'+ys(g).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(g).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    });
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v>0?'+':'')+v.toFixed(2)+'</text>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(-v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(-v).toFixed(2)+'</text>';
+  });
+
+  // Classic gap area fill
+  let areaAbove='M '+xs(0).toFixed(1)+' '+yMid.toFixed(1);
+  let areaBelow='M '+xs(0).toFixed(1)+' '+yMid.toFixed(1);
+  gapsC.forEach((g,i)=>{
+    const x=xs(i), y=ys(g);
+    if(g>=0) areaAbove+=' L '+x.toFixed(1)+' '+y.toFixed(1);
+    else areaBelow+=' L '+x.toFixed(1)+' '+y.toFixed(1);
+  });
+
+  // Classic gap line
+  const cPts=gapsC.map((g,i)=>xs(i).toFixed(1)+','+ys(g).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2" opacity=".85"/>';
+  gapsC.forEach((g,i)=>{
+    const col=g>0.05?'var(--color-text-danger)':g<-0.05?'var(--color-text-info)':'var(--color-text-tertiary)';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(g).toFixed(1)+'" r="3" fill="'+col+'" opacity=".8"/>';
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(g)+(g>=0?-7:11)).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+col+'" font-family="var(--font-mono)">'+(g>0?'+':'')+g.toFixed(2)+'</text>';
+  });
+
+  // Balanced gap line
+  const bPts=gapsB.map((g,i)=>xs(i).toFixed(1)+','+ys(g).toFixed(1)).join(' ');
+  svg+='<polyline points="'+bPts+'" fill="none" stroke="var(--c-taylor-mod)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".7"/>';
+
+  // X labels
+  meetings.forEach((m,i)=>{
+    const shortLbl=m.label.replace(/\d{4}/,'').trim()||m.lb.replace(/ 20\d\d/,'');
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+
+  svg+='<text x="'+ml+'" y="12" font-size="8" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Taylor minus CME (pp) --- positive = Taylor says tighter</text>';
+  svg+='</svg>';
+  return svg;
+}
+
 function SvgPanel({html}) {
   return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
 }
@@ -1373,6 +1559,146 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   return <SvgPanel html={html}/>;
 }
 
+function TaylorRuleTab({state, dispatch, finance}) {
+  const {meetings, states, effrStart} = finance;
+  const lb = state.fwLb;
+  const t = state.taylor;
+
+  const taylorPaths = useMemo(() =>
+    taylorMeetingPath(t, meetings, effrStart, lb),
+    [t, meetings, effrStart, lb]
+  );
+
+  // CME expected rates at each meeting
+  const cmeRates = useMemo(() => {
+    return meetings.map((m, i) => {
+      const s = states[i + 1] || states[states.length - 1];
+      const ek = Object.entries(s).reduce((sum, [k, p]) => sum + parseInt(k) * p, 0);
+      return lb + ek * 0.25;
+    });
+  }, [meetings, states, lb]);
+
+  const classicNow = taylorPaths.classic[0];
+  const balancedNow = taylorPaths.balanced[0];
+  const inertialNow = taylorPaths.inertialC[0];
+  const classicEnd = taylorPaths.classic[taylorPaths.classic.length - 1];
+  const balancedEnd = taylorPaths.balanced[taylorPaths.balanced.length - 1];
+  const gapNow = classicNow !== undefined ? classicNow - effrStart : 0;
+  const gapEnd = classicEnd !== undefined && cmeRates.length ? classicEnd - cmeRates[cmeRates.length - 1] : 0;
+  const rNeutral = t.rStar + t.piStar;
+
+  const paramField = (label, key, min, max, step, unit) => {
+    return '<tr><td style="font-size:11px;white-space:nowrap;padding:4px 8px">'+label+'</td>'
+      +'<td style="padding:4px 8px"><input type="number" class="fw-in" style="width:65px" '
+      +'value="'+t[key]+'" min="'+min+'" max="'+max+'" step="'+step+'" '
+      +'data-taylor-key="'+key+'"/></td>'
+      +'<td style="font-size:10px;color:var(--color-text-tertiary);padding:4px 8px">'+unit+'</td></tr>';
+  };
+
+  let html = '';
+
+  // Summary cards
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem">';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Classic Taylor</div><div class="fw-stat-v" style="color:var(--c-taylor)">'+(classicNow!==undefined?classicNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">prescribed now</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Balanced approach</div><div class="fw-stat-v" style="color:var(--c-taylor-mod)">'+(balancedNow!==undefined?balancedNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">Yellen variant</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Inertial rule</div><div class="fw-stat-v">'+(inertialNow!==undefined?inertialNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">\u03c1='+t.inertia+' smoothing</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Taylor gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':'policy too tight')+'</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
+  html += '</div>';
+
+  // Parameter tables side by side
+  html += '<div class="k-grid" style="margin-bottom:14px">';
+
+  // Macro inputs
+  html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Macro inputs</span></div>';
+  html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
+  html += paramField('Inflation target (\u03c0*)', 'piStar', 0, 10, 0.1, '%');
+  html += paramField('Current PCE inflation', 'piNow', -2, 15, 0.1, '% yr/yr');
+  html += paramField('End-horizon PCE forecast', 'piEnd', -2, 15, 0.1, '% yr/yr');
+  html += paramField('Potential GDP growth (y*)', 'yStar', -2, 8, 0.1, '%');
+  html += paramField('Current GDP growth', 'yNow', -5, 10, 0.1, '%');
+  html += paramField('End-horizon GDP forecast', 'yEnd', -5, 10, 0.1, '%');
+  html += paramField('Neutral real rate (r*)', 'rStar', -2, 5, 0.1, '%');
+  html += '</tbody></table>';
+  html += '<div class="k-note">PCE = personal consumption expenditures price index. Inflation and output are linearly interpolated across meetings.</div>';
+  html += '</div>';
+
+  // Rule coefficients
+  html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Rule coefficients</span></div>';
+  html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
+  html += paramField('Classic \u03b1 (inflation)', 'alphaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Classic \u03b2 (output gap)', 'betaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Balanced \u03b1 (inflation)', 'alphaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Balanced \u03b2 (output gap)', 'betaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Inertia \u03c1 (smoothing)', 'inertia', 0, 0.99, 0.05, 'Clarida-Gali-Gertler');
+  html += '</tbody></table>';
+  html += '<div class="k-note"><b>Classic:</b> r = r* + \u03c0* + \u03b1(\u03c0 \u2212 \u03c0*) + \u03b2(y \u2212 y*). Taylor 1993: \u03b1=1.5, \u03b2=0.5.<br>';
+  html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.</div>';
+  html += '</div></div>';
+
+  // Main chart
+  html += '<div class="k-panel" style="margin-bottom:14px">';
+  html += '<div class="k-hdr"><span class="k-title">Prescribed rate path vs CME market-implied path</span></div>';
+  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t);
+  html += '<div class="k-note">Solid rose = classic Taylor 1993 rule. Dashed rose = balanced approach (Yellen). Dotted = inertial (smoothed). Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
+  html += '</div>';
+
+  // Gap chart
+  html += '<div class="k-panel" style="margin-bottom:14px">';
+  html += '<div class="k-hdr"><span class="k-title">Taylor\u2212CME gap (prescriptive minus market)</span></div>';
+  html += taylorGapSvg(meetings, cmeRates, taylorPaths.classic, taylorPaths.balanced);
+  html += '<div class="k-note">Positive gap = Taylor says policy is too loose (rate should be higher). Negative = Taylor says policy is too tight. Solid = classic, dashed = balanced. Red/blue coloring at \u00b15bp threshold.</div>';
+  html += '</div>';
+
+  // Decomposition table
+  html += '<div class="k-panel">';
+  html += '<div class="k-hdr"><span class="k-title">Meeting-by-meeting decomposition</span></div>';
+  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>Inertial</th><th>CME</th><th>Gap</th></tr></thead><tbody>';
+  const n = meetings.length;
+  for (let i = 0; i < n; i++) {
+    const t2 = n > 1 ? i / (n - 1) : 0;
+    const pi = t.piNow + t2 * (t.piEnd - t.piNow);
+    const y = t.yNow + t2 * (t.yEnd - t.yNow);
+    const gap = taylorPaths.classic[i] - cmeRates[i];
+    const gCol = gap > 0.05 ? 'var(--color-text-danger)' : gap < -0.05 ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+    const shortLbl = meetings[i].label.split('\u2013')[0] || meetings[i].lb;
+    html += '<tr>';
+    html += '<td style="white-space:nowrap;font-size:11px">' + shortLbl + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + pi.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono)">' + y.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor)">' + taylorPaths.classic[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor-mod)">' + taylorPaths.balanced[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono)">' + taylorPaths.inertialC[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-cme)">' + cmeRates[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:' + gCol + '">' + (gap > 0 ? '+' : '') + gap.toFixed(2) + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  html += '<div class="k-note">Inflation and output gap are linearly interpolated from current to end-of-horizon values across meeting dates. Gap = Classic Taylor minus CME implied.</div>';
+  html += '</div>';
+
+  // Wire onchange events for parameter inputs
+  useEffect(() => {
+    const handler = (e) => {
+      const key = e.target.dataset.taylorKey;
+      if (!key) return;
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) dispatch({type: 'UPDATE_TAYLOR', key, value: val});
+    };
+    document.querySelectorAll('[data-taylor-key]').forEach(el => {
+      el.addEventListener('change', handler);
+    });
+    return () => {
+      document.querySelectorAll('[data-taylor-key]').forEach(el => {
+        el.removeEventListener('change', handler);
+      });
+    };
+  });
+
+  return <SvgPanel html={html}/>;
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -1404,6 +1730,7 @@ function App() {
     {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
     {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
+    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
   ];
 
   return (
@@ -1430,7 +1757,7 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 7 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 8 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
@@ -1450,7 +1777,8 @@ function App() {
       {state.fwActive==='kalshi' && <KalshiTab state={state} dispatch={dispatch} finance={finance}
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
-      {!['inputs','chain','tree','kalshi'].includes(state.fwActive) &&
+      {state.fwActive==='taylor' && <TaylorRuleTab state={state} dispatch={dispatch} finance={finance}/>}
+      {!['inputs','chain','tree','kalshi','taylor'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
