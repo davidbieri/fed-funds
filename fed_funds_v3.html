@@ -606,6 +606,169 @@ async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshS
 }
 
 // ============================================================================
+// SVG HELPER FUNCTIONS (return HTML/SVG strings, no globals)
+// ============================================================================
+
+function panel1Svg(comps,lb){
+  const W=720,H=130,ml=10,mr=10,mt=34,mb=28,cW=W-ml-mr;
+  const n=comps.length,grpW=cW/n,bW=Math.min(14,grpW*0.26),gap=3;
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const ys=v=>mt+H*(1-v);
+  [0.25,0.5,0.75,1.0].forEach(v=>{
+    svg+='<line x1="'+ml+'" y1="'+ys(v).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(v).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+ml+'" y="'+(ys(v)-2).toFixed(1)+'" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';
+  });
+  comps.forEach((c,i)=>{
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
+    const hC=H*c.cmeCut,yC=mt+H-hC;
+    svg+='<rect x="'+x0.toFixed(1)+'" y="'+yC.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hC).toFixed(1)+'" rx="2" fill="var(--c-cme)" opacity=".85"/>';
+    let topY=yC;
+    if(c.kCut!==null){
+      const hK=H*c.kCut,yK=mt+H-hK;
+      svg+='<rect x="'+x1.toFixed(1)+'" y="'+yK.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hK).toFixed(1)+'" rx="2" fill="var(--c-kal)" opacity=".85"/>';
+      topY=Math.min(topY,yK);
+      const bKC=((c.kCut-c.cmeCut)*100).toFixed(1);
+      const pillCol=c.basisKC>0.02?'var(--color-text-info)':c.basisKC<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+      svg+='<text x="'+(cx-bW/2-gap/2).toFixed(1)+'" y="'+(topY-14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+pillCol+'" font-family="var(--font-mono)">'+(bKC>0?'+':'')+bKC+'</text>';
+    }
+    if(c.pCut!==null){
+      const hP=H*c.pCut,yP=mt+H-hP;
+      svg+='<rect x="'+x2.toFixed(1)+'" y="'+yP.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hP).toFixed(1)+'" rx="2" fill="var(--c-poly)" opacity=".85"/>';
+      topY=Math.min(topY,yP);
+      if(c.kCut!==null&&c.basisPK!==null){
+        const bPK=(c.basisPK*100).toFixed(1);
+        const pillColP=c.basisPK>0.02?'var(--color-text-info)':c.basisPK<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+        svg+='<text x="'+(cx+bW+gap).toFixed(1)+'" y="'+(topY-4).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+pillColP+'" font-family="var(--font-mono)">'+(bPK>0?'+':'')+bPK+'</text>';
+      }
+    }
+    const shortLbl=c.label.replace(/\d{4}/,'').trim()||c.lb.replace(/ 20\d\d/,'');
+    svg+='<text x="'+cx.toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME</text>';
+  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">\u25a0 Kalshi</text>';
+  svg+='<text x="'+(ml+102)+'" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a0 Polymarket</text>';
+  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal\u2212CME \u00b7 right pill = Poly\u2212Kal</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel2Svg(cme,kal,poly){
+  const W=340,H=90,mt=16,mb=24,ml=8,mr=8,cW=W-ml-mr;
+  const keys=['0','1','2','3','4','5+'];
+  const cmeV=k=>k==='5+'?(cme[4]||0)*0.3:cme[parseInt(k)]||0;
+  const kalV=k=>k==='5+'?0:kal[parseInt(k)]||0;
+  const polyV=k=>{if(k==='5+')return (poly['5']||0)+(poly['6']||0)+(poly['7+']||0);return poly[k]||0;};
+  const n=keys.length,grpW=cW/n,bW=Math.min(12,grpW*0.27),gap=2;
+  const maxV=Math.max(...keys.flatMap(k=>[cmeV(k),kalV(k),polyV(k)]));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxV*maxV);if(v<=maxV){svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';svg+='<text x="'+(ml-1).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';}});
+  keys.forEach((k,i)=>{
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
+    const hC=H*cmeV(k)/maxV,hK=H*kalV(k)/maxV,hP=H*polyV(k)/maxV;
+    svg+='<rect x="'+x0.toFixed(1)+'" y="'+(mt+H-hC).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hC).toFixed(1)+'" rx="2" fill="var(--c-cme)" opacity=".85"/>';
+    svg+='<rect x="'+x1.toFixed(1)+'" y="'+(mt+H-hK).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hK).toFixed(1)+'" rx="2" fill="var(--c-kal)" opacity=".85"/>';
+    svg+='<rect x="'+x2.toFixed(1)+'" y="'+(mt+H-hP).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hP).toFixed(1)+'" rx="2" fill="var(--c-poly)" opacity=".85"/>';
+    svg+='<text x="'+cx.toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+k+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function panel4Svg(meetings,states,lb,fwD,kalshiD,compareSeries){
+  const W=680,H=120,mt=20,mb=24,ml=34,mr=10;
+  const months=fwD.map(d=>d.lb);
+  const cmeRates=[];
+  let si=0;
+  months.forEach((lb2,i)=>{
+    if(fwD[i].mtg&&si<states.length-1){si++;}
+    const s=states[Math.min(si,states.length-1)];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    cmeRates.push(lb+ek*.25);
+  });
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  const dots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  const allV=[...cmeRates,...kalRates.filter(v=>v!==null),...dots.map(d=>d.rate)];
+  const cSeries4=compareSeries;
+  let cmpRates4=null;
+  if(cSeries4){
+    let si2=0;const cr=[];
+    months.forEach((_,i)=>{
+      if(fwD[i].mtg&&si2<cSeries4.states.length-1){si2++;}
+      const s=cSeries4.states[Math.min(si2,cSeries4.states.length-1)];
+      const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+      cr.push(lb+ek*.25);
+    });
+    cmpRates4=cr;
+    allV.push(...cr);
+  }
+  const minR=Math.min(...allV)-0.1,maxR=Math.max(...allV)+0.1;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25,ymin=Math.floor(minR/step)*step,ymax=Math.ceil(maxR/step)*step;
+  for(let y2=ymin;y2<=ymax;y2+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y2).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y2).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(y2).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y2.toFixed(2)+'</text>';
+  }
+  if(cmpRates4){
+    const oPts=cmpRates4.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+oPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="6,3" opacity=".8"/>';
+    cmpRates4.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-overlay)" opacity=".75"/>';});
+  }
+  const cPts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2" opacity=".85"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".7"/>';});
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev!==null)svg+='<line x1="'+xs(kPrev.i).toFixed(1)+'" y1="'+ys(kPrev.r).toFixed(1)+'" x2="'+xs(i).toFixed(1)+'" y2="'+ys(r).toFixed(1)+'" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="5,3" opacity=".8"/>';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-kal)" opacity=".8"/>';
+    kPrev={i,r};
+  });
+  dots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="5" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)-8).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-dots)" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+  });
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
+  if(cSeries4)svg+='<text x="'+(W-mr)+'" y="12" text-anchor="end" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2e3e '+cSeries4.label+' ('+cSeries4.totalBp+')</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel5Svg(cmeHike,kalHike,largeCut,polyHike){
+  const W=300,HC=118;
+  let svg='<svg viewBox="0 0 '+W+' '+(HC+20)+'" style="width:100%;display:block;overflow:visible">';
+  const cx=W/2,cy=HC-10,r=60,sw=11;
+  function arc(pct,col,opacity,strokeW){
+    strokeW=strokeW||sw;
+    const startA=Math.PI,endA=Math.PI-(Math.min(1,pct)*Math.PI),
+          x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA),
+          x2=cx+r*Math.cos(endA),y2=cy+r*Math.sin(endA),lg=pct>.5?1:0;
+    return '<path d="M '+x1.toFixed(2)+' '+y1.toFixed(2)+' A '+r+' '+r+' 0 '+lg+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+'" fill="none" stroke="'+col+'" stroke-width="'+strokeW+'" stroke-linecap="round" opacity="'+opacity+'"/>';
+  }
+  svg+='<path d="M '+(cx-r).toFixed(2)+' '+cy.toFixed(2)+' A '+r+' '+r+' 0 0 1 '+(cx+r).toFixed(2)+' '+cy.toFixed(2)+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width="'+sw+'"/>';
+  svg+=arc(0.75,'#fee2e2',.5,sw);
+  svg+=arc(cmeHike,'var(--c-cme)',.9,sw);
+  svg+=arc(kalHike,'var(--c-kal)',.88,sw-3);
+  if(polyHike!==undefined)svg+=arc(polyHike,'var(--c-poly)',.85,sw-6);
+  svg+='<text x="'+cx+'" y="'+(cy-r/2).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Hike risk</text>';
+  svg+='<text x="'+(cx-r-4).toFixed(1)+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0%</text>';
+  svg+='<text x="'+(cx+r+4).toFixed(1)+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">100%</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+2).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-cme)" font-family="var(--font-mono)" font-weight="500">CME '+(cmeHike*100).toFixed(1)+'%</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL '+(kalHike*100).toFixed(1)+'%</text>';
+  if(polyHike!==undefined)svg+='<text x="'+cx+'" y="'+(cy+26).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-poly)" font-family="var(--font-mono)" font-weight="500">POLY '+(polyHike*100).toFixed(1)+'%</text>';
+  svg+='</svg>';
+  svg+='<div style="margin-top:6px"><div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut (>25bp) \u2014 Kalshi kxlargecut-26</div><div style="height:16px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+(largeCut*100).toFixed(1)+'%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">'+(largeCut*100).toFixed(0)+'%</div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
+  return svg;
+}
+
+function SvgPanel({html}) {
+  return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
