@@ -1264,6 +1264,115 @@ function TreeTab({state, finance}) {
   return <SvgPanel html={h}/>;
 }
 
+function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {meetings, states, final, chain, compareSeries} = finance;
+  const lb = state.fwLb;
+  const kD = state.kalshiD, pD = state.polyD, fwD = state.fwD;
+
+  let html='<div class="k-fetch-bar" style="flex-wrap:wrap;gap:8px">';
+  html+='<button class="refresh-btn" id="kal-btn"'+(fetching.kal?' disabled':'')+' onclick="window.__kalFetch()"><span'+(fetching.kal?' class="spin"':'')+'>&#x27f3;</span> Fetch Kalshi</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.kal||kD.source)+'</span>';
+  html+='<button class="refresh-btn" id="poly-btn"'+(fetching.poly?' disabled':'')+' onclick="window.__polyFetch()" style="margin-left:4px"><span'+(fetching.poly?' class="spin"':'')+'>&#x27f3;</span> Fetch Polymarket</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.poly||pD.source)+'</span>';
+  html+='<span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary);display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  html+='<span><span class="k-dot" style="background:var(--c-cme)"></span> CME</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-kal)"></span> Kalshi</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-poly)"></span> Polymarket</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP</span>';
+  html+='</span></div>';
+
+  // Panel 1
+  const comps=getMeetingComps(meetings,kD,pD);
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2460 Meeting-by-meeting divergence: P(cut) \u2014 CME vs Kalshi vs Polymarket</span>';
+  html+='<span style="display:flex;gap:4px;flex-wrap:wrap"><span class="k-contract">kxfeddecision-26xxx</span><span class="k-contract">polymarket fed-decision</span></span></div>';
+  html+=panel1Svg(comps,lb);
+  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal\u2212CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly\u2212Kal</b> basis reveals the information spread between the two platforms.</div>';
+  html+='</div></div>';
+
+  // Panel 2 + 3
+  html+='<div class="k-grid" style="margin-bottom:12px">';
+  const cmeCC=cmeCutCountDist(final,fwD);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2461 Cut count distribution \u2014 2026</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecutcount-26dec31</span><span class="k-contract">polymarket how-many-cuts</span></span></div>';
+  html+=panel2Svg(cmeCC,kD.cutCount,pD.cutCount);
+  const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
+  html+='<div class="k-note">Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> \u00b7 Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> \u00b7 Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='Kal\u2212CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
+  html+='Poly\u2212CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
+  html+='Poly\u2212Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
+
+  // Panel 3: Combo paths
+  const paths=enumeratePaths(meetings,3);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2462 Combo path decomposer \u2014 top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Path</th><th>CME prob</th><th>Kalshi</th><th>Basis</th></tr></thead><tbody>';
+  paths.forEach(p=>{
+    const kp=kD.comboPrices[p.key]||'\u2014';
+    const basis=kp!=='\u2014'?((kp-p.prob)*100).toFixed(1)+'pp':'\u2014';
+    const bClass=kp!=='\u2014'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
+    html+='<tr><td style="font-family:var(--font-mono);font-size:11px">'+p.key+'</td>';
+    html+='<td style="font-family:var(--font-mono)">'+(p.prob*100).toFixed(1)+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">'+(kp==='\u2014'?kp:Math.round(kp*100)+'%')+'</td>';
+    html+='<td><span class="k-pill '+bClass+'">'+basis+'</span></td></tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">CME tree path probabilities for the first three meeting months. Large positive basis = Kalshi prices this path more richly than CME.</div></div></div>';
+
+  // Panel 4: Dot plot
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2463 Market-implied dot plot \u2014 CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx \u00b7 Dec 2025 SEP</span></div>';
+  html+=panel4Svg(meetings,states,lb,fwD,kD,compareSeries);
+  html+='<div class="k-note">Three implied rate paths. CME (blue): expected EFFR from ZQ chain. Kalshi (orange): implied rate from decision markets. Fed dots (purple): Dec 2025 SEP medians.</div>';
+  html+='</div></div>';
+
+  // Panels 5 + 6
+  html+='<div class="k-grid">';
+  const cmeHike=getCmeHikeProb(meetings);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2464 Hike risk monitor</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxfedhike</span><span class="k-contract">polymarket fed-rate-hike-in-2026</span></span></div>';
+  html+=panel5Svg(cmeHike,kD.hikeAny,kD.largeCutAny,pD.hikeAny);
+  html+='<div class="k-note">Semicircular gauge: CME max single-meeting hike probability (blue), Kalshi "any hike" (orange), Polymarket "hike in 2026" (cyan). Also shown: Kalshi jumbo-cut probability.</div></div>';
+
+  // Panel 6
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2465 First cut timing \u2014 cumulative P(cut has happened)</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecut-26dec31</span><span class="k-contract">polymarket fed-rate-cut-by</span></span></div>';
+  html+=panel6Svg(meetings,states,lb,kD,pD);
+  html+='<div class="k-note">CME step curve (blue): cumulative P(\u22651 cut) by meeting. Kalshi binary markers (orange \u25cf): cut-by-end-2026 = <b>'+(kD.cutBinary['end-2026']*100).toFixed(0)+'%</b>, cut-by-end-2027 = <b>'+(kD.cutBinary['end-2027']*100).toFixed(0)+'%</b>. Polymarket per-meeting markers (cyan \u25c6).</div></div></div>';
+
+  // Panel 7
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2466 Terminal rate distribution end-2026 \u2014 CME tree vs Polymarket</span>';
+  html+='<span class="k-contract">polymarket what-will-the-fed-rate-be-at-the-end-of-2026</span></div>';
+  html+=panel7Svg(final,lb,pD);
+  const cmeTerm=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+  const polyTermExp=Object.entries(pD.terminalRate).reduce((s,[r,p])=>s+parseFloat(r)*p,0);
+  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> \u00b7 Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound \u2014 subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
+
+  // Panels 8a + 8b
+  html+='<div class="k-grid">';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2467 Fed Chair nomination \u2014 regime risk</span>';
+  html+='<span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair \u00b7 $230M vol</span></div>';
+  html+=panel8aHtml(pD);
+  html+='<div class="k-note">Polymarket\'s most liquid Fed markets ($230M volume). The nominee probabilities are a proxy for <i>policy regime risk</i>.</div></div>';
+
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2468 Emergency cut gauge \u2014 unscheduled FOMC action</span>';
+  html+='<span class="k-contract">polymarket fed-emergency-rate-cut-before-2027</span></div>';
+  html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
+  html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
+
+  // Wire fetch buttons via window globals (inline onclick in generated HTML)
+  useEffect(()=>{
+    window.__kalFetch=()=>fetchKalshi(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    window.__polyFetch=()=>fetchPolymarket(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    return ()=>{delete window.__kalFetch;delete window.__polyFetch;};
+  });
+
+  return <SvgPanel html={html}/>;
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -1338,7 +1447,10 @@ function App() {
       {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}
       {state.fwActive==='chain'  && <ChainTab state={state} finance={finance}/>}
       {state.fwActive==='tree'   && <TreeTab state={state} finance={finance}/>}
-      {!['inputs','chain','tree'].includes(state.fwActive) &&
+      {state.fwActive==='kalshi' && <KalshiTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {!['inputs','chain','tree','kalshi'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
