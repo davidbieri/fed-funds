@@ -432,6 +432,109 @@ function taylorRateYellen(trD) {
 }
 
 // ============================================================================
+// NELSON-SIEGEL YIELD CURVE PURE FUNCTIONS
+// ============================================================================
+
+// nsYield(mat, params) -> rate (%)
+// Nelson-Siegel spot rate for maturity mat (in years):
+//   y(m) = b0 + b1*[(1-exp(-m/tau))/(m/tau)] + b2*[(1-exp(-m/tau))/(m/tau) - exp(-m/tau)]
+// params = {beta0, beta1, beta2, tau}
+// Returns rate in percent (e.g. 4.31, not 0.0431)
+function nsYield(mat, params) {
+  const {beta0, beta1, beta2, tau} = params;
+  if(mat <= 0) return beta0 + beta1;
+  const x = mat / tau;
+  const f1 = (1 - Math.exp(-x)) / x;
+  const f2 = f1 - Math.exp(-x);
+  return beta0 + beta1 * f1 + beta2 * f2;
+}
+
+// nsForward(mat, params) -> rate (%)
+// Instantaneous forward rate:
+//   f(m) = b0 + b1*exp(-m/tau) + b2*(m/tau)*exp(-m/tau)
+function nsForward(mat, params) {
+  const {beta0, beta1, beta2, tau} = params;
+  if(mat <= 0) return beta0 + beta1;
+  const x = mat / tau;
+  return beta0 + beta1 * Math.exp(-x) + beta2 * x * Math.exp(-x);
+}
+
+// nsFit(points) -> {beta0, beta1, beta2, tau, rmse}
+// Nelder-Mead minimization over 4 parameters.
+// points = [{mat, rate}] -- the ycD array (7 maturity points)
+// Constraints enforced by penalty: beta0 > 0, beta0+beta1 > 0, tau > 0.1
+// Returns best params + RMSE in basis points
+function nsFit(points) {
+  const ssr = (p) => {
+    const [b0, b1, b2, tau] = p;
+    if(tau <= 0.05 || b0 <= 0) return 1e9;
+    return points.reduce((s, pt) => {
+      const fit = nsYield(pt.mat, {beta0:b0, beta1:b1, beta2:b2, tau});
+      return s + (fit - pt.rate) ** 2;
+    }, 0);
+  };
+  // Nelder-Mead
+  let simplex = [
+    [4, -0.5, 0.5, 2],
+    [5, -1.5, 1.0, 1.5],
+    [3.5, -0.3, 1.5, 3],
+    [4.5, -1.0, 0.5, 1],
+    [4, -0.8, 2.0, 2.5],
+  ].map(p => ({p, v: ssr(p)}));
+  const N = 4;
+  for(let iter = 0; iter < 2000; iter++) {
+    simplex.sort((a, b) => a.v - b.v);
+    if(simplex[0].v < 1e-10) break;
+    const centroid = Array(N).fill(0).map((_, i) =>
+      simplex.slice(0, N).reduce((s, pt) => s + pt.p[i], 0) / N);
+    const worst = simplex[N];
+    const reflected = centroid.map((c, i) => 2*c - worst.p[i]);
+    const vr = ssr(reflected);
+    if(vr < simplex[0].v) {
+      const expanded = centroid.map((c, i) => 3*c - 2*worst.p[i]);
+      simplex[N] = ssr(expanded) < vr ? {p:expanded, v:ssr(expanded)} : {p:reflected, v:vr};
+    } else if(vr < simplex[N-1].v) {
+      simplex[N] = {p:reflected, v:vr};
+    } else {
+      const contracted = centroid.map((c, i) => 0.5*(c + worst.p[i]));
+      if(ssr(contracted) < worst.v) {
+        simplex[N] = {p:contracted, v:ssr(contracted)};
+      } else {
+        const best = simplex[0].p;
+        simplex = simplex.map(s => {
+          const np = s.p.map((x, i) => 0.5*(x + best[i]));
+          return {p:np, v:ssr(np)};
+        });
+      }
+    }
+  }
+  simplex.sort((a, b) => a.v - b.v);
+  const [b0, b1, b2, tau] = simplex[0].p;
+  const rmse = Math.sqrt(simplex[0].v / points.length) * 100; // in bp
+  return {beta0:b0, beta1:b1, beta2:b2, tau, rmse};
+}
+
+// nsShockCurve(ycD, cumulativeDeltaFFR) -> ycD-shaped array with shocked rates
+// Applies Bieri-Chincarini empirical factor model to project yield curve
+// impact of cumulative funds rate change (in bp):
+//   dy_3mo  ~ +1.00 * dFFR/100  (short end moves 1:1)
+//   dy_6mo  ~ +0.85 * dFFR/100
+//   dy_1yr  ~ +0.70 * dFFR/100
+//   dy_2yr  ~ +0.50 * dFFR/100
+//   dy_5yr  ~ +0.30 * dFFR/100
+//   dy_10yr ~ +0.10 * dFFR/100  (Exhibit 5: 100bp hike -> ~25bp flattening 10-2yr)
+//   dy_30yr ~ +0.05 * dFFR/100
+// cumulativeDeltaFFR is in basis points (negative = cuts)
+function nsShockCurve(ycD, cumulativeDeltaFFR) {
+  const loadings = [1.00, 0.85, 0.70, 0.50, 0.30, 0.10, 0.05];
+  const deltaFrac = cumulativeDeltaFFR / 100;
+  return ycD.map((pt, i) => ({
+    ...pt,
+    rate: pt.rate + loadings[i] * deltaFrac
+  }));
+}
+
+// ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
 
