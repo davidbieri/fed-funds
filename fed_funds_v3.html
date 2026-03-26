@@ -391,6 +391,46 @@ function taylorMeetingPath(taylor, meetings, effrStart, lb) {
   return {classic, balanced, inertialC, inertialB};
 }
 
+function taylorRateJR(trD, prevFFR, prevGap) {
+  // Judd-Rudebusch ECM --- Equations 23-25 from Bieri-Chincarini (2005).
+  // Target rate from ECM specification (Eq. 23):
+  //   i*_t = r* + pi* + lambda1*(pi_t - pi*) + lambda2*gap_t + lambda3*gap_{t-1}
+  // where gap = outputGap (% potential GDP) or -2*(u - u*) depending on gapMeasure
+  const pi       = trD.inflationRate      ?? 2.8;
+  const piStar   = trD.inflationTarget    ?? 2.0;
+  const rStar    = trD.naturalRate        ?? 0.5;
+  const gap      = trD.gapMeasure === 'unemployment'
+    ? -2 * ((trD.unemploymentRate ?? 4.1) - (trD.unemploymentNatural ?? 4.1))
+    : (trD.outputGap ?? -0.5);
+  const lambda1  = trD.jrLambda1 ?? 1.5;
+  const lambda2  = trD.jrLambda2 ?? 0.5;
+  const lambda3  = trD.jrLambda3 ?? 0.3;
+  const gamma    = trD.jrGamma   ?? 0.85;
+
+  const iStar = rStar + piStar + lambda1 * (pi - piStar) + lambda2 * gap + lambda3 * prevGap;
+
+  // Partial adjustment toward i*_t (Eq. 24):
+  //   delta_i_t = gamma*(i*_t - i_{t-1})
+  //   i_t = i_{t-1} + gamma*(i*_t - i_{t-1})
+  const prescribed = prevFFR + gamma * (iStar - prevFFR);
+  return Math.max(0, prescribed);
+}
+
+function taylorRateYellen(trD) {
+  // Yellen Alt1 --- Atlanta Fed alternative using unemployment gap and FOMC SEP r*.
+  // Same form as Taylor 1993 but:
+  //   gap = -2*(u - u*)  (Okun's Law approximation of output gap)
+  //   r*  = FOMC SEP median longer-run real FFR (trD.naturalRate)
+  //   inflation weight fixed at 1.5, gap weight fixed at 1.0 (balanced approach)
+  const pi     = trD.inflationRate       ?? 2.8;
+  const piStar = trD.inflationTarget     ?? 2.0;
+  const rStar  = trD.naturalRate         ?? 0.5;
+  const u      = trD.unemploymentRate    ?? 4.1;
+  const uStar  = trD.unemploymentNatural ?? 4.1;
+  const gap    = -2 * (u - uStar);
+  return rStar + piStar + 1.5 * (pi - piStar) + 1.0 * gap;
+}
+
 // ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
@@ -420,6 +460,23 @@ const INITIAL_STATE = {
     alphaBalanced: 1.0,// balanced-approach (Yellen) inflation coeff
     betaBalanced: 1.0, // balanced-approach output gap coeff
     inertia: 0.85,     // Clarida-Gali-Gertler smoothing coefficient
+  },
+  trD: {
+    fetched: false,
+    asOf: null,
+    source: 'Seed data',
+    inflationRate: 2.8,        // current PCE inflation (% yr/yr)
+    inflationTarget: 2.0,      // FOMC target (%)
+    naturalRate: 0.5,          // neutral real rate r* (%)
+    outputGap: -0.5,           // CBO output gap (% potential GDP)
+    unemploymentRate: 4.1,     // current U-3 (%)
+    unemploymentNatural: 4.1,  // CBO NAIRU (%)
+    gapMeasure: 'output',      // 'output' | 'unemployment'
+    rhoSmoothing: 0.85,        // CGG inertia coefficient
+    jrLambda1: 1.5,            // JR inflation deviation weight
+    jrLambda2: 0.5,            // JR contemporaneous gap weight
+    jrLambda3: 0.3,            // JR lagged gap weight
+    jrGamma: 0.85,             // JR partial adjustment speed
   },
 };
 
@@ -505,6 +562,10 @@ function reducer(state, action){
     }
     case 'UPDATE_TAYLOR':
       return {...state, taylor: {...state.taylor, [action.key]: action.value}};
+    case 'UPDATE_TRD':
+      return {...state, trD: {...state.trD, [action.key]: action.value}};
+    case 'APPLY_LIVE_TAYLOR':
+      return {...state, trD: {...state.trD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
     default:
       return state;
   }
@@ -527,8 +588,29 @@ function useFinance(state) {
     for(let i=0;i<state.fwD.length;i++){
       if(state.fwD[i].mtg && chain[i].start !== null){effrStart=chain[i].start; break;}
     }
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb]);
+    // Taylor rule prescriptions (all 4 variants)
+    const t = state.trD ?? {};
+    const prevGap = t.outputGap ?? -0.5;
+    const gap = t.gapMeasure === 'unemployment'
+      ? -2 * ((t.unemploymentRate ?? 4.1) - (t.unemploymentNatural ?? 4.1))
+      : (t.outputGap ?? -0.5);
+    const trRates = {
+      taylor93:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 0.5*gap,
+      balanced:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 1.0*gap,
+      yellen:        taylorRateYellen(t),
+      juddRudebusch: taylorRateJR(t, state.fwLb, prevGap),
+    };
+    // CGG inertial (backward-compatible with existing chart)
+    trRates.cgg = state.fwLb + (1 - (t.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
+
+    // Taylor signal: JR is the primary signal (Bieri-Chincarini Exhibit 7)
+    const jrPrescribed = trRates.juddRudebusch;
+    const taylorSignalVal = Math.abs(jrPrescribed - effrStart) < 0.125 ? 0
+      : jrPrescribed < effrStart ? -1 : 1;
+    const taylorJRRate = jrPrescribed;
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD]);
 }
 
 // ============================================================================
