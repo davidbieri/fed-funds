@@ -795,6 +795,10 @@ function reducer(state, action){
       return {...state, trD: {...state.trD, [action.key]: action.value}};
     case 'APPLY_LIVE_TAYLOR':
       return {...state, trD: {...state.trD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'TOGGLE_RIDE_FILTER':
+      return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
+    case 'SET_RIDE_SELECTED':
+      return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
     default:
       return state;
   }
@@ -896,8 +900,11 @@ function useFinance(state) {
       };
     });
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD]);
+    // Riding-the-yield-curve matrix
+    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
 }
 
 // ============================================================================
@@ -2417,6 +2424,143 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
   );
 }
 
+function RidingTab({state, dispatch, finance}) {
+  const {rideData, nsFitParams, syncedYcD} = finance;
+  const MATS = ['6mo','1yr','2yr','5yr','7yr','10yr','30yr'];
+  const HORIZONS = ['1mo','3mo','6mo','12mo','18mo'];
+  const FILTERS = [
+    {key:'positiveSlope',    label:'Positive slope'},
+    {key:'positiveCushion',  label:'Positive cushion'},
+    {key:'cushion75',        label:'75th pctile cushion'},
+    {key:'taylorRule',       label:'Taylor rule signal'},
+    {key:'cmeExpectations',  label:'CME signal'},
+  ];
+
+  const sel = state.rideSelected;
+  const selectedCell = rideData[sel.matIdx] && rideData[sel.matIdx][sel.hIdx] ? rideData[sel.matIdx][sel.hIdx] : null;
+
+  const signalBg = {ride:'#dcfce7', hold:'#fee2e2', marginal:'#fef9c3'};
+  const signalColor = {ride:'var(--color-text-success)', hold:'var(--color-text-danger)', marginal:'var(--color-text-warning)'};
+
+  return (
+    <div>
+      {/* Filter chips */}
+      <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.75rem'}}>
+        <span style={{fontSize:'10px',fontWeight:500,color:'var(--color-text-tertiary)',textTransform:'uppercase',letterSpacing:'.06em',marginRight:'4px'}}>Active filters:</span>
+        {FILTERS.map(function(f){
+          var on = state.rideFilters[f.key];
+          return (
+            <button key={f.key} onClick={()=>dispatch({type:'TOGGLE_RIDE_FILTER',key:f.key})}
+              style={{padding:'3px 10px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(on?'var(--color-border-info)':'var(--color-border-secondary)'),background:on?'var(--color-background-info)':'transparent',color:on?'var(--color-text-info)':'var(--color-text-tertiary)',fontWeight:on?600:400}}>
+              {f.label} {on?'\u2713':''}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Matrix */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr"><span className="k-title">HPR matrix \u2014 instrument \u00d7 horizon (click cell for detail)</span></div>
+        <div style={{overflowX:'auto'}}>
+          <table className="fwt">
+            <thead>
+              <tr>
+                <th>Instrument</th>
+                {HORIZONS.map(function(h){return <th key={h}>{h}</th>;})}
+              </tr>
+            </thead>
+            <tbody>
+              {MATS.map(function(mat,mi){return(
+                <tr key={mat}>
+                  <td style={{fontWeight:500,fontFamily:'var(--font-mono)'}}>{mat}</td>
+                  {HORIZONS.map(function(hor,hi){
+                    var cell = rideData[mi] && rideData[mi][hi] ? rideData[mi][hi] : null;
+                    if(!cell || cell.signal===undefined) return <td key={hor} style={{opacity:.3,fontSize:'11px',textAlign:'center'}}>\u2014</td>;
+                    var isSel = sel.matIdx===mi && sel.hIdx===hi;
+                    return (
+                      <td key={hor}
+                        onClick={()=>dispatch({type:'SET_RIDE_SELECTED',matIdx:mi,hIdx:hi})}
+                        style={{background:signalBg[cell.signal],cursor:'pointer',border:isSel?'2px solid var(--c-cme)':'2px solid transparent',padding:'5px 8px',minWidth:'72px'}}>
+                        <div style={{fontWeight:600,fontSize:'12px',color:signalColor[cell.signal],fontFamily:'var(--font-mono)'}}>
+                          {cell.annXhpr>=0?'+':''}{(cell.annXhpr*100).toFixed(2)}pp
+                        </div>
+                        <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+                          {cell.cushion>=0?'+':''}{cell.cushion.toFixed(0)}bp
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );})}
+            </tbody>
+          </table>
+        </div>
+        <div className="k-note" style={{marginTop:'8px'}}>XHPR = annualized excess HPR vs buy-and-hold. Cushion = break-even yield change (bp). Color: \ud83d\udfe2 ride / \ud83d\udd34 hold / \ud83d\udfe1 marginal based on active filters. Source: Bieri-Chincarini (2005) Eqs. 8\u201316.</div>
+      </div>
+
+      {/* Cushion detail for selected cell */}
+      {selectedCell && selectedCell.m > selectedCell.h && (
+        <div className="k-grid" style={{marginBottom:'12px'}}>
+          <div className="k-panel">
+            <div className="k-hdr">
+              <span className="k-title">Cushion detail \u2014 {MATS[sel.matIdx]} instrument, {HORIZONS[sel.hIdx]} horizon</span>
+            </div>
+            {/* Cushion gauge bar */}
+            <div style={{marginBottom:'12px'}}>
+              <div style={{fontSize:'22px',fontWeight:500,color:selectedCell.cushion>15?'var(--color-text-success)':selectedCell.cushion>0?'var(--color-text-warning)':'var(--color-text-danger)'}}>
+                {selectedCell.cushion>=0?'+':''}{selectedCell.cushion.toFixed(0)} bp
+              </div>
+              <div style={{fontSize:'11px',color:'var(--color-text-secondary)',marginBottom:'8px'}}>
+                Rates must rise {Math.abs(selectedCell.cushion).toFixed(0)}bp to eliminate excess return
+              </div>
+              <div style={{height:'16px',borderRadius:'4px',overflow:'hidden',border:'.5px solid var(--color-border-tertiary)',background:'var(--color-background-secondary)',position:'relative'}}>
+                <div style={{position:'absolute',left:'50%',top:0,bottom:0,width:'1px',background:'var(--color-border-secondary)'}}/>
+                {selectedCell.cushion > 0 && (
+                  <div style={{position:'absolute',left:'50%',top:0,height:'100%',width:Math.min(50, selectedCell.cushion/2)+'%',background:'var(--color-text-success)',opacity:.7}}/>
+                )}
+                {selectedCell.cushion < 0 && (
+                  <div style={{position:'absolute',right:'50%',top:0,height:'100%',width:Math.min(50, -selectedCell.cushion/2)+'%',background:'var(--color-text-danger)',opacity:.7}}/>
+                )}
+                {/* 75th pctile marker at ~15bp */}
+                <div style={{position:'absolute',left:(50+15/2)+'%',top:0,bottom:0,width:'2px',background:'var(--color-text-warning)',opacity:.6}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+                <span>{'\u2212'}100bp</span><span>0</span><span>75th pctile (~15bp)</span><span>+100bp</span>
+              </div>
+            </div>
+            {/* Comparison table */}
+            <table className="fwt" style={{marginTop:'8px'}}>
+              <thead><tr><th>Metric</th><th>Raw ride</th><th>Duration-neutral</th></tr></thead>
+              <tbody>
+                <tr><td>HPR (ann.)</td>
+                  <td style={{fontFamily:'var(--font-mono)'}}>{(selectedCell.hpr/selectedCell.h*100).toFixed(2)}%</td>
+                  <td style={{fontFamily:'var(--font-mono)'}}>{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}%</td>
+                </tr>
+                <tr><td>XHPR (ann.)</td>
+                  <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>{selectedCell.annXhpr>=0?'+':''}{(selectedCell.annXhpr*100).toFixed(2)}pp</td>
+                  <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>{selectedCell.dnXR>=0?'+':''}{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}pp</td>
+                </tr>
+                <tr><td>Cushion</td>
+                  <td style={{fontFamily:'var(--font-mono)'}} colSpan={2}>{selectedCell.cushion>=0?'+':''}{selectedCell.cushion.toFixed(0)} bp</td>
+                </tr>
+                <tr><td>Signal</td>
+                  <td colSpan={2} style={{color:signalColor[selectedCell.signal],fontWeight:600,textTransform:'uppercase'}}>{selectedCell.signal}</td>
+                </tr>
+              </tbody>
+            </table>
+            {/* Taylor signal note */}
+            <div style={{marginTop:'10px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',fontSize:'11px'}}>
+              {finance.taylorSignalVal === -1 && <span style={{color:'var(--color-text-info)'}}>{'\ud83d\udccf'} Taylor rule prescribes cut \u2192 riding favorable \u2713</span>}
+              {finance.taylorSignalVal === +1 && <span style={{color:'var(--color-text-danger)'}}>{'\ud83d\udccf'} Taylor rule prescribes hike \u2192 riding less favorable \u2717</span>}
+              {finance.taylorSignalVal === 0  && <span style={{color:'var(--color-text-secondary)'}}>{'\ud83d\udccf'} Taylor rule neutral</span>}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -2449,6 +2593,7 @@ function App() {
     {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
     {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
+    {id:'riding',     label:'\ud83d\udcca Riding'},
   ];
 
   return (
@@ -2475,7 +2620,7 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 8 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 9 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
@@ -2499,7 +2644,8 @@ function App() {
       {state.fwActive==='yieldcurve' && <YieldCurveTab state={state} dispatch={dispatch} finance={finance}
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
-      {!['inputs','chain','tree','kalshi','taylor','yieldcurve'].includes(state.fwActive) &&
+      {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
+      {!['inputs','chain','tree','kalshi','taylor','yieldcurve','riding'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
