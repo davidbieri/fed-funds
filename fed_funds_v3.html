@@ -1188,6 +1188,82 @@ function ChainTab({state, finance}) {
   return <SvgPanel html={h}/>;
 }
 
+function TreeTab({state, finance}) {
+  const {meetings, states, final, compareSeries} = finance;
+  const lb = state.fwLb;
+  if(!meetings.length) return <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>No meetings detected.</div>;
+  const cuts=Object.entries(final).map(([k,p])=>({k:parseInt(k),p:p})).sort((a,b)=>a.k-b.k);
+  const cSeries=compareSeries;
+  const allRateKeys=[...new Set([...cuts.map(d=>d.k),...(cSeries?Object.keys(cSeries.final).map(Number):[])])].sort((a,b)=>a-b);
+  const pC1=cuts.filter(d=>d.k<=-1).reduce((s,d)=>s+d.p,0),pC2=cuts.filter(d=>d.k<=-2).reduce((s,d)=>s+d.p,0),pC3=cuts.filter(d=>d.k<=-3).reduce((s,d)=>s+d.p,0);
+  const expC=cuts.reduce((s,d)=>s+(-d.k)*d.p,0),expR=lb-expC*0.25;
+  let cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem">';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22652 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC2*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22653 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC3*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">Expected cuts</div><div class="fw-stat-v">'+expC.toFixed(2)+'</div><div class="fw-stat-s">of 25bp each</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">Implied rate</div><div class="fw-stat-v">'+expR.toFixed(2)+'%</div><div class="fw-stat-s">exp. lower bound</div></div>';
+  cards+='</div>';
+  const W=760,NR=18,nCols=states.length,colW=(W-50)/(nCols-1||1);
+  const allK=[];states.forEach(s=>Object.keys(s).forEach(k=>{const ki=parseInt(k);if(!allK.includes(ki))allK.push(ki);}));allK.sort((a,b)=>a-b);
+  const minK=allK[0],maxK=allK[allK.length-1],nRows=maxK-minK+1,rowH=Math.max(36,Math.min(56,280/Math.max(nRows,1))),svgH=nRows*rowH+60;
+  const gx=li=>30+li*colW,gyf=k=>30+(-k)*rowH+rowH/2;
+  let svg='';
+  for(let li=0;li<states.length-1;li++){
+    const m=meetings[li],x1=gx(li)+NR,x2=gx(li+1)-NR;
+    Object.entries(states[li]).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y1=gyf(ki),k0=ki+m.b0,y0=gyf(k0);
+      svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y0.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="'+Math.max(.6,p*m.p0*6).toFixed(1)+'" opacity=".85"/>';
+      if(m.p1>0.005){const k1=ki+m.b1,y1b=gyf(k1);svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y1b.toFixed(1)+'" stroke="var(--color-border-info)" stroke-width="'+Math.max(.4,p*m.p1*6).toFixed(1)+'" stroke-dasharray="4,2" opacity=".75"/>';}
+    });
+  }
+  states.forEach((st,li)=>{
+    const x=gx(li),lbl=li===0?'Now':meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'';
+    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    Object.entries(st).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
+      svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+NR+'" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".8"/>';
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="500" fill="var(--color-text-primary)" font-family="var(--font-mono)">'+(p*100).toFixed(0)+'%</text>';
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(y+6).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-secondary)" font-family="var(--font-mono)">'+rate+'%</text>';
+    });
+  });
+  for(let k=0;k>=minK;k--){const y=gyf(k);svg+='<text x="0" y="'+y.toFixed(1)+'" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';}
+  const maxP=Math.max(...cuts.map(d=>d.p),...(cSeries?Object.values(cSeries.final):[0]));
+  const bW=Math.min(60,520/Math.max(allRateKeys.length,1));
+  let dSvg='';
+  if(cSeries){
+    const cCutsMap=Object.fromEntries(Object.entries(cSeries.final).map(([k,p])=>[parseInt(k),p]));
+    allRateKeys.slice().reverse().forEach((k,i)=>{
+      const p=cCutsMap[k];if(!p||p<0.002)return;
+      const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h;
+      dSvg+='<rect x="'+(x-2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bW+4).toFixed(1)+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-overlay-a)" stroke="var(--c-overlay)" stroke-width="1.5"/>';
+      if(p>.03)dSvg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-overlay)" font-family="var(--font-sans)">'+(p*100).toFixed(1)+'%</text>';
+    });
+  }
+  const cutsMap=Object.fromEntries(cuts.map(d=>[d.k,d.p]));
+  allRateKeys.slice().reverse().forEach((k,i)=>{
+    const p=cutsMap[k];if(!p||p<0.002)return;
+    const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h,fo=.2+p*.75;
+    dSvg+='<rect x="'+x+'" y="'+y+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".5"/>';
+    if(p>.02)dSvg+='<text x="'+(x+bW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">'+(p*100).toFixed(1)+'%</text>';
+    dSvg+='<text x="'+(x+bW/2)+'" y="73" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';
+  });
+  const mainLabel=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline';
+  const cmpLabel=cSeries?' vs <span style="color:var(--c-overlay)">'+cSeries.label+' ('+cSeries.totalBp+')</span>':'';
+  const h=cards
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice \u2014 '+meetings.length+' meetings</div>'
+    +'<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+svgH+'" style="min-width:500px;width:100%;display:block;height:'+svgH+'px">'+svg+'</svg></div>'
+    +'<div style="margin-top:1.25rem">'
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution \u2014 <span style="color:var(--c-cme)">'+mainLabel+'</span>'+cmpLabel+'</div>'
+    +'<div style="overflow-x:auto"><svg viewBox="0 0 '+Math.max(560,20+allRateKeys.length*(bW+5)+20)+' 80" style="min-width:400px;width:100%;display:block;height:80px">'+dSvg+'</svg></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">'
+    +'<span>Opacity \u221d probability</span><span>Solid = hold/base \u00b7 Dashed = extra 25bp cut</span><span>Width \u221d weight</span>'
+    +(cSeries?'<span style="color:var(--c-overlay)">\u25a0 Amber = compare scenario</span>':'')
+    +'</div>';
+  return <SvgPanel html={h}/>;
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -1261,7 +1337,8 @@ function App() {
 
       {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}
       {state.fwActive==='chain'  && <ChainTab state={state} finance={finance}/>}
-      {!['inputs','chain'].includes(state.fwActive) &&
+      {state.fwActive==='tree'   && <TreeTab state={state} finance={finance}/>}
+      {!['inputs','chain','tree'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
