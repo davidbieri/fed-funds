@@ -2064,6 +2064,234 @@ function TaylorRuleTab({state, dispatch, finance}) {
   return <SvgPanel html={html}/>;
 }
 
+function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD} = finance;
+  const [selectedMeeting, setSelectedMeeting] = React.useState(null);
+  const [showAll, setShowAll] = React.useState(false);
+  const [model, setModel] = React.useState('ns');
+
+  // Bridge for onchange in HTML string inputs
+  window.__ycDispatch = (i, v) => dispatch({type:'UPDATE_YC_RATE', i, value:parseFloat(v)||state.ycD[i].rate});
+
+  // -- Fetch bar --
+  const fetchStatus = refreshStatus?.yc || 'Seed data \u2014 3mo/6mo/1yr from ZQ chain \u00b7 2yr\u201330yr enter manually or fetch';
+  const isFetching = fetching?.yc || false;
+
+  // -- Curve SVG --
+  function buildCurveChart() {
+    const W=720, H=170, mt=24, mb=30, ml=40, mr=16;
+    const allRates = [...syncedYcD.map(d=>d.rate), ...nsCurvePoints.map(d=>d.rate)];
+    const minR = Math.min(...allRates) - 0.15;
+    const maxR = Math.max(...allRates) + 0.15;
+    const xs = m => ml + (Math.log(m+0.1)/Math.log(30.1)) * (W-ml-mr);
+    const ys = v => mt + H * (1-(v-minR)/(maxR-minR));
+    let svg = '<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+
+    // Y grid
+    const step=0.25;
+    for(let y=Math.ceil(minR/step)*step; y<=maxR; y+=step){
+      svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+      svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+    }
+
+    // X axis labels (log scale maturity)
+    [{m:0.25,l:'3mo'},{m:0.5,l:'6mo'},{m:1,l:'1yr'},{m:2,l:'2yr'},{m:5,l:'5yr'},{m:10,l:'10yr'},{m:30,l:'30yr'}].forEach(function(d){
+      svg+='<line x1="'+xs(d.m).toFixed(1)+'" y1="'+mt+'" x2="'+xs(d.m).toFixed(1)+'" y2="'+(mt+H).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".3" stroke-dasharray="2,3"/>';
+      svg+='<text x="'+xs(d.m).toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.l+'</text>';
+    });
+
+    // Scenario shocked curves (if any)
+    var curvesToShow = showAll ? scenarioCurves : (selectedMeeting ? scenarioCurves.filter(function(c){return c.meetingLb===selectedMeeting;}) : []);
+    curvesToShow.forEach(function(sc, idx) {
+      var opacity = showAll ? (0.12 + idx*(0.7/Math.max(scenarioCurves.length-1,1))).toFixed(2) : '0.7';
+      var pts = Array.from({length:80},function(_,i){var m=0.08+(i/79)*29.92;return xs(m).toFixed(1)+','+ys(nsYield(m,sc.params)).toFixed(1);}).join(' ');
+      svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.5" opacity="'+opacity+'" stroke-dasharray="4,2"/>';
+    });
+
+    // NS instantaneous forward (dashed amber)
+    var fwdPts = nsForwardPoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
+    svg+='<polyline points="'+fwdPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".5"/>';
+
+    // NS spot curve (amber solid)
+    var nsPts = nsCurvePoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
+    svg+='<polyline points="'+nsPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" opacity=".9"/>';
+
+    // Raw data points -- connect with gray line first
+    for(var i=0;i<syncedYcD.length-1;i++){
+      var a=syncedYcD[i], b=syncedYcD[i+1];
+      svg+='<line x1="'+xs(a.mat).toFixed(1)+'" y1="'+ys(a.rate).toFixed(1)+'" x2="'+xs(b.mat).toFixed(1)+'" y2="'+ys(b.rate).toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1" opacity=".5"/>';
+    }
+    syncedYcD.forEach(function(d){
+      var col = d.src==='zq' ? 'var(--c-cme)' : 'var(--c-sofr)';
+      svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+      svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+    });
+
+    // Legend
+    svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf ZQ-derived</text>';
+    svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
+    svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
+    svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd \u00b7 --- scenario</text>';
+    svg+='</svg>';
+    return svg;
+  }
+
+  // -- Shock impact table --
+  function buildShockTable() {
+    var mats = [{m:2,l:'2yr'},{m:5,l:'5yr'},{m:10,l:'10yr'},{m:30,l:'30yr'}];
+    var loadings = {2:0.50, 5:0.30, 10:0.10, 30:0.05};
+    var h = '<table class="fwt"><thead><tr><th>Meeting</th><th>EFFR \u0394 (bp)</th>';
+    mats.forEach(function(d){h+='<th>'+d.l+' \u0394 (bp)</th>';});
+    h+='<th>10\u22122yr \u0394 (bp)</th><th>Riding signal</th></tr></thead><tbody>';
+    scenarioCurves.forEach(function(sc) {
+      var slopeChg = (sc.cumDeltaBp * (loadings[2] - loadings[10])).toFixed(1);
+      var signal = parseFloat(slopeChg) < -5 ? '\ud83d\udfe2 Ride' : parseFloat(slopeChg) > 5 ? '\ud83d\udd34 Hold' : '\ud83d\udfe1 Marginal';
+      var dc = sc.cumDeltaBp < -5 ? 'var(--color-text-info)' : sc.cumDeltaBp > 5 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)';
+      h+='<tr><td style="white-space:nowrap;font-weight:500">'+sc.label+'</td>';
+      h+='<td style="font-family:var(--font-mono);color:'+dc+'">'+(sc.cumDeltaBp > 0 ? '+':'')+sc.cumDeltaBp.toFixed(0)+'</td>';
+      mats.forEach(function(mt){
+        var d=(sc.cumDeltaBp*loadings[mt.m]).toFixed(1);
+        var col=parseFloat(d)<0?'var(--color-text-info)':parseFloat(d)>0?'var(--color-text-danger)':'var(--color-text-tertiary)';
+        h+='<td style="font-family:var(--font-mono);color:'+col+'">'+(parseFloat(d)>0?'+':'')+d+'</td>';
+      });
+      h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(slopeChg)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(parseFloat(slopeChg)>0?'+':'')+slopeChg+'</td>';
+      h+='<td>'+signal+'</td></tr>';
+    });
+    h+='</tbody></table>';
+    return h;
+  }
+
+  // -- CMT input table --
+  function buildCmtTable() {
+    var short = syncedYcD[0].rate;
+    var h = '<table class="fwt"><thead><tr><th>Tenor</th><th>Rate (%)</th><th>Source</th><th>Spread vs 3mo (bp)</th></tr></thead><tbody>';
+    syncedYcD.forEach(function(row, i) {
+      var spread = ((row.rate - short) * 100).toFixed(1);
+      var spreadCol = parseFloat(spread) > 0 ? 'var(--color-text-success)' : parseFloat(spread) < 0 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)';
+      var srcBadge = row.src==='live'
+        ? '<span class="k-pill k-up">live</span>'
+        : row.src==='zq'
+          ? '<span class="k-pill" style="background:var(--c-cme-a);color:var(--c-cme)">ZQ</span>'
+          : '<span class="k-pill k-neu">manual</span>';
+      h+='<tr><td style="font-weight:500;font-family:var(--font-mono)">'+row.label+'</td>';
+      h+='<td><input class="fw-in" type="number" step="0.01" min="0" max="20" value="'+row.rate.toFixed(2)+'" '+(row.editable?'':'disabled style="opacity:.6"')+' style="width:68px" onchange="window.__ycDispatch('+i+', this.value)"/>';
+      h+='<span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">%</span></td>';
+      h+='<td>'+srcBadge+'</td>';
+      h+='<td style="font-family:var(--font-mono);color:'+spreadCol+'">'+(parseFloat(spread)>0?'+':'')+spread+' bp</td></tr>';
+    });
+    h+='</tbody></table>';
+    return h;
+  }
+
+  var slope10_2 = ((syncedYcD[5].rate - syncedYcD[3].rate)*100).toFixed(1);
+  var slope2_3mo = ((syncedYcD[3].rate - syncedYcD[0].rate)*100).toFixed(1);
+  var curveShape = parseFloat(slope10_2) > 50 ? 'Normal / steep' : parseFloat(slope10_2) > 10 ? 'Normal / flat' : parseFloat(slope10_2) > -10 ? 'Near flat / mixed' : 'Inverted';
+
+  return (
+    <div>
+      {/* Fetch bar */}
+      <div className="k-fetch-bar">
+        <button className="refresh-btn" disabled={isFetching}
+          onClick={()=>fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus)}>
+          {isFetching ? '\u27f3 ...' : '\u27f3 Fetch CMT rates'}
+        </button>
+        <span className="k-seed-note">{fetchStatus}</span>
+        <span style={{marginLeft:'auto',fontSize:'10px',color:'var(--color-text-tertiary)',display:'flex',gap:'10px'}}>
+          <span><span className="k-dot" style={{background:'var(--c-cme)'}}></span> ZQ-derived</span>
+          <span><span className="k-dot" style={{background:'var(--c-sofr)'}}></span> CMT</span>
+          <span><span className="k-dot" style={{background:'var(--c-overlay)'}}></span> NS fit</span>
+        </span>
+      </div>
+
+      {/* CMT input table */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Treasury CMT par rates \u2014 input grid</span>
+          <span className="k-contract">Federal Reserve H.15 \u00b7 daily</span>
+        </div>
+        <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildCmtTable()}}/>
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginTop:'8px'}}>
+          {[
+            {l:'10yr\u22122yr slope', v:slope10_2+'bp', col:parseFloat(slope10_2)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'2yr\u22123mo slope',  v:slope2_3mo+'bp', col:parseFloat(slope2_3mo)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'Curve shape', v:curveShape, col:'var(--color-text-primary)'},
+            {l:'NS RMSE', v:nsFactors.rmse.toFixed(1)+'bp', col:'var(--c-overlay)'},
+          ].map(function(d){return(
+            <div key={d.l} className="fw-stat" style={{padding:'6px 10px'}}>
+              <div className="fw-stat-l">{d.l}</div>
+              <div className="fw-stat-v" style={{fontSize:'15px',color:d.col}}>{d.v}</div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      {/* NS factor cards */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Nelson-Siegel factors</span>
+          <span style={{display:'flex',gap:'6px',alignItems:'center'}}>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Model:</span>
+            {['ns','nss'].map(function(m){return(
+              <button key={m} onClick={()=>setModel(m)}
+                style={{padding:'2px 8px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(model===m?'var(--c-overlay)':'var(--color-border-secondary)'),background:model===m?'var(--c-overlay-a)':'transparent',color:model===m?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+                {m.toUpperCase()}
+              </button>
+            );})}
+            {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson \u2014 Phase 3 extension)</span>}
+          </span>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
+          {[
+            {l:'Level \u03b2\u2080', v:nsFactors.level.toFixed(3)+'%', sub:'Long-run rate', col:'var(--c-overlay)'},
+            {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
+            {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
+            {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
+            {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
+          ].map(function(d){return(
+            <div key={d.l} className="fw-stat">
+              <div className="fw-stat-l">{d.l}</div>
+              <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
+              <div className="fw-stat-s">{d.sub}</div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      {/* Curve chart */}
+      <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Yield curve \u2014 CMT data + Nelson-Siegel fit + scenario paths</span>
+          <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+            <button onClick={()=>setShowAll(!showAll)}
+              style={{padding:'2px 8px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(showAll?'var(--c-overlay)':'var(--color-border-secondary)'),background:showAll?'var(--c-overlay-a)':'transparent',color:showAll?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+              {showAll ? 'Showing all meetings' : 'Show all meetings'}
+            </button>
+            {!showAll && scenarioCurves.map(function(sc){return(
+              <button key={sc.meetingLb} onClick={()=>setSelectedMeeting(selectedMeeting===sc.meetingLb?null:sc.meetingLb)}
+                style={{padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-border-secondary)'),background:selectedMeeting===sc.meetingLb?'var(--c-overlay-a)':'transparent',color:selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+                {sc.label.split('\u2013')[0].replace(/ 20\d\d/,'')}
+                {sc.cumDeltaBp!==0&&<span style={{fontSize:'9px',marginLeft:'3px',opacity:.7}}>{sc.cumDeltaBp>0?'+':''}{sc.cumDeltaBp.toFixed(0)}bp</span>}
+              </button>
+            );})}
+          </div>
+        </div>
+        <SvgPanel html={buildCurveChart()}/>
+        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting. X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp. Click a meeting button to overlay the shocked curve for that meeting.</div>
+      </div>
+
+      {/* Shock impact table */}
+      <div className="k-panel k-full">
+        <div className="k-hdr">
+          <span className="k-title">Yield curve impact by FOMC meeting \u2014 Bieri-Chincarini empirical coefficients</span>
+          <span className="k-contract">Exhibit 5: \u221225bp slope per 100bp FFTR hike</span>
+        </div>
+        <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildShockTable()}}/>
+        <div className="k-note">Maturity loadings: 2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100bp FFR change. Slope \u0394 = 2yr loading minus 10yr loading \u00d7 cumulative delta. Green = curve steepening (riding more favorable), red = flattening/inverting. Riding signal feeds the Phase 4 calculator.</div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -2143,7 +2371,10 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='taylor' && <TaylorRuleTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','taylor'].includes(state.fwActive) &&
+      {state.fwActive==='yieldcurve' && <YieldCurveTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {!['inputs','chain','tree','kalshi','taylor','yieldcurve'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
