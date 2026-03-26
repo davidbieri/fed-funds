@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fed Funds Probability Tree v3 — React</title>
+<script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+:root {
+  --color-text-primary:#1a1a1a;--color-text-secondary:#555;--color-text-tertiary:#888;
+  --color-text-info:#1d6fa4;--color-text-warning:#c97d00;--color-text-danger:#c0392b;--color-text-success:#166534;
+  --color-background-primary:#ffffff;--color-background-secondary:#f4f4f5;
+  --color-background-info:#dbeafe;--color-background-danger:#fee2e2;--color-background-success:#dcfce7;
+  --color-border-secondary:#d1d5db;--color-border-tertiary:#e5e7eb;--color-border-info:#93c5fd;
+  --border-radius-md:8px;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
+  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;
+  --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --color-text-primary:#f0f0f0;--color-text-secondary:#aaa;--color-text-tertiary:#777;
+    --color-text-info:#60a5fa;--color-text-warning:#fbbf24;--color-text-danger:#f87171;--color-text-success:#86efac;
+    --color-background-primary:#18181b;--color-background-secondary:#27272a;
+    --color-background-info:#1e3a5f;--color-background-danger:#450a0a;--color-background-success:#14532d;
+    --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
+    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;
+    --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
+  }
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto}
+.fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
+.fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
+.fwt{width:100%;border-collapse:collapse}
+.fwt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.fwt td{padding:5px 8px;border-bottom:.5px solid var(--color-border-tertiary);font-size:12px;vertical-align:middle}
+.fw-in{font-family:var(--font-mono);font-size:12px;padding:2px 5px;border:.5px solid var(--color-border-secondary);border-radius:4px;background:transparent;color:var(--color-text-primary)}
+.fw-stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px}
+.fw-stat-l{font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px}
+.fw-stat-v{font-size:20px;font-weight:500}
+.fw-stat-s{font-size:11px;color:var(--color-text-secondary);margin-top:1px}
+.refresh-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:500;background:var(--color-background-secondary);border:.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);cursor:pointer;color:var(--color-text-primary);transition:opacity .2s}
+.refresh-btn:hover{opacity:.75}.refresh-btn:disabled{opacity:.4;cursor:not-allowed}
+.spin{display:inline-block;animation:spin .8s linear infinite}
+@keyframes spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.data-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;padding:2px 8px;border-radius:20px;background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.data-badge.live{background:var(--color-background-success);color:var(--color-text-success)}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;display:inline-block}
+.api-note{font-size:11px;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:8px 12px;margin-top:6px;line-height:1.5}
+.api-note code{font-family:var(--font-mono);font-size:10px;background:var(--color-background-primary);padding:1px 4px;border-radius:3px;border:.5px solid var(--color-border-tertiary)}
+/* Kalshi panels */
+.k-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:12px;margin-bottom:12px}
+.k-full{grid-column:1/-1}
+.k-panel{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px;overflow:hidden}
+.k-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:6px;flex-wrap:wrap}
+.k-title{font-size:12px;font-weight:500;color:var(--color-text-primary)}
+.k-contract{font-size:9px;font-family:var(--font-mono);color:var(--color-text-tertiary);background:var(--color-background-primary);padding:1px 5px;border-radius:3px;border:.5px solid var(--color-border-tertiary)}
+.k-note{font-size:10px;color:var(--color-text-tertiary);margin-top:6px;line-height:1.5;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)}
+.k-legend{display:flex;gap:12px;font-size:10px;color:var(--color-text-secondary);margin-bottom:8px;align-items:center;flex-wrap:wrap}
+.k-dot{width:10px;height:10px;border-radius:2px;display:inline-block;margin-right:3px;vertical-align:middle}
+.k-pill{font-size:9px;padding:1px 6px;border-radius:10px;font-weight:500;white-space:nowrap}
+.k-up{background:var(--color-background-info);color:var(--color-text-info)}
+.k-dn{background:var(--color-background-danger);color:var(--color-text-danger)}
+.k-neu{background:var(--color-background-secondary);color:var(--color-text-tertiary)}
+.k-fetch-bar{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:.5px solid var(--color-border-tertiary);margin-bottom:14px;flex-wrap:wrap}
+.k-seed-note{font-size:11px;color:var(--color-text-tertiary);background:var(--color-background-secondary);border-radius:4px;padding:4px 10px;border:.5px solid var(--color-border-tertiary)}
+/* Compare/overlay scenario — amber */
+:root{--c-overlay:#f59e0b;--c-overlay-a:rgba(245,158,11,.13);}
+@media(prefers-color-scheme:dark){:root{--c-overlay:#fbbf24;--c-overlay-a:rgba(251,191,36,.13);}}
+/* -- Mobile responsive -------------------------------------------------- */
+@media(max-width:640px){
+  body{padding:.75rem .75rem 1.5rem}
+  .fw-tab{font-size:11px;padding:4px 9px}
+  .k-grid{grid-template-columns:1fr !important}
+  #api-key-input{max-width:240px !important}
+  .fw-stat-v{font-size:17px !important}
+}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const {useState, useReducer, useEffect, useMemo, useCallback} = React;
+
+// ============================================================================
+// SEED DATA --- copied verbatim from fed_funds_probability_tree.html
+// ============================================================================
+
+const FW_SEED_PRICES=[96.36,96.40,96.50,96.58,96.65,96.72,96.78,96.85,96.90,96.94,96.97,97.00];
+
+const FW_SEED=[
+  {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28\u201329'},
+  {lb:'May 2026',price:96.40,mtg:false,N:0, M:0, ml:''},
+  {lb:'Jun 2026',price:96.50,mtg:true, N:17,M:13,ml:'Jun 17\u201318'},
+  {lb:'Jul 2026',price:96.58,mtg:true, N:28,M:3, ml:'Jul 28\u201329'},
+  {lb:'Aug 2026',price:96.65,mtg:false,N:0, M:0, ml:''},
+  {lb:'Sep 2026',price:96.72,mtg:true, N:16,M:14,ml:'Sep 16\u201317'},
+  {lb:'Oct 2026',price:96.78,mtg:true, N:28,M:3, ml:'Oct 28\u201329'},
+  {lb:'Nov 2026',price:96.85,mtg:false,N:0, M:0, ml:''},
+  {lb:'Dec 2026',price:96.90,mtg:true, N:9, M:22,ml:'Dec 9\u201310'},
+  {lb:'Jan 2027',price:96.94,mtg:true, N:27,M:4, ml:'Jan 27\u201328'},
+  {lb:'Feb 2027',price:96.97,mtg:false,N:0, M:0, ml:''},
+  {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17\u201318'},
+];
+
+const SCENARIOS={
+  'soft-landing-95':{
+    shortLabel:'Soft Landing \'95',era:'easing',totalBp:'-25bp',endRate:'3.39',
+    desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign \u2014 growth never faltered. The most benign plausible outcome.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61]},
+  'insurance-98':{
+    shortLabel:'Insurance \'98/\'19',era:'easing',totalBp:'-75bp',endRate:'2.89',
+    desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment \u2014 easing that stops once tail risk subsides.',
+    prices:[96.36,96.36,96.47,96.63,96.86,96.98,97.11,97.11,97.11,97.11,97.11,97.11]},
+  'measured-pace':{
+    shortLabel:'Measured Pace',era:'easing',totalBp:'-100bp',endRate:'2.64',
+    desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence \u2014 methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
+    prices:[96.36,96.36,96.47,96.61,96.61,96.73,96.86,96.86,97.04,97.11,97.11,97.22]},
+  'mild-recession-90':{
+    shortLabel:'Recession \'90-91',era:'easing',totalBp:'-150bp',endRate:'2.14',
+    desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession \u2014 persistent incremental pressure, no financial seizure.',
+    prices:[96.38,96.61,96.72,96.88,97.11,97.23,97.38,97.61,97.79,97.86,97.86,97.86]},
+  'dotcom-01':{
+    shortLabel:'Dot-com \'01',era:'easing',totalBp:'-225bp',endRate:'1.39',
+    desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure \u2014 2001 dot-com collapse analog.',
+    prices:[96.36,96.36,96.58,96.91,97.36,97.59,97.88,98.11,98.29,98.39,98.61,98.61]},
+  'gfc-08':{
+    shortLabel:'GFC \'08',era:'crisis',totalBp:'-300bp',endRate:'0.64',
+    desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) \u2014 reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
+    prices:[96.38,96.61,96.83,97.18,97.86,98.21,98.66,99.11,99.29,99.36,99.36,99.36]},
+  'volcker-82':{
+    shortLabel:'Volcker \'82',era:'crisis',totalBp:'-350bp',endRate:'0.14',
+    desc:'Maximum historical easing velocity: 50+75+75+75+50+25bp. After Volcker broke inflation in 1981-82 the Fed cut ~1100bp from peak. A stress-test of the tree at the lower bound.',
+    prices:[96.39,96.86,97.19,97.68,98.36,98.71,99.16,99.61,99.79,99.86,99.86,99.86]},
+  'stagflation-70s':{
+    shortLabel:'Stagflation \'70s',era:'tightening',totalBp:'+100bp',endRate:'4.64',
+    desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era \u2014 premature loosening followed by stubborn inflation forcing re-tightening.',
+    prices:[96.36,96.36,96.36,96.34,96.11,95.99,95.86,95.86,95.68,95.61,95.61,95.50]},
+  'renorm-22':{
+    shortLabel:'Re-norm \'22',era:'tightening',totalBp:'+350bp',endRate:'7.14',
+    desc:'Full 2022 replay from today\'s starting rate: 50+75+75+75+50+25bp = +350bp driving EFFR to ~7.14%. Inflation re-accelerates or new Fed Chair abandons the easing path.',
+    prices:[96.33,95.86,95.54,95.04,94.36,94.01,93.56,93.11,92.93,92.86,92.86,92.86]},
+};
+
+const kalshiD={
+  fetched:false, asOf:null, source:'Seed data \u2014 click Fetch Kalshi',
+  kBadge:'Seed',
+  meetings:{
+    'Apr 2026':{hold:.992,cut25:.005,cut50:.001,hike25:.002},
+    'Jun 2026':{hold:.74, cut25:.22, cut50:.02, hike25:.02},
+    'Jul 2026':{hold:.64, cut25:.28, cut50:.05, hike25:.03},
+    'Sep 2026':{hold:.55, cut25:.32, cut50:.09, hike25:.04},
+    'Oct 2026':{hold:.50, cut25:.32, cut50:.13, hike25:.05},
+    'Dec 2026':{hold:.46, cut25:.31, cut50:.16, hike25:.07},
+    'Jan 2027':{hold:.44, cut25:.32, cut50:.17, hike25:.07},
+    'Mar 2027':{hold:.42, cut25:.33, cut50:.18, hike25:.07},
+  },
+  cutCount:{
+    0:.15, 1:.32, 2:.30, 3:.15, 4:.08
+  },
+  comboPrices:{
+    'hold\u2192hold\u2192hold':'\u2014',
+    'hold\u2192hold\u2192cut':'\u2014',
+    'hold\u2192cut\u2192hold':'\u2014',
+    'hold\u2192cut\u2192cut':'\u2014',
+    'cut\u2192hold\u2192hold':'\u2014',
+    'cut\u2192cut\u2192hold':'\u2014',
+    'cut\u2192cut\u2192cut':'\u2014',
+  },
+  kalshiRate:{
+    'Apr 2026':3.625,'Jun 2026':3.54,'Jul 2026':3.47,'Sep 2026':3.38,
+    'Oct 2026':3.30,'Dec 2026':3.22,'Jan 2027':3.16,'Mar 2027':3.10,
+  },
+  fedDots:[
+    {lb:'Jun 2026',rate:3.75},{lb:'Dec 2026',rate:3.375},{lb:'Mar 2027',rate:3.25},
+  ],
+  fedDotsNote:'Dec 2025 SEP median: 3.375% end-2026, 3.125% end-2027',
+  hikeAny:.04,
+  cutBinary:{
+    'end-2026':.85,
+    'end-2027':.97,
+  },
+  cmeHikeAny:null,
+  largeCutAny:.11,
+};
+
+const polyD={
+  fetched:false, asOf:'2026-03-17', source:'Seed data \u2014 click Fetch Polymarket',
+  meetings:{
+    'Apr 2026':{hold:.99, cut25:.005,cut50:.002,hike25:.003},
+    'Jun 2026':{hold:.72, cut25:.21, cut50:.04, hike25:.03},
+    'Jul 2026':{hold:.62, cut25:.27, cut50:.07, hike25:.04},
+    'Sep 2026':{hold:.53, cut25:.31, cut50:.11, hike25:.05},
+    'Oct 2026':{hold:.48, cut25:.31, cut50:.15, hike25:.06},
+    'Dec 2026':{hold:.44, cut25:.30, cut50:.18, hike25:.08},
+    'Jan 2027':{hold:.43, cut25:.31, cut50:.18, hike25:.08},
+    'Mar 2027':{hold:.41, cut25:.32, cut50:.19, hike25:.08},
+  },
+  cutCount:{'0':.05,'1':.09,'2':.26,'3':.22,'4':.17,'5':.12,'6':.06,'7+':.03},
+  terminalRate:{
+    '4.00':.02,'3.75':.08,'3.50':.18,'3.25':.26,'3.00':.22,'2.75':.13,'2.50':.08,'2.25':.03
+  },
+  hikeAny:.155,
+  emergencyCut:.08,
+  cutByMeeting:{
+    'Apr 2026':.01,'Jun 2026':.22,'Jul 2026':.45,'Sep 2026':.68,
+    'Oct 2026':.78,'Dec 2026':.88,'end-2026':.88,'end-2027':.97,
+  },
+  fedChair:{
+    'Kevin Warsh':.47,'Rick Rieder':.26,'Other':.27
+  },
+};
+
+const srD=[
+  {lb:'Jun 2026',ticker:'SR3M6',price:96.35,qLabel:'Q2 2026',zqMonths:['Apr 2026','May 2026','Jun 2026']},
+  {lb:'Sep 2026',ticker:'SR3U6',price:96.53,qLabel:'Q3 2026',zqMonths:['Jul 2026','Aug 2026','Sep 2026']},
+  {lb:'Dec 2026',ticker:'SR3Z6',price:96.68,qLabel:'Q4 2026',zqMonths:['Oct 2026','Nov 2026','Dec 2026']},
+  {lb:'Mar 2027',ticker:'SR3H7',price:96.80,qLabel:'Q1 2027',zqMonths:['Jan 2027','Feb 2027','Mar 2027']},
+  {lb:'Jun 2027',ticker:'SR3M7',price:96.88,qLabel:'Q2 2027',zqMonths:[]},
+  {lb:'Sep 2027',ticker:'SR3U7',price:96.94,qLabel:'Q3 2027',zqMonths:[]},
+  {lb:'Dec 2027',ticker:'SR3Z7',price:96.99,qLabel:'Q4 2027',zqMonths:[]},
+];
+
+const ycD=[
+  {mat:0.25, label:'3mo',  rate:3.64, src:'zq',     editable:false, ticker:'CMT 3M'},
+  {mat:0.50, label:'6mo',  rate:3.60, src:'zq',     editable:false, ticker:'CMT 6M'},
+  {mat:1.00, label:'1yr',  rate:3.55, src:'zq',     editable:false, ticker:'CMT 1Y'},
+  {mat:2.00, label:'2yr',  rate:3.84, src:'manual',  editable:true,  ticker:'CMT 2Y'},
+  {mat:5.00, label:'5yr',  rate:4.04, src:'manual',  editable:true,  ticker:'CMT 5Y'},
+  {mat:10.0, label:'10yr', rate:4.31, src:'manual',  editable:true,  ticker:'CMT 10Y'},
+  {mat:30.0, label:'30yr', rate:4.61, src:'manual',  editable:true,  ticker:'CMT 30Y'},
+];
+
+// ============================================================================
+// PURE FUNCTIONS --- math layer + helpers (no globals, explicit args only)
+// ============================================================================
+
+function fwChain(months){
+  const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
+  for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
+  for(let r=0;r<n;r++){for(let i=n-1;i>=0;i--){const m=months[i];if(m.mtg&&c[i].end!==null&&c[i].start===null&&m.N>0)c[i].start=(c[i].avg-(m.M/(m.N+m.M))*c[i].end)/(m.N/(m.N+m.M));if(m.mtg&&c[i].start!==null&&i>0&&months[i-1].mtg&&c[i-1].end===null)c[i-1].end=c[i].start;}}
+  for(let r=0;r<n;r++){for(let i=0;i<n;i++){const m=months[i];if(m.mtg&&c[i].start!==null&&c[i].end===null&&m.M>0)c[i].end=(c[i].avg-(m.N/(m.N+m.M))*c[i].start)/(m.M/(m.N+m.M));if(m.mtg&&c[i].end!==null&&i<n-1&&months[i+1].mtg&&c[i+1].start===null)c[i+1].start=c[i].end;}}
+  return c;
+}
+
+function fwMeetings(months,chain){
+  const res=[];
+  months.forEach((m,i)=>{
+    if(!m.mtg||chain[i].start===null||chain[i].end===null)return;
+    const chg=chain[i].end-chain[i].start,moves=chg/0.25,abs=Math.abs(moves),char=Math.floor(abs),mant=abs-char;
+    const isCut=chg<-0.0001,isHike=chg>0.0001,p0=1-mant,p1=mant;
+    const b0=isCut?-char:isHike?char:0,b1=isCut?-(char+1):isHike?(char+1):0;
+    const l0=b0===0?'hold':(b0>0?`+${b0*25}bp`:`${b0*25}bp`);
+    const l1=b1===0?'hold':(b1>0?`+${b1*25}bp`:`${b1*25}bp`);
+    res.push({lb:m.lb,label:m.ml||m.lb,start:chain[i].start,end:chain[i].end,chg,moves,p0,p1,b0,b1,l0,l1,isCut,isHike});
+  });
+  return res;
+}
+
+function fwDist(meetings){
+  let d={'0':1.0};const states=[{'0':1.0}];
+  meetings.forEach(m=>{
+    const nd={};
+    for(const[k,p]of Object.entries(d)){const ki=parseInt(k);nd[ki+m.b0]=(nd[ki+m.b0]||0)+p*m.p0;if(m.p1>0.0005)nd[ki+m.b1]=(nd[ki+m.b1]||0)+p*m.p1;}
+    d=nd;states.push({...d});
+  });
+  return{states,final:d};
+}
+
+function cmeCutCountDist(final,fwD){
+  const chain2=fwChain(fwD);
+  const m2026=fwMeetings(fwD.filter(d=>d.lb.includes('2026')&&d.mtg),chain2.filter((_,i)=>fwD[i].lb.includes('2026')));
+  const {final:f26}=fwDist(m2026);
+  const out={0:0,1:0,2:0,3:0,4:0};
+  Object.entries(f26).forEach(([k,p])=>{const ki=Math.max(0,Math.min(4,-parseInt(k)));out[ki]=(out[ki]||0)+p;});
+  return out;
+}
+
+function getMeetingComps(meetings,kalshiD,polyD){
+  const comps=[];
+  meetings.forEach(m=>{
+    const cmeCut=(m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0);
+    const kd=kalshiD.meetings[m.lb];
+    const pd=polyD.meetings[m.lb];
+    const kCut=kd?(kd.cut25||0)+(kd.cut50||0):null;
+    const pCut=pd?(pd.cut25||0)+(pd.cut50||0):null;
+    comps.push({lb:m.lb,label:m.label,cmeCut,kCut,pCut,
+      basisKC:kCut!==null?kCut-cmeCut:null,
+      basisPK:pCut!==null&&kCut!==null?pCut-kCut:null});
+  });
+  return comps;
+}
+
+function getCmeHikeProb(meetings){
+  return meetings.reduce((mx,m)=>{
+    const ph=(m.b0>0?m.p0:0)+(m.b1>0&&m.p1>0.001?m.p1:0);
+    return Math.max(mx,ph);
+  },0);
+}
+
+function enumeratePaths(meetings,depth){
+  const paths=[];
+  const mSlice=meetings.slice(0,depth);
+  function dfs(idx,seq,prob){
+    if(idx===mSlice.length){paths.push({key:seq.join('\u2192'),prob});return;}
+    const m=mSlice[idx];
+    dfs(idx+1,[...seq,m.l0],prob*m.p0);
+    if(m.p1>0.005)dfs(idx+1,[...seq,m.l1],prob*m.p1);
+  }
+  dfs(0,[],1);
+  return paths.sort((a,b)=>b.prob-a.prob).slice(0,8);
+}
+
+function zqQuarterlyAvg(fwD,srD){
+  return srD.map(s=>{
+    if(!s.zqMonths.length)return null;
+    const vals=s.zqMonths.map(lb2=>{const row=fwD.find(d=>d.lb===lb2);return row?100-row.price:null;}).filter(v=>v!==null);
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+}
+
+function srInstFwd(srD){
+  const rates=srD.map(s=>100-s.price);
+  return rates.map((r,i)=>i===0?null:2*rates[i]-rates[i-1]);
+}
+
+function ycSyncShortEnd(fwD,ycD){
+  const result=ycD.map(d=>({...d}));
+  const chain=fwChain(fwD);
+  let se=3.64;
+  for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start;break;}}
+  result[0].rate=parseFloat((se).toFixed(4));
+  const avg6=fwD.slice(0,6).reduce((s,d)=>s+(100-d.price),0)/6;
+  const avg12=fwD.reduce((s,d)=>s+(100-d.price),0)/fwD.length;
+  result[1].rate=parseFloat(avg6.toFixed(4));
+  result[2].rate=parseFloat(avg12.toFixed(4));
+  return result;
+}
+
+function getCompareSeries(fwCompareScenario,fwD,fwLb){
+  if(!fwCompareScenario||!SCENARIOS[fwCompareScenario])return null;
+  const sc=SCENARIOS[fwCompareScenario];
+  const cD=fwD.map((m,i)=>({...m,price:sc.prices[i]}));
+  const cChain=fwChain(cD),cMeetings=fwMeetings(cD,cChain);
+  const{states:cStates,final:cFinal}=fwDist(cMeetings);
+  return{label:sc.shortLabel,totalBp:sc.totalBp,endRate:sc.endRate,era:sc.era,
+    color:'var(--c-overlay)',colorA:'var(--c-overlay-a)',
+    chain:cChain,meetings:cMeetings,states:cStates,final:cFinal};
+}
+
+// ============================================================================
+// INITIAL STATE + REDUCER STUB
+// ============================================================================
+
+const INITIAL_STATE = {
+  fwActive: 'inputs',
+  fwLb: 3.50,
+  fwActiveScenario: '',
+  fwCompareScenario: '',
+  fwD: FW_SEED.map(r=>({...r})),
+  kalshiD: kalshiD,
+  polyD: polyD,
+  srD: srD.map(r=>({...r})),
+  ycD: ycD.map(r=>({...r})),
+  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  rideSelected: {matIdx:3, hIdx:1},
+};
+
+function reducer(state, action){
+  switch(action.type){
+    case 'SET_TAB':
+      return {...state, fwActive: action.tab};
+    case 'SET_LB':
+      return {...state, fwLb: action.lb};
+    case 'SET_SCENARIO':{
+      const sc=SCENARIOS[action.key];
+      if(!sc) return state;
+      return {...state, fwActiveScenario: action.key,
+        fwD: state.fwD.map((r,i)=>({...r, price: sc.prices[i]}))};
+    }
+    case 'DEACTIVATE':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>({...r, price: FW_SEED_PRICES[i]}))};
+    case 'SET_COMPARE':
+      return {...state, fwCompareScenario: action.key};
+    case 'CLEAR_COMPARE':
+      return {...state, fwCompareScenario: ''};
+    case 'UPDATE_ZQ_PRICE':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, price: action.value}:r)};
+    case 'UPDATE_ZQ_MTG':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, mtg: action.value}:r)};
+    case 'UPDATE_ZQ_N':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, N: action.value}:r)};
+    case 'UPDATE_ZQ_M':
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map((r,i)=>i===action.i?{...r, M: action.value}:r)};
+    case 'UPDATE_SR_PRICE':
+      return {...state,
+        srD: state.srD.map((r,i)=>i===action.i?{...r, price: action.value}:r)};
+    case 'UPDATE_YC_RATE':
+      return {...state,
+        ycD: state.ycD.map((r,i)=>i===action.i?{...r, rate: action.value, src:'manual'}:r)};
+    case 'APPLY_LIVE_ZQ':{
+      const d=action.data;
+      return {...state, fwActiveScenario: '',
+        fwD: state.fwD.map(r=>{
+          const nr={...r};
+          if(d.prices&&d.prices[r.lb]!==undefined){const v=parseFloat(d.prices[r.lb]);if(v>90&&v<100)nr.price=v;}
+          if(d.meetings&&d.meetings[r.lb]){const mt=d.meetings[r.lb];nr.mtg=!!mt.hasMeeting;if(mt.label)nr.ml=mt.label;if(mt.hasMeeting&&mt.N>0){nr.N=mt.N;nr.M=mt.M;}if(!mt.hasMeeting){nr.N=0;nr.M=0;}}
+          return nr;
+        })};
+    }
+    case 'APPLY_LIVE_KALSHI':
+      return {...state, kalshiD: {...state.kalshiD, ...action.data, fetched:true}};
+    case 'APPLY_LIVE_POLY':
+      return {...state, polyD: {...state.polyD, ...action.data, fetched:true}};
+    case 'APPLY_LIVE_SOFR':{
+      const prices=action.prices;
+      return {...state,
+        srD: state.srD.map(r=>{
+          if(prices[r.lb]!==undefined){const v=parseFloat(prices[r.lb]);if(v>90&&v<100)return{...r, price:v};}
+          return r;
+        })};
+    }
+    case 'APPLY_LIVE_YC':{
+      const rates=action.rates;
+      const keyMap={'3mo':0,'6mo':1,'1yr':2,'2yr':3,'5yr':4,'10yr':5,'30yr':6};
+      const next=state.ycD.map(r=>({...r}));
+      Object.entries(rates).forEach(([k,v])=>{
+        const idx=keyMap[k];
+        if(idx!==undefined&&v!==null&&v>0&&v<20){next[idx].rate=parseFloat(v.toFixed(4));next[idx].src='live';}
+      });
+      return {...state, ycD: next};
+    }
+    case 'LOAD_SETTINGS':{
+      const s=action.settings;
+      let next={...state};
+      if(s.lb!==undefined&&s.lb>=0&&s.lb<=8) next.fwLb=parseFloat(s.lb);
+      if(s.scenario&&SCENARIOS[s.scenario]){
+        next.fwActiveScenario=s.scenario;
+        next.fwD=next.fwD.map((r,i)=>({...r, price: SCENARIOS[s.scenario].prices[i]}));
+      }
+      if(s.compare&&SCENARIOS[s.compare]&&s.compare!==next.fwActiveScenario) next.fwCompareScenario=s.compare;
+      return next;
+    }
+    default:
+      return state;
+  }
+}
+
+// ============================================================================
+// DERIVED COMPUTATION HOOK
+// ============================================================================
+
+function useFinance(state) {
+  return useMemo(() => {
+    const syncedYcD = ycSyncShortEnd(state.fwD, state.ycD);
+    const chain = fwChain(state.fwD);
+    const meetings = fwMeetings(state.fwD, chain);
+    const {states, final} = fwDist(meetings);
+    const zqAvgs = zqQuarterlyAvg(state.fwD, state.srD);
+    const instFwd = srInstFwd(state.srD);
+    const compareSeries = getCompareSeries(state.fwCompareScenario, state.fwD, state.fwLb);
+    let effrStart = 3.64;
+    for(let i=0;i<state.fwD.length;i++){
+      if(state.fwD[i].mtg && chain[i].start !== null){effrStart=chain[i].start; break;}
+    }
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb]);
+}
+
+// ============================================================================
+// ASYNC FETCH FUNCTIONS (Anthropic API + web_search)
+// ============================================================================
+
+async function refreshData(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, zq:true}));
+  setRefreshStatus(s=>({...s, zq:'Searching for ZQ futures and FOMC schedule\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Return ONLY raw JSON \u2014 no markdown, no fences \u2014 for CME 30-Day Fed Funds (ZQ) futures prices Apr 2026\u2013Mar 2027 and FOMC meeting dates. Shape:\n{"asOf":"YYYY-MM-DD","source":"name","effr":3.64,"prices":{"Apr 2026":96.36,"May 2026":96.40,"Jun 2026":96.50,"Jul 2026":96.58,"Aug 2026":96.65,"Sep 2026":96.72,"Oct 2026":96.78,"Nov 2026":96.85,"Dec 2026":96.90,"Jan 2027":96.94,"Feb 2027":96.97,"Mar 2027":97.00},"meetings":{"Apr 2026":{"hasMeeting":true,"label":"Apr 28-29","N":28,"M":2},"May 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Jun 2026":{"hasMeeting":true,"label":"Jun 17-18","N":17,"M":13},"Jul 2026":{"hasMeeting":true,"label":"Jul 28-29","N":28,"M":3},"Aug 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Sep 2026":{"hasMeeting":true,"label":"Sep 16-17","N":16,"M":14},"Oct 2026":{"hasMeeting":true,"label":"Oct 28-29","N":28,"M":3},"Nov 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Dec 2026":{"hasMeeting":true,"label":"Dec 9-10","N":9,"M":22},"Jan 2027":{"hasMeeting":true,"label":"Jan 27-28","N":27,"M":4},"Feb 2027":{"hasMeeting":false,"label":"","N":0,"M":0},"Mar 2027":{"hasMeeting":true,"label":"Mar 17-18","N":17,"M":14}}}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON in response');
+    const p=JSON.parse(m[0]);
+    dispatch({type:'APPLY_LIVE_ZQ', data:p});
+    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' \u00b7 EFFR '+(p.effr||'\u2014')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, zq:'\u26a0 '+(e.message||'Failed \u2014 data unchanged')}));}
+  finally{setFetching(f=>({...f, zq:false}));}
+}
+
+async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, kal:true}));
+  setRefreshStatus(s=>({...s, kal:'Searching Kalshi markets\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Kalshi.com for current market prices on these contracts:\n1. kxfeddecision-26mar, kxfeddecision-26jun, kxfeddecision-26jul, kxfeddecision-26sep, kxfeddecision-26oct, kxfeddecision-26dec, kxfeddecision-27jan, kxfeddecision-27mar \u2014 per-meeting Fed decision markets (hold/cut/hike probabilities)\n2. kxfedhike / fedhike \u2014 next Fed rate hike probability\n3. kxlargecut-26 \u2014 large cut (>25bp) probability this year\n4. kxratecutcount-26dec31 \u2014 number of rate cuts in 2026\n5. kxratecut-26dec31 \u2014 P(any cut by end 2026)\n6. kxfed-26mar, kxfed-26jun, kxfed-26sep, kxfed-26dec \u2014 implied rate level after each meeting\nReturn ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best available data, keep shown fallbacks where unavailable):\n{\n  "asOf":"YYYY-MM-DD","source":"Kalshi",\n  "meetings":{\n    "Apr 2026":{"hold":0.992,"cut25":0.005,"cut50":0.001,"hike25":0.002},\n    "Jun 2026":{"hold":0.74,"cut25":0.22,"cut50":0.02,"hike25":0.02},\n    "Jul 2026":{"hold":0.64,"cut25":0.28,"cut50":0.05,"hike25":0.03},\n    "Sep 2026":{"hold":0.55,"cut25":0.32,"cut50":0.09,"hike25":0.04},\n    "Oct 2026":{"hold":0.50,"cut25":0.32,"cut50":0.13,"hike25":0.05},\n    "Dec 2026":{"hold":0.46,"cut25":0.31,"cut50":0.16,"hike25":0.07},\n    "Jan 2027":{"hold":0.44,"cut25":0.32,"cut50":0.17,"hike25":0.07},\n    "Mar 2027":{"hold":0.42,"cut25":0.33,"cut50":0.18,"hike25":0.07}\n  },\n  "cutCount":{"0":0.15,"1":0.32,"2":0.30,"3":0.15,"4":0.08},\n  "hikeAny":0.04,\n  "largeCutAny":0.11,\n  "cutBinary":{"end-2026":0.85,"end-2027":0.97},\n  "kalshiRate":{"Apr 2026":3.625,"Jun 2026":3.54,"Jul 2026":3.47,"Sep 2026":3.38,"Oct 2026":3.30,"Dec 2026":3.22,"Jan 2027":3.16,"Mar 2027":3.10}\n}`;
+  const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok) throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m) throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    const merged={};
+    if(p.meetings) merged.meetings={...state.kalshiD.meetings,...p.meetings};
+    if(p.cutCount) merged.cutCount=p.cutCount;
+    if(p.hikeAny!==undefined) merged.hikeAny=p.hikeAny;
+    if(p.largeCutAny!==undefined) merged.largeCutAny=p.largeCutAny;
+    if(p.cutBinary) merged.cutBinary={...state.kalshiD.cutBinary,...p.cutBinary};
+    if(p.kalshiRate) merged.kalshiRate={...state.kalshiD.kalshiRate,...p.kalshiRate};
+    merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    merged.source=p.source||'Kalshi (web search)';
+    merged.kBadge='Live';
+    dispatch({type:'APPLY_LIVE_KALSHI', data:merged});
+    setRefreshStatus(s=>({...s, kal:'Kalshi data updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+  }catch(e){setRefreshStatus(s=>({...s, kal:'\u26a0 Kalshi: '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, kal:false}));}
+}
+
+async function fetchPolymarket(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, poly:true}));
+  setRefreshStatus(s=>({...s, poly:'Searching Polymarket fed-rates\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search Polymarket.com for current prices on these Fed-related markets:\n1. polymarket.com/event/fed-decision-in-march-885 and equivalent monthly markets \u2014 per-meeting probabilities for hold/25bp cut/50+bp cut/hike\n2. polymarket.com/event/how-many-fed-rate-cuts-in-2026 \u2014 cut count distribution (13 outcomes)\n3. polymarket.com/event/what-will-the-fed-rate-be-at-the-end-of-2026 \u2014 terminal rate distribution\n4. polymarket.com/event/fed-rate-hike-in-2026 \u2014 P(any hike in 2026)\n5. polymarket.com/event/fed-emergency-rate-cut-before-2027 \u2014 P(emergency cut before 2027)\n6. polymarket.com/event/fed-rate-cut-by-629 \u2014 first cut timing by meeting\n7. polymarket.com/event/who-will-trump-nominate-as-fed-chair \u2014 Fed Chair nominee odds\nReturn ONLY raw JSON, no markdown, no fences:\n{\n  "asOf":"YYYY-MM-DD","source":"Polymarket",\n  "meetings":{\n    "Apr 2026":{"hold":0.99,"cut25":0.005,"cut50":0.002,"hike25":0.003},\n    "Jun 2026":{"hold":0.72,"cut25":0.21,"cut50":0.04,"hike25":0.03},\n    "Jul 2026":{"hold":0.62,"cut25":0.27,"cut50":0.07,"hike25":0.04},\n    "Sep 2026":{"hold":0.53,"cut25":0.31,"cut50":0.11,"hike25":0.05},\n    "Oct 2026":{"hold":0.48,"cut25":0.31,"cut50":0.15,"hike25":0.06},\n    "Dec 2026":{"hold":0.44,"cut25":0.30,"cut50":0.18,"hike25":0.08},\n    "Jan 2027":{"hold":0.43,"cut25":0.31,"cut50":0.18,"hike25":0.08},\n    "Mar 2027":{"hold":0.41,"cut25":0.32,"cut50":0.19,"hike25":0.08}\n  },\n  "cutCount":{"0":0.05,"1":0.09,"2":0.26,"3":0.22,"4":0.17,"5":0.12,"6":0.06,"7+":0.03},\n  "terminalRate":{"4.00":0.02,"3.75":0.08,"3.50":0.18,"3.25":0.26,"3.00":0.22,"2.75":0.13,"2.50":0.08,"2.25":0.03},\n  "hikeAny":0.155,\n  "emergencyCut":0.08,\n  "cutByMeeting":{"Apr 2026":0.01,"Jun 2026":0.22,"Jul 2026":0.45,"Sep 2026":0.68,"Oct 2026":0.78,"Dec 2026":0.88,"end-2026":0.88,"end-2027":0.97},\n  "fedChair":{"Kevin Warsh":0.47,"Rick Rieder":0.26,"Other":0.27}\n}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    const merged={};
+    if(p.meetings) merged.meetings={...state.polyD.meetings,...p.meetings};
+    if(p.cutCount) merged.cutCount=p.cutCount;
+    if(p.terminalRate) merged.terminalRate=p.terminalRate;
+    if(p.hikeAny!==undefined) merged.hikeAny=p.hikeAny;
+    if(p.emergencyCut!==undefined) merged.emergencyCut=p.emergencyCut;
+    if(p.cutByMeeting) merged.cutByMeeting={...state.polyD.cutByMeeting,...p.cutByMeeting};
+    if(p.fedChair) merged.fedChair=p.fedChair;
+    merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
+    merged.source=p.source||'Polymarket (web search)';
+    dispatch({type:'APPLY_LIVE_POLY', data:merged});
+    setRefreshStatus(s=>({...s, poly:'Polymarket updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+  }catch(e){setRefreshStatus(s=>({...s, poly:'\u26a0 Polymarket: '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, poly:false}));}
+}
+
+async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, sofr:true}));
+  setRefreshStatus(s=>({...s, sofr:'Searching for SR3 futures prices\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest CME 3-Month SOFR futures (SR3) settlement or last-trade prices for these contract months: Jun 2026 (SR3M6), Sep 2026 (SR3U6), Dec 2026 (SR3Z6), Mar 2027 (SR3H7), Jun 2027 (SR3M7), Sep 2027 (SR3U7), Dec 2027 (SR3Z7). Also find the current SOFR fixing rate. Return ONLY raw JSON \u2014 no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"source name","sofr":3.68,"prices":{"Jun 2026":96.35,"Sep 2026":96.53,"Dec 2026":96.68,"Mar 2027":96.80,"Jun 2027":96.88,"Sep 2027":96.94,"Dec 2027":96.99}}\nPrices follow the CME convention (100 minus implied rate). Keep fallback values shown if a contract is unavailable.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    if(p.prices) dispatch({type:'APPLY_LIVE_SOFR', prices:p.prices});
+    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' \u00b7 SOFR '+(p.sofr||'\u2014')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, sofr:'\u26a0 '+(e.message||'Failed')}));}
+  finally{setFetching(f=>({...f, sofr:false}));}
+}
+
+async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, yc:true}));
+  setRefreshStatus(s=>({...s, yc:'Fetching Treasury CMT rates\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Search for the latest U.S. Treasury constant-maturity (CMT) par rates from the Federal Reserve H.15 release or Treasury.gov. Find the most recent daily values for: 3-month, 6-month, 1-year, 2-year, 5-year, 10-year, and 30-year. Return ONLY raw JSON, no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"Federal Reserve H.15","rates":{"3mo":3.64,"6mo":3.60,"1yr":3.55,"2yr":3.84,"5yr":4.04,"10yr":4.31,"30yr":4.61}}\nUse null for any maturity not available. Keep fallback values shown if search fails.`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found');
+    const p=JSON.parse(m[0]);
+    if(p.rates) dispatch({type:'APPLY_LIVE_YC', rates:p.rates});
+    setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' \u00b7 '+(p.asOf||today)}));
+  }catch(e){setRefreshStatus(s=>({...s, yc:'\u26a0 '+(e.message||'Failed \u2014 rates unchanged')}));}
+  finally{setFetching(f=>({...f, yc:false}));}
+}
+
+// ============================================================================
+// SVG HELPER FUNCTIONS (return HTML/SVG strings, no globals)
+// ============================================================================
+
+function panel1Svg(comps,lb){
+  const W=720,H=130,ml=10,mr=10,mt=34,mb=28,cW=W-ml-mr;
+  const n=comps.length,grpW=cW/n,bW=Math.min(14,grpW*0.26),gap=3;
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const ys=v=>mt+H*(1-v);
+  [0.25,0.5,0.75,1.0].forEach(v=>{
+    svg+='<line x1="'+ml+'" y1="'+ys(v).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(v).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+ml+'" y="'+(ys(v)-2).toFixed(1)+'" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';
+  });
+  comps.forEach((c,i)=>{
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
+    const hC=H*c.cmeCut,yC=mt+H-hC;
+    svg+='<rect x="'+x0.toFixed(1)+'" y="'+yC.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hC).toFixed(1)+'" rx="2" fill="var(--c-cme)" opacity=".85"/>';
+    let topY=yC;
+    if(c.kCut!==null){
+      const hK=H*c.kCut,yK=mt+H-hK;
+      svg+='<rect x="'+x1.toFixed(1)+'" y="'+yK.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hK).toFixed(1)+'" rx="2" fill="var(--c-kal)" opacity=".85"/>';
+      topY=Math.min(topY,yK);
+      const bKC=((c.kCut-c.cmeCut)*100).toFixed(1);
+      const pillCol=c.basisKC>0.02?'var(--color-text-info)':c.basisKC<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+      svg+='<text x="'+(cx-bW/2-gap/2).toFixed(1)+'" y="'+(topY-14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+pillCol+'" font-family="var(--font-mono)">'+(bKC>0?'+':'')+bKC+'</text>';
+    }
+    if(c.pCut!==null){
+      const hP=H*c.pCut,yP=mt+H-hP;
+      svg+='<rect x="'+x2.toFixed(1)+'" y="'+yP.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hP).toFixed(1)+'" rx="2" fill="var(--c-poly)" opacity=".85"/>';
+      topY=Math.min(topY,yP);
+      if(c.kCut!==null&&c.basisPK!==null){
+        const bPK=(c.basisPK*100).toFixed(1);
+        const pillColP=c.basisPK>0.02?'var(--color-text-info)':c.basisPK<-0.02?'var(--color-text-danger)':'var(--color-text-tertiary)';
+        svg+='<text x="'+(cx+bW+gap).toFixed(1)+'" y="'+(topY-4).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+pillColP+'" font-family="var(--font-mono)">'+(bPK>0?'+':'')+bPK+'</text>';
+      }
+    }
+    const shortLbl=c.label.replace(/\d{4}/,'').trim()||c.lb.replace(/ 20\d\d/,'');
+    svg+='<text x="'+cx.toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME</text>';
+  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">\u25a0 Kalshi</text>';
+  svg+='<text x="'+(ml+102)+'" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a0 Polymarket</text>';
+  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal\u2212CME \u00b7 right pill = Poly\u2212Kal</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel2Svg(cme,kal,poly){
+  const W=340,H=90,mt=16,mb=24,ml=8,mr=8,cW=W-ml-mr;
+  const keys=['0','1','2','3','4','5+'];
+  const cmeV=k=>k==='5+'?(cme[4]||0)*0.3:cme[parseInt(k)]||0;
+  const kalV=k=>k==='5+'?0:kal[parseInt(k)]||0;
+  const polyV=k=>{if(k==='5+')return (poly['5']||0)+(poly['6']||0)+(poly['7+']||0);return poly[k]||0;};
+  const n=keys.length,grpW=cW/n,bW=Math.min(12,grpW*0.27),gap=2;
+  const maxV=Math.max(...keys.flatMap(k=>[cmeV(k),kalV(k),polyV(k)]));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxV*maxV);if(v<=maxV){svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';svg+='<text x="'+(ml-1).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';}});
+  keys.forEach((k,i)=>{
+    const cx=ml+i*grpW+grpW/2;
+    const x0=cx-bW*1.5-gap,x1=cx-bW/2,x2=cx+bW/2+gap;
+    const hC=H*cmeV(k)/maxV,hK=H*kalV(k)/maxV,hP=H*polyV(k)/maxV;
+    svg+='<rect x="'+x0.toFixed(1)+'" y="'+(mt+H-hC).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hC).toFixed(1)+'" rx="2" fill="var(--c-cme)" opacity=".85"/>';
+    svg+='<rect x="'+x1.toFixed(1)+'" y="'+(mt+H-hK).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hK).toFixed(1)+'" rx="2" fill="var(--c-kal)" opacity=".85"/>';
+    svg+='<rect x="'+x2.toFixed(1)+'" y="'+(mt+H-hP).toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,hP).toFixed(1)+'" rx="2" fill="var(--c-poly)" opacity=".85"/>';
+    svg+='<text x="'+cx.toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+k+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function panel4Svg(meetings,states,lb,fwD,kalshiD,compareSeries){
+  const W=680,H=120,mt=20,mb=24,ml=34,mr=10;
+  const months=fwD.map(d=>d.lb);
+  const cmeRates=[];
+  let si=0;
+  months.forEach((lb2,i)=>{
+    if(fwD[i].mtg&&si<states.length-1){si++;}
+    const s=states[Math.min(si,states.length-1)];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    cmeRates.push(lb+ek*.25);
+  });
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  const dots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  const allV=[...cmeRates,...kalRates.filter(v=>v!==null),...dots.map(d=>d.rate)];
+  const cSeries4=compareSeries;
+  let cmpRates4=null;
+  if(cSeries4){
+    let si2=0;const cr=[];
+    months.forEach((_,i)=>{
+      if(fwD[i].mtg&&si2<cSeries4.states.length-1){si2++;}
+      const s=cSeries4.states[Math.min(si2,cSeries4.states.length-1)];
+      const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+      cr.push(lb+ek*.25);
+    });
+    cmpRates4=cr;
+    allV.push(...cr);
+  }
+  const minR=Math.min(...allV)-0.1,maxR=Math.max(...allV)+0.1;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25,ymin=Math.floor(minR/step)*step,ymax=Math.ceil(maxR/step)*step;
+  for(let y2=ymin;y2<=ymax;y2+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y2).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y2).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(y2).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y2.toFixed(2)+'</text>';
+  }
+  if(cmpRates4){
+    const oPts=cmpRates4.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+oPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="6,3" opacity=".8"/>';
+    cmpRates4.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-overlay)" opacity=".75"/>';});
+  }
+  const cPts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2" opacity=".85"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".7"/>';});
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev!==null)svg+='<line x1="'+xs(kPrev.i).toFixed(1)+'" y1="'+ys(kPrev.r).toFixed(1)+'" x2="'+xs(i).toFixed(1)+'" y2="'+ys(r).toFixed(1)+'" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="5,3" opacity=".8"/>';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-kal)" opacity=".8"/>';
+    kPrev={i,r};
+  });
+  dots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="5" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)-8).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-dots)" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+  });
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
+  if(cSeries4)svg+='<text x="'+(W-mr)+'" y="12" text-anchor="end" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2e3e '+cSeries4.label+' ('+cSeries4.totalBp+')</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel5Svg(cmeHike,kalHike,largeCut,polyHike){
+  const W=300,HC=118;
+  let svg='<svg viewBox="0 0 '+W+' '+(HC+20)+'" style="width:100%;display:block;overflow:visible">';
+  const cx=W/2,cy=HC-10,r=60,sw=11;
+  function arc(pct,col,opacity,strokeW){
+    strokeW=strokeW||sw;
+    const startA=Math.PI,endA=Math.PI-(Math.min(1,pct)*Math.PI),
+          x1=cx+r*Math.cos(startA),y1=cy+r*Math.sin(startA),
+          x2=cx+r*Math.cos(endA),y2=cy+r*Math.sin(endA),lg=pct>.5?1:0;
+    return '<path d="M '+x1.toFixed(2)+' '+y1.toFixed(2)+' A '+r+' '+r+' 0 '+lg+' 1 '+x2.toFixed(2)+' '+y2.toFixed(2)+'" fill="none" stroke="'+col+'" stroke-width="'+strokeW+'" stroke-linecap="round" opacity="'+opacity+'"/>';
+  }
+  svg+='<path d="M '+(cx-r).toFixed(2)+' '+cy.toFixed(2)+' A '+r+' '+r+' 0 0 1 '+(cx+r).toFixed(2)+' '+cy.toFixed(2)+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width="'+sw+'"/>';
+  svg+=arc(0.75,'#fee2e2',.5,sw);
+  svg+=arc(cmeHike,'var(--c-cme)',.9,sw);
+  svg+=arc(kalHike,'var(--c-kal)',.88,sw-3);
+  if(polyHike!==undefined)svg+=arc(polyHike,'var(--c-poly)',.85,sw-6);
+  svg+='<text x="'+cx+'" y="'+(cy-r/2).toFixed(1)+'" text-anchor="middle" font-size="9.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Hike risk</text>';
+  svg+='<text x="'+(cx-r-4).toFixed(1)+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0%</text>';
+  svg+='<text x="'+(cx+r+4).toFixed(1)+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">100%</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+2).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-cme)" font-family="var(--font-mono)" font-weight="500">CME '+(cmeHike*100).toFixed(1)+'%</text>';
+  svg+='<text x="'+cx+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL '+(kalHike*100).toFixed(1)+'%</text>';
+  if(polyHike!==undefined)svg+='<text x="'+cx+'" y="'+(cy+26).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-poly)" font-family="var(--font-mono)" font-weight="500">POLY '+(polyHike*100).toFixed(1)+'%</text>';
+  svg+='</svg>';
+  svg+='<div style="margin-top:6px"><div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut (>25bp) \u2014 Kalshi kxlargecut-26</div><div style="height:16px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+(largeCut*100).toFixed(1)+'%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">'+(largeCut*100).toFixed(0)+'%</div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
+  return svg;
+}
+
+function panel6Svg(meetings,states,lb,kalshiD,polyD){
+  const W=380,H=100,mt=16,mb=32,ml=30,mr=10;
+  const n=states.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-v);
+  const cumCuts=states.map(s=>Object.entries(s).filter(([k])=>parseInt(k)<=-1).reduce((sum,[,p])=>sum+p,0));
+  const kalPoints=[];
+  const dec2026Idx=meetings.findIndex(m=>m.lb==='Dec 2026');
+  const mar2027Idx=meetings.findIndex(m=>m.lb==='Mar 2027');
+  if(dec2026Idx>=0&&kalshiD.cutBinary['end-2026'])kalPoints.push({i:dec2026Idx+1,v:kalshiD.cutBinary['end-2026'],label:'KAL end-26'});
+  if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'KAL end-27'});
+  const polyPoints=meetings.map((m,i)=>{
+    const v=polyD.cutByMeeting[m.lb];
+    return v!==undefined?{i:i+1,v,label:m.label.split('\u2013')[0]}:null;
+  }).filter(Boolean);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1.0].forEach(v=>{
+    svg+='<line x1="'+ml+'" y1="'+ys(v).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(v).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';
+  });
+  for(let i=0;i<cumCuts.length-1;i++){
+    const x1=xs(i),x2=xs(i+1),y1=ys(cumCuts[i]),y2=ys(cumCuts[i+1]);
+    svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2"/>';
+    svg+='<line x1="'+x2.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2" stroke-dasharray="2,2"/>';
+  }
+  cumCuts.forEach((v,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(v).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';});
+  polyPoints.forEach(p=>{
+    const cx2=xs(p.i),cy2=ys(p.v),s=5;
+    svg+='<polygon points="'+cx2+','+( cy2-s)+' '+(cx2+s)+','+cy2+' '+cx2+','+(cy2+s)+' '+(cx2-s)+','+cy2+'" fill="var(--c-poly)" opacity=".85"/>';
+    svg+='<text x="'+cx2.toFixed(1)+'" y="'+(ys(p.v)-9).toFixed(1)+'" text-anchor="middle" font-size="7" fill="var(--c-poly)" font-family="var(--font-mono)">'+(p.v*100).toFixed(0)+'%</text>';
+  });
+  kalPoints.forEach(p=>{
+    svg+='<circle cx="'+xs(p.i).toFixed(1)+'" cy="'+ys(p.v).toFixed(1)+'" r="6" fill="var(--c-kal)" opacity=".85"/>';
+    svg+='<text x="'+xs(p.i).toFixed(1)+'" y="'+(ys(p.v)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-kal)" font-family="var(--font-mono)">'+(p.v*100).toFixed(0)+'%</text>';
+    svg+='<text x="'+xs(p.i).toFixed(1)+'" y="'+(H+mt+mb-4).toFixed(1)+'" text-anchor="middle" font-size="7" fill="var(--c-kal)" font-family="var(--font-sans)">'+p.label+'</text>';
+  });
+  meetings.forEach((m,i)=>{
+    if(i%2===0)svg+='<text x="'+xs(i+1).toFixed(1)+'" y="'+(H+mt+16).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+m.label.split('\u2013')[0]+'</text>';
+  });
+  svg+='<text x="'+ml+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">\u25cf CME</text>';
+  svg+='<text x="'+(ml+38)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">\u25cf Kalshi</text>';
+  svg+='<text x="'+(ml+90)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">\u25c6 Polymarket</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel7Svg(final,lb,polyD){
+  const W=680,H=90,mt=22,mb=30,ml=10,mr=10;
+  const cmeDist=Object.entries(final).map(([k,p])=>({rate:lb+parseInt(k)*.25,p:p})).sort((a,b)=>a.rate-b.rate);
+  const polyDist=Object.entries(polyD.terminalRate).map(([r,p])=>({rate:parseFloat(r)-0.25,p:p})).sort((a,b)=>a.rate-b.rate);
+  const allRates=[...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)];
+  const minR=Math.min(...allRates),maxR=Math.max(...allRates);
+  const maxP=Math.max(...cmeDist.map(d=>d.p),...polyDist.map(d=>d.p));
+  const rRange=maxR-minR||1;
+  const xs=r=>ml+(r-minR)/rRange*(W-ml-mr);
+  const bW=Math.min(28,(W-ml-mr)/Math.max(allRates.length,1)*0.38);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxP*maxP);if(v<=maxP+0.05){svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';svg+='<text x="'+(ml-1).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';}});
+  cmeDist.forEach(d=>{if(d.p<0.002)return;const x=xs(d.rate)-bW/2,h=H*(d.p/maxP),y=mt+H-h,fo=0.2+d.p*.7;svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-cme)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--c-cme)" stroke-width=".5"/>';if(d.p>.04)svg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">'+(d.p*100).toFixed(0)+'%</text>';});
+  polyDist.forEach(d=>{if(d.p<0.01)return;const x=xs(d.rate)-bW/2+2,h=H*(d.p/maxP),y=mt+H-h;svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-poly)" fill-opacity=".18" stroke="var(--c-poly)" stroke-width="1.5"/>';if(d.p>.06)svg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">'+(d.p*100).toFixed(0)+'%</text>';});
+  const labelRates=[...new Set([...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)])].sort((a,b)=>a-b);
+  labelRates.forEach(r=>{svg+='<text x="'+xs(r).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';});
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME (lower bound)</text>';
+  svg+='<text x="'+(ml+140)+'" y="14" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a1 Polymarket (upper bound \u22120.25%)</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel8aHtml(polyD){
+  const entries=Object.entries(polyD.fedChair).sort((a,b)=>b[1]-a[1]);
+  const hawkishness={'Kevin Warsh':'hawkish','Rick Rieder':'dovish','Other':'unknown'};
+  let h='<div style="margin-bottom:8px">';
+  entries.forEach(([name,p])=>{
+    const pct=(p*100).toFixed(0);
+    const tag=hawkishness[name]||'unknown';
+    const tagCol=tag==='hawkish'?'var(--color-text-danger)':tag==='dovish'?'var(--color-text-info)':'var(--color-text-tertiary)';
+    h+='<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:12px;font-weight:500">'+name+'</span><span style="display:flex;gap:5px;align-items:center"><span class="k-pill" style="background:var(--color-background-secondary);color:'+tagCol+';border:.5px solid '+tagCol+'">'+tag+'</span><span style="font-size:12px;font-weight:500;font-family:var(--font-mono)">'+pct+'%</span></span></div><div style="height:16px;border-radius:3px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+pct+'%;background:var(--c-poly);opacity:.8"></div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
+  });
+  h+='</div><div style="font-size:10px;color:var(--color-text-tertiary);border-top:.5px solid var(--color-border-tertiary);padding-top:6px">Volume: $230M</div>';
+  return h;
+}
+
+function panel8bSvg(emergencyCut,polyHike){
+  const W=280,H=60,mt=10,mb=14,ml=10,mr=10;
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const items=[
+    {label:'Emergency cut before 2027',v:emergencyCut,col:'var(--c-poly)'},
+    {label:'Any hike in 2026',v:polyHike,col:'var(--color-text-danger)'},
+  ];
+  items.forEach((item,i)=>{
+    const y=mt+i*(H/2+4);
+    const barW=(W-ml-mr-100)*Math.min(1,item.v);
+    svg+='<text x="'+ml+'" y="'+(y+11).toFixed(1)+'" font-size="9" fill="var(--color-text-secondary)" font-family="var(--font-sans)">'+item.label+'</text>';
+    svg+='<rect x="'+ml+'" y="'+(y+14).toFixed(1)+'" width="'+(W-ml-mr-100).toFixed(1)+'" height="14" rx="3" fill="var(--color-border-tertiary)" opacity=".4"/>';
+    svg+='<rect x="'+ml+'" y="'+(y+14).toFixed(1)+'" width="'+Math.max(2,barW).toFixed(1)+'" height="14" rx="3" fill="'+item.col+'" opacity=".8"/>';
+    svg+='<text x="'+(ml+W-ml-mr-96).toFixed(1)+'" y="'+(y+25).toFixed(1)+'" font-size="10" font-weight="500" fill="'+item.col+'" font-family="var(--font-mono)">'+(item.v*100).toFixed(1)+'%</text>';
+  });
+  svg+='</svg>';
+  svg+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Historical precedent: Jan 2001, Sep 2001, Oct 2008, Mar 2020</div>';
+  return svg;
+}
+
+function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
+  const W=680,H=140,mt=24,mb=28,ml=36,mr=12;
+  const n=srD.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const sofrRates=srD.map(s=>100-s.price);
+  const validZQ=zqAvgs.map((v,i)=>({v:v,i:i})).filter(d=>d.v!==null);
+  const validFwd=instFwd.map((v,i)=>({v:v,i:i})).filter(d=>d.v!==null);
+  const fedDots=[{i:2,rate:3.375,label:'Dec 2026 SEP'},{i:6,rate:3.00,label:'Dec 2027 SEP'}];
+  const allV=[...sofrRates,...validZQ.map(d=>d.v),...validFwd.map(d=>d.v),...fedDots.map(d=>d.rate)];
+  const minR=Math.min(...allV)-0.08,maxR=Math.max(...allV)+0.08;
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y2=Math.ceil(minR/step)*step;y2<=maxR;y2+=step){
+    const y=ys(y2);
+    svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y2.toFixed(2)+'</text>';
+  }
+  if(validZQ.length>1){
+    for(let k=0;k<validZQ.length-1;k++){const a=validZQ[k],b=validZQ[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2" opacity=".8"/>';}
+    validZQ.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="4" fill="var(--c-cme)" opacity=".85"/>';});
+  }
+  if(validFwd.length>1){
+    for(let k=0;k<validFwd.length-1;k++){const a=validFwd[k],b=validFwd[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-sofr-fwd)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".85"/>';}
+    validFwd.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="3" fill="var(--c-sofr-fwd)" opacity=".8"/>';});
+  }
+  for(let i=0;i<sofrRates.length-1;i++){svg+='<line x1="'+xs(i).toFixed(1)+'" y1="'+ys(sofrRates[i]).toFixed(1)+'" x2="'+xs(i+1).toFixed(1)+'" y2="'+ys(sofrRates[i+1]).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".9"/>';}
+  sofrRates.forEach((r,i)=>{
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(r)-9).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-sofr)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';
+  });
+  fedDots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">'+d.label+'</text>';
+  });
+  srD.forEach((s,i)=>{svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+s.qLabel+'</text>';});
+  svg+='</svg>';
+  return svg;
+}
+
+function basisBarsSvg(zqAvgs,srD){
+  const W=320,H=80,mt=18,mb=30,ml=26,mr=8;
+  const bases=srD.map((s,i)=>zqAvgs[i]!==null?((100-s.price)-zqAvgs[i])*100:null).filter(v=>v!==null);
+  const quarters=srD.filter((_,i)=>zqAvgs[i]!==null).map(s=>s.qLabel);
+  const maxB=Math.max(...bases.map(Math.abs),0.15);
+  const bW=Math.min(30,(W-ml-mr)/Math.max(bases.length,1)*0.65);
+  const xs=i=>ml+(i+0.5)*((W-ml-mr)/Math.max(bases.length,1));
+  const yMid=mt+H/2;
+  const ys=v=>yMid-(v/maxB)*(H/2);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  svg+='<line x1="'+ml+'" y1="'+yMid.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+yMid.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  [maxB/2,maxB].forEach(v=>{
+    [v,-v].forEach(y2=>{svg+='<line x1="'+ml+'" y1="'+ys(y2).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y2).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';});
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v.toFixed(1)+'</text>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(0).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>';
+  });
+  bases.forEach((b,i)=>{
+    const x=xs(i)-bW/2,h=Math.abs(b/maxB)*(H/2),y=b>=0?ys(b):yMid;
+    const col=b>=0?'var(--c-sofr)':'var(--color-text-danger)';
+    svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="'+col+'" opacity=".8"/>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(b>=0?ys(b)-4:ys(b)+h+10).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+col+'" font-family="var(--font-mono)" font-weight="500">'+(b>0?'+':'')+b.toFixed(1)+'</text>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+mb-6).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+quarters[i]+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function dashUnifiedSvg(chain,meetings,states,lb,compareSeries,zqAvgs,fwD,kalshiD,srD){
+  const W=760,H=150,mt=24,mb=28,ml=38,mr=12;
+  const months=fwD.map(d=>d.lb);
+  let si=0;
+  const cmeRates=months.map((_,i)=>{
+    if(fwD[i].mtg&&si<states.length-1)si++;
+    const s=states[Math.min(si,states.length-1)];
+    return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+  });
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  const sofrPts=srD.map(s=>{const idx=months.indexOf(s.lb);return idx>=0?{i:idx,r:100-s.price}:null;}).filter(Boolean);
+  let cmpRates=null;
+  if(compareSeries){
+    let si2=0;
+    cmpRates=months.map((_,i)=>{
+      if(fwD[i].mtg&&si2<compareSeries.states.length-1)si2++;
+      const s=compareSeries.states[Math.min(si2,compareSeries.states.length-1)];
+      return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+    });
+  }
+  const fedDots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  const allV=[...cmeRates,...kalRates.filter(Boolean),...sofrPts.map(d=>d.r),...fedDots.map(d=>d.rate),...(cmpRates||[])];
+  const minR=Math.min(...allV)-0.12,maxR=Math.max(...allV)+0.12;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+  }
+  if(cmpRates){
+    const pts=cmpRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="7,3" opacity=".75"/>';
+    cmpRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2" fill="var(--c-overlay)" opacity=".7"/>';});
+  }
+  if(sofrPts.length>1){
+    for(let k=0;k<sofrPts.length-1;k++){const a=sofrPts[k],b=sofrPts[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.r).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.r).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".85"/>';}
+    sofrPts.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.r)-9).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-sofr)" font-family="var(--font-mono)">'+d.r.toFixed(2)+'</text>';});
+  }
+  const cPts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".9"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';});
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev)svg+='<line x1="'+xs(kPrev.i).toFixed(1)+'" y1="'+ys(kPrev.r).toFixed(1)+'" x2="'+xs(i).toFixed(1)+'" y2="'+ys(r).toFixed(1)+'" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".75"/>';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-kal)" opacity=".85"/>';
+    kPrev={i:i,r:r};
+  });
+  fedDots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">SEP</text>';
+  });
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
+  svg+='</svg>';
+  return svg;
+}
+
+function ycCurveChart(ycD){
+  const W=720,H=160,mt=24,mb=28,ml=38,mr=16;
+  const mats=ycD.map(d=>d.mat);
+  const rates=ycD.map(d=>d.rate);
+  const minM=0,maxM=31,minR=Math.min(...rates)-0.15,maxR=Math.max(...rates)+0.15;
+  const xs=m=>ml+(m-minM)/(maxM-minM)*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+  }
+  [0.25,0.5,1,2,5,10,30].forEach(m=>{
+    const lbl=m<1?(m*12).toFixed(0)+'mo':m+'yr';
+    svg+='<text x="'+xs(m).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    svg+='<line x1="'+xs(m).toFixed(1)+'" y1="'+mt+'" x2="'+xs(m).toFixed(1)+'" y2="'+(mt+H).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".3" stroke-dasharray="2,3"/>';
+  });
+  for(let i=0;i<ycD.length-1;i++){
+    const a=ycD[i],b=ycD[i+1];
+    svg+='<line x1="'+xs(a.mat).toFixed(1)+'" y1="'+ys(a.rate).toFixed(1)+'" x2="'+xs(b.mat).toFixed(1)+'" y2="'+ys(b.rate).toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1.2" opacity=".6"/>';
+  }
+  ycD.forEach(d=>{
+    const col=d.src==='zq'?'var(--c-cme)':'var(--c-sofr)';
+    svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+    svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+    svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)+18).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.label+'</text>';
+  });
+  svg+='<text x="'+(W/2).toFixed(1)+'" y="'+(mt+H/2).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--c-overlay)" opacity=".4" font-family="var(--font-sans)">Nelson-Siegel fit \u2014 Phase 2</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function SvgPanel({html}) {
+  return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
+}
+
+// ============================================================================
+// TAB COMPONENTS
+// ============================================================================
+
+function FuturesInputsTab({state, dispatch, finance}) {
+  const ERA = {
+    easing:     {label:'Easing',     color:'var(--c-cme)',             bg:'var(--color-background-info)',    border:'var(--color-border-info)'},
+    crisis:     {label:'Crisis',     color:'var(--color-text-danger)', bg:'var(--color-background-danger)',  border:'#fca5a5'},
+    tightening: {label:'Tightening', color:'var(--color-text-warning)',bg:'#fff7ed',                         border:'#fed7aa'},
+  };
+  const activeSc = SCENARIOS[state.fwActiveScenario];
+  const cmpSc = SCENARIOS[state.fwCompareScenario];
+  return (
+    <div>
+      <div style={{padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.5rem'}}>
+        <div style={{fontSize:'10px',fontWeight:500,color:'var(--color-text-tertiary)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'7px'}}>
+          Historical scenario &mdash; click to apply &middot; click active to deactivate
+        </div>
+        {['easing','crisis','tightening'].map(era=>{
+          const e=ERA[era];
+          return (
+            <div key={era} style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',marginBottom:'5px'}}>
+              <span style={{fontSize:'9px',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',color:e.color,minWidth:'54px'}}>{e.label}</span>
+              {Object.entries(SCENARIOS).filter(([,s])=>s.era===era).map(([key,sc])=>{
+                const isActive=state.fwActiveScenario===key;
+                return (
+                  <button key={key} title={sc.desc}
+                    onClick={()=>dispatch({type:isActive?'DEACTIVATE':'SET_SCENARIO',key})}
+                    style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 9px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?e.border:'var(--color-border-secondary)'),background:isActive?e.bg:'var(--color-background-secondary)',color:isActive?e.color:'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
+                    <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.75}}>{sc.totalBp}</span>
+                    {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
+        {activeSc&&(
+          <div style={{display:'flex',alignItems:'flex-start',gap:'8px',padding:'7px 10px',background:'var(--color-background-info)',border:'.5px solid var(--color-border-info)',borderRadius:'var(--border-radius-md)',marginTop:'4px',fontSize:'11px',color:'var(--color-text-info)',lineHeight:1.5,flexWrap:'wrap'}}>
+            <span style={{fontWeight:600,whiteSpace:'nowrap'}}>{activeSc.shortLabel} ({activeSc.totalBp} &rarr; {activeSc.endRate}%)</span>
+            <span style={{color:'var(--color-text-secondary)',flex:1}}>{activeSc.desc}</span>
+            <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'\u2715'}</button>
+          </div>
+        )}
+      </div>
+      <div style={{padding:'8px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--c-overlay)',marginBottom:'.75rem'}}>
+        <div style={{fontSize:'10px',fontWeight:500,color:'var(--c-overlay)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'6px'}}>
+          {'\u2194'} Compare overlay &mdash; amber on dot plot &amp; final distribution &middot; click active to remove
+        </div>
+        {['easing','crisis','tightening'].map(era=>(
+          <div key={era} style={{display:'flex',alignItems:'center',gap:'5px',flexWrap:'wrap',marginBottom:'4px'}}>
+            <span style={{fontSize:'9px',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--color-text-tertiary)',minWidth:'54px'}}>{ERA[era].label}</span>
+            {Object.entries(SCENARIOS).filter(([,s])=>s.era===era).map(([key,sc])=>{
+              if(key===state.fwActiveScenario) return (
+                <button key={key} disabled style={{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 7px',fontSize:'10px',borderRadius:'20px',border:'.5px solid var(--color-border-tertiary)',background:'transparent',color:'var(--color-text-tertiary)',fontFamily:'var(--font-sans)',opacity:.3,cursor:'not-allowed'}}>
+                  <span>{sc.shortLabel}</span>
+                </button>
+              );
+              const isActive=state.fwCompareScenario===key;
+              return (
+                <button key={key} title={sc.desc}
+                  onClick={()=>dispatch({type:isActive?'CLEAR_COMPARE':'SET_COMPARE',key})}
+                  style={{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?'var(--c-overlay)':'var(--color-border-secondary)'),background:isActive?'var(--c-overlay-a)':'transparent',color:isActive?'var(--c-overlay)':'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
+                  <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.7}}>{sc.totalBp}</span>
+                  {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                </button>
+              );
+            })}
+          </div>
+        ))}
+        {cmpSc&&<div style={{marginTop:'4px',fontSize:'10px',color:'var(--c-overlay)',lineHeight:1.4}}><b>{cmpSc.shortLabel} ({cmpSc.totalBp} &rarr; {cmpSc.endRate}%)</b> &mdash; {cmpSc.desc}</div>}
+      </div>
+      <div style={{display:'flex',alignItems:'center',gap:'10px',marginBottom:'.75rem',flexWrap:'wrap'}}>
+        <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>Current target range lower bound:</span>
+        <input className="fw-in" type="number" step="0.25" min="0" max="8"
+          key={'lb-'+state.fwLb} defaultValue={state.fwLb} style={{width:'60px'}}
+          onBlur={e=>dispatch({type:'SET_LB',lb:parseFloat(e.target.value)||3.50})}/>
+        <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>%</span>
+      </div>
+      <div style={{overflowX:'auto'}}>
+        <table className="fwt">
+          <thead><tr><th>Month</th><th>ZQ price</th><th>Impl. avg EFFR</th><th>FOMC mtg</th><th>Label</th><th>N (to mtg)</th><th>M (after)</th></tr></thead>
+          <tbody>
+            {state.fwD.map((m,i)=>(
+              <tr key={m.lb}>
+                <td style={{whiteSpace:'nowrap',fontWeight:m.mtg?500:400}}>
+                  {m.lb}{m.mtg&&<span style={{fontSize:'9px',color:'var(--color-text-warning)'}}> {'\u25cf'}</span>}
+                </td>
+                <td>
+                  <input className="fw-in" type="number" step="0.005" min="90" max="100"
+                    key={m.lb+'-'+m.price} defaultValue={m.price} style={{width:'72px'}}
+                    onBlur={e=>{const v=parseFloat(e.target.value);if(v&&v>90&&v<100)dispatch({type:'UPDATE_ZQ_PRICE',i,value:v});}}/>
+                </td>
+                <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-secondary)'}}>{(100-m.price).toFixed(4)}%</td>
+                <td style={{textAlign:'center'}}>
+                  <input type="checkbox" checked={m.mtg}
+                    onChange={e=>dispatch({type:'UPDATE_ZQ_MTG',i,value:e.target.checked})}/>
+                </td>
+                <td><span style={{fontFamily:'var(--font-mono)',fontSize:'11px',opacity:m.mtg?1:.3}}>{m.ml}</span></td>
+                <td>
+                  <input className="fw-in" type="number" step="1" min="1" max="31"
+                    key={m.lb+'-N-'+m.N} defaultValue={m.N} disabled={!m.mtg} style={{width:'40px',opacity:m.mtg?1:.3}}
+                    onBlur={e=>dispatch({type:'UPDATE_ZQ_N',i,value:parseInt(e.target.value)||1})}/>
+                </td>
+                <td>
+                  <input className="fw-in" type="number" step="1" min="0" max="31"
+                    key={m.lb+'-M-'+m.M} defaultValue={m.M} disabled={!m.mtg} style={{width:'40px',opacity:m.mtg?1:.3}}
+                    onBlur={e=>dispatch({type:'UPDATE_ZQ_M',i,value:parseInt(e.target.value)||0})}/>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p style={{fontSize:'11px',color:'var(--color-text-tertiary)',marginTop:'.5rem'}}>N = days from month start through meeting day. M = remaining days. N+M = days in month. Manual edits clear the active scenario.</p>
+    </div>
+  );
+}
+
+function ChainTab({state, finance}) {
+  const {chain, meetings} = finance;
+  const fwD = state.fwD;
+  let h='<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt"><thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>\u0394 (bp)</th><th>25bp moves</th></tr></thead><tbody>';
+  fwD.forEach((m,i)=>{
+    const c=chain[i],chg=(c.start!==null&&c.end!==null)?(c.end-c.start)*100:null;
+    const cc=chg!==null?(chg<-0.01?'var(--color-text-info)':chg>0.01?'var(--color-text-danger)':'var(--color-text-secondary)'):'var(--color-text-secondary)';
+    h+='<tr><td style="white-space:nowrap">'+(m.mtg?'<span style="color:var(--color-text-warning);font-size:9px">\u25cf </span>':'')+m.lb+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+m.price+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+c.avg.toFixed(4)+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.start!==null?c.start.toFixed(4):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.end!==null?c.end.toFixed(4):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(chg!==null?chg.toFixed(2):'\u2014')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(m.mtg&&chg!==null?(chg/25).toFixed(4):'\u2014')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+  if(meetings.length){
+    h+='<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.75rem">Per-meeting probability breakdown</div>';
+    meetings.forEach(m=>{
+      const p0=+(m.p0*100).toFixed(1),p1=+(m.p1*100).toFixed(1);
+      const col=m.isCut?'var(--color-background-info)':'var(--color-background-danger)';
+      const tcol=m.isCut?'var(--color-text-info)':'var(--color-text-danger)';
+      h+='<div style="margin-bottom:.7rem">';
+      h+='<div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">';
+      h+='<span style="font-size:12px;font-weight:500">'+m.label+'</span>';
+      h+='<span style="font-size:11px;color:var(--color-text-tertiary)">'+m.start.toFixed(3)+'% \u2192 '+m.end.toFixed(3)+'% (\u0394 '+(m.chg*100).toFixed(2)+' bp)</span>';
+      h+='</div>';
+      h+='<div style="display:flex;height:22px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary)">';
+      h+='<div style="width:'+p0+'%;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--color-text-secondary)">'+(p0>15?p0+'%':'')+'</div>';
+      if(m.p1>0.001) h+='<div style="width:'+p1+'%;background:'+col+';display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:'+tcol+'">'+(p1>8?p1+'%':'')+'</div>';
+      h+='</div>';
+      h+='<div style="display:flex;gap:1.25rem;margin-top:3px;font-size:10px;color:var(--color-text-tertiary)">';
+      h+='<span>'+p0+'% '+m.l0+'</span>';
+      if(m.p1>0.001) h+='<span style="color:'+tcol+'">'+p1+'% '+m.l1+'</span>';
+      h+='</div></div>';
+    });
+  }
+  return <SvgPanel html={h}/>;
+}
+
+function TreeTab({state, finance}) {
+  const {meetings, states, final, compareSeries} = finance;
+  const lb = state.fwLb;
+  if(!meetings.length) return <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>No meetings detected.</div>;
+  const cuts=Object.entries(final).map(([k,p])=>({k:parseInt(k),p:p})).sort((a,b)=>a.k-b.k);
+  const cSeries=compareSeries;
+  const allRateKeys=[...new Set([...cuts.map(d=>d.k),...(cSeries?Object.keys(cSeries.final).map(Number):[])])].sort((a,b)=>a-b);
+  const pC1=cuts.filter(d=>d.k<=-1).reduce((s,d)=>s+d.p,0),pC2=cuts.filter(d=>d.k<=-2).reduce((s,d)=>s+d.p,0),pC3=cuts.filter(d=>d.k<=-3).reduce((s,d)=>s+d.p,0);
+  const expC=cuts.reduce((s,d)=>s+(-d.k)*d.p,0),expR=lb-expC*0.25;
+  let cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem">';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22652 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC2*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22653 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC3*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">Expected cuts</div><div class="fw-stat-v">'+expC.toFixed(2)+'</div><div class="fw-stat-s">of 25bp each</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">Implied rate</div><div class="fw-stat-v">'+expR.toFixed(2)+'%</div><div class="fw-stat-s">exp. lower bound</div></div>';
+  cards+='</div>';
+  const W=760,NR=18,nCols=states.length,colW=(W-50)/(nCols-1||1);
+  const allK=[];states.forEach(s=>Object.keys(s).forEach(k=>{const ki=parseInt(k);if(!allK.includes(ki))allK.push(ki);}));allK.sort((a,b)=>a-b);
+  const minK=allK[0],maxK=allK[allK.length-1],nRows=maxK-minK+1,rowH=Math.max(36,Math.min(56,280/Math.max(nRows,1))),svgH=nRows*rowH+60;
+  const gx=li=>30+li*colW,gyf=k=>30+(-k)*rowH+rowH/2;
+  let svg='';
+  for(let li=0;li<states.length-1;li++){
+    const m=meetings[li],x1=gx(li)+NR,x2=gx(li+1)-NR;
+    Object.entries(states[li]).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y1=gyf(ki),k0=ki+m.b0,y0=gyf(k0);
+      svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y0.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="'+Math.max(.6,p*m.p0*6).toFixed(1)+'" opacity=".85"/>';
+      if(m.p1>0.005){const k1=ki+m.b1,y1b=gyf(k1);svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y1b.toFixed(1)+'" stroke="var(--color-border-info)" stroke-width="'+Math.max(.4,p*m.p1*6).toFixed(1)+'" stroke-dasharray="4,2" opacity=".75"/>';}
+    });
+  }
+  states.forEach((st,li)=>{
+    const x=gx(li),lbl=li===0?'Now':meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'';
+    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    Object.entries(st).forEach(([k,p])=>{
+      if(p<0.005)return;const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
+      svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+NR+'" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".8"/>';
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="500" fill="var(--color-text-primary)" font-family="var(--font-mono)">'+(p*100).toFixed(0)+'%</text>';
+      svg+='<text x="'+x.toFixed(1)+'" y="'+(y+6).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-secondary)" font-family="var(--font-mono)">'+rate+'%</text>';
+    });
+  });
+  for(let k=0;k>=minK;k--){const y=gyf(k);svg+='<text x="0" y="'+y.toFixed(1)+'" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';}
+  const maxP=Math.max(...cuts.map(d=>d.p),...(cSeries?Object.values(cSeries.final):[0]));
+  const bW=Math.min(60,520/Math.max(allRateKeys.length,1));
+  let dSvg='';
+  if(cSeries){
+    const cCutsMap=Object.fromEntries(Object.entries(cSeries.final).map(([k,p])=>[parseInt(k),p]));
+    allRateKeys.slice().reverse().forEach((k,i)=>{
+      const p=cCutsMap[k];if(!p||p<0.002)return;
+      const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h;
+      dSvg+='<rect x="'+(x-2).toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+(bW+4).toFixed(1)+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-overlay-a)" stroke="var(--c-overlay)" stroke-width="1.5"/>';
+      if(p>.03)dSvg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-overlay)" font-family="var(--font-sans)">'+(p*100).toFixed(1)+'%</text>';
+    });
+  }
+  const cutsMap=Object.fromEntries(cuts.map(d=>[d.k,d.p]));
+  allRateKeys.slice().reverse().forEach((k,i)=>{
+    const p=cutsMap[k];if(!p||p<0.002)return;
+    const x=20+i*(bW+5),h=Math.max(2,(p/maxP)*52),y=60-h,fo=.2+p*.75;
+    dSvg+='<rect x="'+x+'" y="'+y+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".5"/>';
+    if(p>.02)dSvg+='<text x="'+(x+bW/2)+'" y="'+(y-3)+'" text-anchor="middle" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">'+(p*100).toFixed(1)+'%</text>';
+    dSvg+='<text x="'+(x+bW/2)+'" y="73" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';
+  });
+  const mainLabel=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline';
+  const cmpLabel=cSeries?' vs <span style="color:var(--c-overlay)">'+cSeries.label+' ('+cSeries.totalBp+')</span>':'';
+  const h=cards
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice \u2014 '+meetings.length+' meetings</div>'
+    +'<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+svgH+'" style="min-width:500px;width:100%;display:block;height:'+svgH+'px">'+svg+'</svg></div>'
+    +'<div style="margin-top:1.25rem">'
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution \u2014 <span style="color:var(--c-cme)">'+mainLabel+'</span>'+cmpLabel+'</div>'
+    +'<div style="overflow-x:auto"><svg viewBox="0 0 '+Math.max(560,20+allRateKeys.length*(bW+5)+20)+' 80" style="min-width:400px;width:100%;display:block;height:80px">'+dSvg+'</svg></div>'
+    +'</div>'
+    +'<div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">'
+    +'<span>Opacity \u221d probability</span><span>Solid = hold/base \u00b7 Dashed = extra 25bp cut</span><span>Width \u221d weight</span>'
+    +(cSeries?'<span style="color:var(--c-overlay)">\u25a0 Amber = compare scenario</span>':'')
+    +'</div>';
+  return <SvgPanel html={h}/>;
+}
+
+function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {meetings, states, final, chain, compareSeries} = finance;
+  const lb = state.fwLb;
+  const kD = state.kalshiD, pD = state.polyD, fwD = state.fwD;
+
+  let html='<div class="k-fetch-bar" style="flex-wrap:wrap;gap:8px">';
+  html+='<button class="refresh-btn" id="kal-btn"'+(fetching.kal?' disabled':'')+' onclick="window.__kalFetch()"><span'+(fetching.kal?' class="spin"':'')+'>&#x27f3;</span> Fetch Kalshi</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.kal||kD.source)+'</span>';
+  html+='<button class="refresh-btn" id="poly-btn"'+(fetching.poly?' disabled':'')+' onclick="window.__polyFetch()" style="margin-left:4px"><span'+(fetching.poly?' class="spin"':'')+'>&#x27f3;</span> Fetch Polymarket</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.poly||pD.source)+'</span>';
+  html+='<span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary);display:flex;gap:8px;align-items:center;flex-wrap:wrap">';
+  html+='<span><span class="k-dot" style="background:var(--c-cme)"></span> CME</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-kal)"></span> Kalshi</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-poly)"></span> Polymarket</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP</span>';
+  html+='</span></div>';
+
+  // Panel 1
+  const comps=getMeetingComps(meetings,kD,pD);
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2460 Meeting-by-meeting divergence: P(cut) \u2014 CME vs Kalshi vs Polymarket</span>';
+  html+='<span style="display:flex;gap:4px;flex-wrap:wrap"><span class="k-contract">kxfeddecision-26xxx</span><span class="k-contract">polymarket fed-decision</span></span></div>';
+  html+=panel1Svg(comps,lb);
+  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal\u2212CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly\u2212Kal</b> basis reveals the information spread between the two platforms.</div>';
+  html+='</div></div>';
+
+  // Panel 2 + 3
+  html+='<div class="k-grid" style="margin-bottom:12px">';
+  const cmeCC=cmeCutCountDist(final,fwD);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2461 Cut count distribution \u2014 2026</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecutcount-26dec31</span><span class="k-contract">polymarket how-many-cuts</span></span></div>';
+  html+=panel2Svg(cmeCC,kD.cutCount,pD.cutCount);
+  const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
+  html+='<div class="k-note">Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> \u00b7 Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> \u00b7 Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='Kal\u2212CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
+  html+='Poly\u2212CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
+  html+='Poly\u2212Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
+
+  // Panel 3: Combo paths
+  const paths=enumeratePaths(meetings,3);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2462 Combo path decomposer \u2014 top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Path</th><th>CME prob</th><th>Kalshi</th><th>Basis</th></tr></thead><tbody>';
+  paths.forEach(p=>{
+    const kp=kD.comboPrices[p.key]||'\u2014';
+    const basis=kp!=='\u2014'?((kp-p.prob)*100).toFixed(1)+'pp':'\u2014';
+    const bClass=kp!=='\u2014'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
+    html+='<tr><td style="font-family:var(--font-mono);font-size:11px">'+p.key+'</td>';
+    html+='<td style="font-family:var(--font-mono)">'+(p.prob*100).toFixed(1)+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">'+(kp==='\u2014'?kp:Math.round(kp*100)+'%')+'</td>';
+    html+='<td><span class="k-pill '+bClass+'">'+basis+'</span></td></tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">CME tree path probabilities for the first three meeting months. Large positive basis = Kalshi prices this path more richly than CME.</div></div></div>';
+
+  // Panel 4: Dot plot
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2463 Market-implied dot plot \u2014 CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx \u00b7 Dec 2025 SEP</span></div>';
+  html+=panel4Svg(meetings,states,lb,fwD,kD,compareSeries);
+  html+='<div class="k-note">Three implied rate paths. CME (blue): expected EFFR from ZQ chain. Kalshi (orange): implied rate from decision markets. Fed dots (purple): Dec 2025 SEP medians.</div>';
+  html+='</div></div>';
+
+  // Panels 5 + 6
+  html+='<div class="k-grid">';
+  const cmeHike=getCmeHikeProb(meetings);
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2464 Hike risk monitor</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxfedhike</span><span class="k-contract">polymarket fed-rate-hike-in-2026</span></span></div>';
+  html+=panel5Svg(cmeHike,kD.hikeAny,kD.largeCutAny,pD.hikeAny);
+  html+='<div class="k-note">Semicircular gauge: CME max single-meeting hike probability (blue), Kalshi "any hike" (orange), Polymarket "hike in 2026" (cyan). Also shown: Kalshi jumbo-cut probability.</div></div>';
+
+  // Panel 6
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2465 First cut timing \u2014 cumulative P(cut has happened)</span>';
+  html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecut-26dec31</span><span class="k-contract">polymarket fed-rate-cut-by</span></span></div>';
+  html+=panel6Svg(meetings,states,lb,kD,pD);
+  html+='<div class="k-note">CME step curve (blue): cumulative P(\u22651 cut) by meeting. Kalshi binary markers (orange \u25cf): cut-by-end-2026 = <b>'+(kD.cutBinary['end-2026']*100).toFixed(0)+'%</b>, cut-by-end-2027 = <b>'+(kD.cutBinary['end-2027']*100).toFixed(0)+'%</b>. Polymarket per-meeting markers (cyan \u25c6).</div></div></div>';
+
+  // Panel 7
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2466 Terminal rate distribution end-2026 \u2014 CME tree vs Polymarket</span>';
+  html+='<span class="k-contract">polymarket what-will-the-fed-rate-be-at-the-end-of-2026</span></div>';
+  html+=panel7Svg(final,lb,pD);
+  const cmeTerm=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+  const polyTermExp=Object.entries(pD.terminalRate).reduce((s,[r,p])=>s+parseFloat(r)*p,0);
+  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> \u00b7 Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound \u2014 subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
+
+  // Panels 8a + 8b
+  html+='<div class="k-grid">';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2467 Fed Chair nomination \u2014 regime risk</span>';
+  html+='<span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair \u00b7 $230M vol</span></div>';
+  html+=panel8aHtml(pD);
+  html+='<div class="k-note">Polymarket\'s most liquid Fed markets ($230M volume). The nominee probabilities are a proxy for <i>policy regime risk</i>.</div></div>';
+
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2468 Emergency cut gauge \u2014 unscheduled FOMC action</span>';
+  html+='<span class="k-contract">polymarket fed-emergency-rate-cut-before-2027</span></div>';
+  html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
+  html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
+
+  // Wire fetch buttons via window globals (inline onclick in generated HTML)
+  useEffect(()=>{
+    window.__kalFetch=()=>fetchKalshi(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    window.__polyFetch=()=>fetchPolymarket(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    return ()=>{delete window.__kalFetch;delete window.__polyFetch;};
+  });
+
+  return <SvgPanel html={html}/>;
+}
+
+// ============================================================================
+// REACT APP
+// ============================================================================
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
+  const finance = useFinance(state);
+  const [apiKey, setApiKey] = useState('');
+  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:''});
+  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false});
+
+  useEffect(() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('fwCfg') || '{}');
+      if(s.lb || s.scenario || s.compare) dispatch({type:'LOAD_SETTINGS', settings:s});
+    } catch(e) {}
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem('fwCfg', JSON.stringify({lb:state.fwLb, scenario:state.fwActiveScenario, compare:state.fwCompareScenario})); }
+    catch(e) {}
+  }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
+
+  const TABS = [
+    {id:'inputs',     label:'Futures inputs'},
+    {id:'chain',      label:'EFFR chain'},
+    {id:'tree',       label:'Probability tree'},
+    {id:'kalshi',     label:'\u2696 Prediction markets'},
+    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
+    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
+    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
+  ];
+
+  return (
+    <div style={{padding:'1rem 0 .5rem'}}>
+      <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'6px'}}>
+        <div>
+          <h2 style={{fontSize:'18px',fontWeight:500,margin:'0 0 2px'}}>Fed Funds probability tree</h2>
+          <div style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>
+            Target: <b style={{color:'var(--color-text-primary)'}}>{state.fwLb.toFixed(2)}&ndash;{(state.fwLb+0.25).toFixed(2)}%</b>
+            &nbsp;&middot;&nbsp;EFFR: <b style={{color:'var(--color-text-primary)'}}>{finance.effrStart.toFixed(2)}%</b>
+          </div>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'4px'}}>
+          <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
+            <input type="password" className="fw-in" placeholder="sk-ant-... (standalone only)"
+              style={{width:'195px',fontSize:'11px'}} value={apiKey}
+              onChange={e=>setApiKey(e.target.value)}/>
+            <button className="refresh-btn" disabled={fetching.zq}
+              onClick={()=>refreshData(state,dispatch,apiKey,setFetching,setRefreshStatus)}>
+              <span className={fetching.zq?'spin':''}>&#x27f3;</span> Refresh ZQ
+            </button>
+          </div>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',textAlign:'right',maxWidth:'400px',minHeight:'14px'}}>{refreshStatus.zq}</div>
+        </div>
+      </div>
+
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 7 tabs.</p>
+      <div className="api-note">
+        <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
+      </div>
+
+      <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
+        {TABS.map(t=>(
+          <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
+            onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
+            {t.label}
+          </div>
+        ))}
+      </div>
+
+      {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='chain'  && <ChainTab state={state} finance={finance}/>}
+      {state.fwActive==='tree'   && <TreeTab state={state} finance={finance}/>}
+      {state.fwActive==='kalshi' && <KalshiTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {!['inputs','chain','tree','kalshi'].includes(state.fwActive) &&
+        <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
+    </div>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
