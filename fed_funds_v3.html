@@ -477,6 +477,7 @@ const INITIAL_STATE = {
     jrLambda2: 0.5,            // JR contemporaneous gap weight
     jrLambda3: 0.3,            // JR lagged gap weight
     jrGamma: 0.85,             // JR partial adjustment speed
+    ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
   },
 };
 
@@ -562,7 +563,7 @@ function reducer(state, action){
     }
     case 'UPDATE_TAYLOR':
       return {...state, taylor: {...state.taylor, [action.key]: action.value}};
-    case 'UPDATE_TRD':
+    case 'UPDATE_TR':
       return {...state, trD: {...state.trD, [action.key]: action.value}};
     case 'APPLY_LIVE_TAYLOR':
       return {...state, trD: {...state.trD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
@@ -609,7 +610,18 @@ function useFinance(state) {
       : jrPrescribed < effrStart ? -1 : 1;
     const taylorJRRate = jrPrescribed;
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate};
+    // JR implied path: apply taylorRateJR meeting-by-meeting, carrying forward prevFFR
+    const jrImpliedPath = (() => {
+      let prev = state.fwLb;
+      const pg = t.outputGap ?? -0.5;
+      return meetings.map(row => {
+        const rate = taylorRateJR(t, prev, pg);
+        prev = rate;
+        return rate;
+      });
+    })();
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath};
   }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD]);
 }
 
@@ -1162,7 +1174,7 @@ function ycCurveChart(ycD){
   return svg;
 }
 
-function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
+function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jrPath) {
   const W=720, H=180, mt=28, mb=32, ml=38, mr=14;
   const n=meetings.length;
   if(n===0) return '<div style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</div>';
@@ -1179,7 +1191,8 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
   }
 
   const {classic, balanced, inertialC, inertialB}=taylorPaths;
-  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB];
+  const jrV=jrPath||[];
+  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB,...jrV];
   const minR=Math.min(...allV)-0.15, maxR=Math.max(...allV)+0.15;
   const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
 
@@ -1199,10 +1212,10 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
     svg+='<text x="'+(W-mr-2).toFixed(1)+'" y="'+(ys(rNeutral)-5).toFixed(1)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">r* neutral '+rNeutral.toFixed(2)+'%</text>';
   }
 
-  // Classic Taylor (solid rose)
+  // Classic Taylor (thinner rose — JR takes the heavy line)
   const cPts=classic.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
-  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2.5" opacity=".9"/>';
-  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-taylor)" opacity=".9"/>';});
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="10,4" opacity=".65"/>';
+  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-taylor)" opacity=".65"/>';});
 
   // Balanced approach (dashed rose lighter)
   const bPts=balanced.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
@@ -1212,6 +1225,13 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
   // Inertial classic (thin dotted)
   const icPts=inertialC.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+icPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="3,3" opacity=".6"/>';
+
+  // Judd-Rudebusch path (rose solid, heavy — signal source)
+  if(jrV.length){
+    const jrPts=jrV.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+jrPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2.5" opacity=".95"/>';
+    jrV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-taylor)" stroke="var(--color-background-primary)" stroke-width="1" opacity=".95"/>';});
+  }
 
   // CME implied path (blue)
   const cmePts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
@@ -1229,10 +1249,11 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor) {
   });
 
   // Legend
-  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="500">--- Classic Taylor</text>';
-  svg+='<text x="'+(ml+105)+'" y="14" font-size="8.5" fill="var(--c-taylor-mod)" font-family="var(--font-sans)" font-weight="500">- - Balanced</text>';
-  svg+='<text x="'+(ml+185)+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".6">... Inertial</text>';
-  svg+='<text x="'+(ml+250)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">--- CME implied</text>';
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="600">\u25cf JR ECM (signal)</text>';
+  svg+='<text x="'+(ml+115)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".65">- - Classic</text>';
+  svg+='<text x="'+(ml+175)+'" y="14" font-size="8" fill="var(--c-taylor-mod)" font-family="var(--font-sans)">- - Balanced</text>';
+  svg+='<text x="'+(ml+255)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".5">... CGG</text>';
+  svg+='<text x="'+(ml+305)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf CME implied</text>';
 
   svg+='</svg>';
   return svg;
@@ -1641,10 +1662,43 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   return <SvgPanel html={html}/>;
 }
 
+function buildRuleComparisonTable(trRates, effrStart, fwLb) {
+  const rules = [
+    {key:'taylor93',      label:'Taylor 1993',        note:'Original \u2014 r*=2%, \u03b2=0.5, GDP gap'},
+    {key:'yellen',        label:'Yellen Alt1',         note:'Unemployment gap, FOMC SEP r*, \u03b2=1.0'},
+    {key:'balanced',      label:'Balanced approach',   note:'\u03b2=1.0 (Yellen 2012/2017 speeches)'},
+    {key:'cgg',           label:'CGG Inertial',        note:'\u03c1=0.85 smoothing around Taylor 1993'},
+    {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM \u2014 highest R\u00b2 for \u0394FFTR prediction'},
+  ];
+  const threshold = 0.125;
+  var h = '<table class="fwt"><thead><tr><th>Rule</th><th>Prescribed</th><th>Gap vs EFFR (bp)</th><th>Signal</th><th>Notes</th></tr></thead><tbody>';
+  rules.forEach(function(r) {
+    var rate = trRates[r.key];
+    if(rate === undefined) return;
+    var gap = (rate - effrStart) * 100;
+    var signal = Math.abs(gap) < threshold*100 ? 0 : gap > 0 ? 1 : -1;
+    var sigLabel = signal === 0 ? '= Neutral' : signal === 1 ? '\u2191 Hike' : '\u2193 Cut';
+    var sigCol = signal === 0 ? 'var(--color-text-tertiary)' : signal === 1 ? 'var(--color-text-danger)' : 'var(--color-text-info)';
+    var isJR = r.key === 'juddRudebusch';
+    h += '<tr style="'+(isJR?'background:var(--color-background-info)':'')+'">';
+    h += '<td style="font-weight:'+(isJR?600:400)+';white-space:nowrap">'+r.label;
+    if(isJR) h += ' <span style="font-size:9px;color:var(--c-taylor);background:rgba(225,29,72,.1);padding:1px 5px;border-radius:8px;margin-left:4px">signal source</span>';
+    h += '</td>';
+    h += '<td style="font-family:var(--font-mono);color:var(--c-taylor)">'+rate.toFixed(2)+'%</td>';
+    h += '<td style="font-family:var(--font-mono);color:'+(gap>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(gap>0?'+':'')+gap.toFixed(0)+'</td>';
+    h += '<td style="font-weight:600;color:'+sigCol+'">'+sigLabel+'</td>';
+    h += '<td style="font-size:10px;color:var(--color-text-tertiary)">'+r.note+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
 function TaylorRuleTab({state, dispatch, finance}) {
-  const {meetings, states, effrStart} = finance;
+  const {meetings, states, effrStart, trRates, jrImpliedPath} = finance;
   const lb = state.fwLb;
   const t = state.taylor;
+  const tr = state.trD;
 
   const taylorPaths = useMemo(() =>
     taylorMeetingPath(t, meetings, effrStart, lb),
@@ -1663,11 +1717,12 @@ function TaylorRuleTab({state, dispatch, finance}) {
   const classicNow = taylorPaths.classic[0];
   const balancedNow = taylorPaths.balanced[0];
   const inertialNow = taylorPaths.inertialC[0];
-  const classicEnd = taylorPaths.classic[taylorPaths.classic.length - 1];
-  const balancedEnd = taylorPaths.balanced[taylorPaths.balanced.length - 1];
-  const gapNow = classicNow !== undefined ? classicNow - effrStart : 0;
-  const gapEnd = classicEnd !== undefined && cmeRates.length ? classicEnd - cmeRates[cmeRates.length - 1] : 0;
+  const jrNow = trRates.juddRudebusch;
+  const yellenNow = trRates.yellen;
+  const gapNow = jrNow !== undefined ? jrNow - effrStart : 0;
   const rNeutral = t.rStar + t.piStar;
+
+  const ruleVariant = tr.ruleVariant || 'taylor93';
 
   const paramField = (label, key, min, max, step, unit) => {
     return '<tr><td style="font-size:11px;white-space:nowrap;padding:4px 8px">'+label+'</td>'
@@ -1677,15 +1732,42 @@ function TaylorRuleTab({state, dispatch, finance}) {
       +'<td style="font-size:10px;color:var(--color-text-tertiary);padding:4px 8px">'+unit+'</td></tr>';
   };
 
+  const trField = (label, key, min, max, step, unit) => {
+    return '<tr><td style="font-size:11px;white-space:nowrap;padding:4px 8px">'+label+'</td>'
+      +'<td style="padding:4px 8px"><input type="number" class="fw-in" style="width:65px" '
+      +'value="'+tr[key]+'" min="'+min+'" max="'+max+'" step="'+step+'" '
+      +'data-tr-key="'+key+'"/></td>'
+      +'<td style="font-size:10px;color:var(--color-text-tertiary);padding:4px 8px">'+unit+'</td></tr>';
+  };
+
   let html = '';
+
+  // --- Rule variant chips ---
+  const variants = [
+    {key:'taylor93', label:'Taylor 1993'},
+    {key:'balanced', label:'Balanced'},
+    {key:'cgg',      label:'CGG Inertial'},
+    {key:'yellen',   label:'Yellen Alt1'},
+    {key:'juddRudebusch', label:'Judd-Rudebusch'},
+  ];
+  html += '<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin-bottom:6px;width:fit-content;flex-wrap:wrap">';
+  variants.forEach(v => {
+    const isAct = ruleVariant === v.key;
+    html += '<div class="fw-tab'+(isAct?' act':'')+'" data-rule-variant="'+v.key+'" style="cursor:pointer'+(v.key==='juddRudebusch'&&isAct?';border-color:var(--c-taylor)':'')+'">';
+    html += v.label;
+    if(v.key==='juddRudebusch') html += ' <span style="font-size:8px;color:var(--c-taylor);margin-left:2px">\u2605</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:1rem;line-height:1.5">Signal source: Judd-Rudebusch ECM (highest predictive R\u00b2 for FFTR changes, Bieri-Chincarini 2005 Exhibit 7)</div>';
 
   // Summary cards
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem">';
-  html += '<div class="fw-stat"><div class="fw-stat-l">Classic Taylor</div><div class="fw-stat-v" style="color:var(--c-taylor)">'+(classicNow!==undefined?classicNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">prescribed now</div></div>';
-  html += '<div class="fw-stat"><div class="fw-stat-l">Balanced approach</div><div class="fw-stat-v" style="color:var(--c-taylor-mod)">'+(balancedNow!==undefined?balancedNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">Yellen variant</div></div>';
-  html += '<div class="fw-stat"><div class="fw-stat-l">Inertial rule</div><div class="fw-stat-v">'+(inertialNow!==undefined?inertialNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">\u03c1='+t.inertia+' smoothing</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">JR ECM</div><div class="fw-stat-v" style="color:var(--c-taylor)">'+(jrNow!==undefined?jrNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">signal source</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Classic Taylor</div><div class="fw-stat-v" style="color:var(--c-taylor);opacity:.7">'+(classicNow!==undefined?classicNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">Taylor \'93</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Yellen Alt1</div><div class="fw-stat-v" style="color:var(--c-taylor-mod)">'+(yellenNow!==undefined?yellenNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">unemployment gap</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
-  html += '<div class="fw-stat"><div class="fw-stat-l">Taylor gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':'policy too tight')+'</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">JR gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':gapNow<-0.05?'policy too tight':'near neutral')+'</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
   html += '</div>';
 
@@ -1703,10 +1785,23 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += paramField('End-horizon GDP forecast', 'yEnd', -5, 10, 0.1, '%');
   html += paramField('Neutral real rate (r*)', 'rStar', -2, 5, 0.1, '%');
   html += '</tbody></table>';
+  // Gap measure toggle
+  html += '<div style="margin-top:8px;display:flex;gap:4px;align-items:center">';
+  html += '<span style="font-size:10px;color:var(--color-text-tertiary);margin-right:4px">Gap measure:</span>';
+  html += '<div data-gap-measure="output" class="fw-tab'+(tr.gapMeasure==='output'||!tr.gapMeasure?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">GDP output gap</div>';
+  html += '<div data-gap-measure="unemployment" class="fw-tab'+(tr.gapMeasure==='unemployment'?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">Unemployment gap (2\u00d7)</div>';
+  html += '</div>';
+  // Unemployment fields (shown when unemployment gap selected)
+  if(tr.gapMeasure==='unemployment'){
+    html += '<table class="fwt" style="margin-top:6px"><tbody>';
+    html += trField('Unemployment rate (u)', 'unemploymentRate', 0, 15, 0.1, '%');
+    html += trField('Natural rate (u*)', 'unemploymentNatural', 0, 10, 0.1, 'NAIRU');
+    html += '</tbody></table>';
+  }
   html += '<div class="k-note">PCE = personal consumption expenditures price index. Inflation and output are linearly interpolated across meetings.</div>';
   html += '</div>';
 
-  // Rule coefficients
+  // Rule coefficients + JR parameters
   html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Rule coefficients</span></div>';
   html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
   html += paramField('Classic \u03b1 (inflation)', 'alphaClassic', 0, 5, 0.1, 'Taylor \'93');
@@ -1715,15 +1810,26 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += paramField('Balanced \u03b2 (output gap)', 'betaBalanced', 0, 5, 0.1, 'Yellen \'12');
   html += paramField('Inertia \u03c1 (smoothing)', 'inertia', 0, 0.99, 0.05, 'Clarida-Gali-Gertler');
   html += '</tbody></table>';
+  // JR ECM parameters
+  html += '<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--color-border-tertiary)">';
+  html += '<div style="font-size:10px;font-weight:500;color:var(--c-taylor);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Judd-Rudebusch ECM parameters</div>';
+  html += '<table class="fwt"><tbody>';
+  html += trField('\u03bb\u2081 (inflation weight)', 'jrLambda1', 0.5, 3.0, 0.25, 'Eq. 23');
+  html += trField('\u03bb\u2082 (gap weight)', 'jrLambda2', 0.0, 2.0, 0.25, 'Eq. 23');
+  html += trField('\u03bb\u2083 (lagged gap)', 'jrLambda3', 0.0, 1.0, 0.10, 'Eq. 23');
+  html += trField('\u03b3 (adjustment speed)', 'jrGamma', 0.50, 0.99, 0.05, 'Eq. 24');
+  html += '</tbody></table>';
+  html += '</div>';
   html += '<div class="k-note"><b>Classic:</b> r = r* + \u03c0* + \u03b1(\u03c0 \u2212 \u03c0*) + \u03b2(y \u2212 y*). Taylor 1993: \u03b1=1.5, \u03b2=0.5.<br>';
-  html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.</div>';
+  html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.<br>';
+  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + \u03c0* + \u03bb\u2081(\u03c0\u2212\u03c0*) + \u03bb\u2082\u00b7gap<sub>t</sub> + \u03bb\u2083\u00b7gap<sub>t-1</sub>; \u0394i<sub>t</sub> = \u03b3(i*<sub>t</sub> \u2212 i<sub>t-1</sub>).</div>';
   html += '</div></div>';
 
-  // Main chart
+  // Main chart — now includes JR path
   html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Prescribed rate path vs CME market-implied path</span></div>';
-  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t);
-  html += '<div class="k-note">Solid rose = classic Taylor 1993 rule. Dashed rose = balanced approach (Yellen). Dotted = inertial (smoothed). Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
+  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t, jrImpliedPath);
+  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
   html += '</div>';
 
   // Gap chart
@@ -1733,48 +1839,75 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div class="k-note">Positive gap = Taylor says policy is too loose (rate should be higher). Negative = Taylor says policy is too tight. Solid = classic, dashed = balanced. Red/blue coloring at \u00b15bp threshold.</div>';
   html += '</div>';
 
-  // Decomposition table
-  html += '<div class="k-panel">';
+  // Decomposition table — now includes JR column
+  html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Meeting-by-meeting decomposition</span></div>';
-  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>Inertial</th><th>CME</th><th>Gap</th></tr></thead><tbody>';
+  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
   const n = meetings.length;
   for (let i = 0; i < n; i++) {
     const t2 = n > 1 ? i / (n - 1) : 0;
     const pi = t.piNow + t2 * (t.piEnd - t.piNow);
     const y = t.yNow + t2 * (t.yEnd - t.yNow);
-    const gap = taylorPaths.classic[i] - cmeRates[i];
+    const jrRate = jrImpliedPath[i] !== undefined ? jrImpliedPath[i] : 0;
+    const gap = jrRate - cmeRates[i];
     const gCol = gap > 0.05 ? 'var(--color-text-danger)' : gap < -0.05 ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
     const shortLbl = meetings[i].label.split('\u2013')[0] || meetings[i].lb;
     html += '<tr>';
     html += '<td style="white-space:nowrap;font-size:11px">' + shortLbl + '</td>';
     html += '<td style="font-family:var(--font-mono)">' + pi.toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono)">' + y.toFixed(2) + '%</td>';
-    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor)">' + taylorPaths.classic[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor);opacity:.7">' + taylorPaths.classic[i].toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:var(--c-taylor-mod)">' + taylorPaths.balanced[i].toFixed(2) + '%</td>';
-    html += '<td style="font-family:var(--font-mono)">' + taylorPaths.inertialC[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);font-weight:600;color:var(--c-taylor)">' + jrRate.toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:var(--c-cme)">' + cmeRates[i].toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:' + gCol + '">' + (gap > 0 ? '+' : '') + gap.toFixed(2) + '</td>';
     html += '</tr>';
   }
   html += '</tbody></table></div>';
-  html += '<div class="k-note">Inflation and output gap are linearly interpolated from current to end-of-horizon values across meeting dates. Gap = Classic Taylor minus CME implied.</div>';
+  html += '<div class="k-note">Inflation and output gap are linearly interpolated from current to end-of-horizon values across meeting dates. Gap = JR ECM minus CME implied.</div>';
   html += '</div>';
 
-  // Wire onchange events for parameter inputs
+  // Rule comparison matrix
+  html += '<div class="k-panel" style="margin-top:12px">';
+  html += '<div class="k-hdr"><span class="k-title">Rule comparison matrix \u2014 all variants at current inputs</span>';
+  html += '<span class="k-contract">Bieri-Chincarini (2005) Exhibit 7 \u00b7 Atlanta Fed Taylor Rule Utility</span></div>';
+  html += '<div style="overflow-x:auto">';
+  html += buildRuleComparisonTable(trRates, effrStart, lb);
+  html += '</div>';
+  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter \u2014 it has the highest R\u00b2 for predicting actual FFTR changes (Exhibit 7: R\u00b2=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term \u03bb\u2083 captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative \u2014 it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
+  html += '</div>';
+
+  // Wire onchange events for parameter inputs + variant chips + gap measure
   useEffect(() => {
-    const handler = (e) => {
+    const taylorHandler = (e) => {
       const key = e.target.dataset.taylorKey;
       if (!key) return;
       const val = parseFloat(e.target.value);
       if (!isNaN(val)) dispatch({type: 'UPDATE_TAYLOR', key, value: val});
     };
-    document.querySelectorAll('[data-taylor-key]').forEach(el => {
-      el.addEventListener('change', handler);
-    });
+    const trHandler = (e) => {
+      const key = e.target.dataset.trKey;
+      if (!key) return;
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) dispatch({type: 'UPDATE_TR', key, value: val});
+    };
+    const variantHandler = (e) => {
+      const v = e.currentTarget.dataset.ruleVariant;
+      if (v) dispatch({type: 'UPDATE_TR', key: 'ruleVariant', value: v});
+    };
+    const gapHandler = (e) => {
+      const v = e.currentTarget.dataset.gapMeasure;
+      if (v) dispatch({type: 'UPDATE_TR', key: 'gapMeasure', value: v});
+    };
+    document.querySelectorAll('[data-taylor-key]').forEach(el => el.addEventListener('change', taylorHandler));
+    document.querySelectorAll('[data-tr-key]').forEach(el => el.addEventListener('change', trHandler));
+    document.querySelectorAll('[data-rule-variant]').forEach(el => el.addEventListener('click', variantHandler));
+    document.querySelectorAll('[data-gap-measure]').forEach(el => el.addEventListener('click', gapHandler));
     return () => {
-      document.querySelectorAll('[data-taylor-key]').forEach(el => {
-        el.removeEventListener('change', handler);
-      });
+      document.querySelectorAll('[data-taylor-key]').forEach(el => el.removeEventListener('change', taylorHandler));
+      document.querySelectorAll('[data-tr-key]').forEach(el => el.removeEventListener('change', trHandler));
+      document.querySelectorAll('[data-rule-variant]').forEach(el => el.removeEventListener('click', variantHandler));
+      document.querySelectorAll('[data-gap-measure]').forEach(el => el.removeEventListener('click', gapHandler));
     };
   });
 
