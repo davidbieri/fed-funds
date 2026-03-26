@@ -724,7 +724,54 @@ function useFinance(state) {
       });
     })();
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath};
+    // NS curve fit from current ycD
+    const nsFitParams = nsFit(syncedYcD.map(d => ({mat: d.mat, rate: d.rate})));
+
+    // Smooth fitted curve (200 points from 0.08yr to 30yr)
+    const nsCurvePoints = Array.from({length:200}, (_, i) => {
+      const mat = 0.08 + (i / 199) * 29.92;
+      return {mat, rate: nsYield(mat, nsFitParams)};
+    });
+
+    // Forward curve (same 200 points)
+    const nsForwardPoints = Array.from({length:200}, (_, i) => {
+      const mat = 0.08 + (i / 199) * 29.92;
+      return {mat, rate: nsForward(mat, nsFitParams)};
+    });
+
+    // NS factor interpretation
+    const nsFactors = {
+      level:     nsFitParams.beta0,
+      slope:     nsFitParams.beta1,
+      curvature: nsFitParams.beta2,
+      decay:     nsFitParams.tau,
+      rmse:      nsFitParams.rmse,
+    };
+
+    // Term premium proxy (beta0 = long-run level minus current short rate)
+    const termPremium = nsFitParams.beta0 - effrStart;
+
+    // Scenario-shocked curves -- one per FOMC meeting
+    // Cumulative delta at each meeting = sum of all cuts/hikes from start to that meeting
+    let cumDelta = 0;
+    const scenarioCurves = meetings.map((m, idx) => {
+      const ci = state.fwD.findIndex(d => d.lb === m.lb);
+      const deltaBp = (ci >= 0 && chain[ci] && chain[ci].start !== null && chain[ci].end !== null)
+        ? (chain[ci].end - chain[ci].start) * 100
+        : 0;
+      cumDelta += deltaBp;
+      const shockedYcD = nsShockCurve(syncedYcD, cumDelta);
+      const shockedParams = nsFit(shockedYcD.map(d => ({mat:d.mat, rate:d.rate})));
+      return {
+        meetingLb: m.lb,
+        label: m.label || m.lb,
+        cumDeltaBp: cumDelta,
+        ycD: shockedYcD,
+        params: shockedParams,
+      };
+    });
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves};
   }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD]);
 }
 
