@@ -764,6 +764,267 @@ function panel5Svg(cmeHike,kalHike,largeCut,polyHike){
   return svg;
 }
 
+function panel6Svg(meetings,states,lb,kalshiD,polyD){
+  const W=380,H=100,mt=16,mb=32,ml=30,mr=10;
+  const n=states.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-v);
+  const cumCuts=states.map(s=>Object.entries(s).filter(([k])=>parseInt(k)<=-1).reduce((sum,[,p])=>sum+p,0));
+  const kalPoints=[];
+  const dec2026Idx=meetings.findIndex(m=>m.lb==='Dec 2026');
+  const mar2027Idx=meetings.findIndex(m=>m.lb==='Mar 2027');
+  if(dec2026Idx>=0&&kalshiD.cutBinary['end-2026'])kalPoints.push({i:dec2026Idx+1,v:kalshiD.cutBinary['end-2026'],label:'KAL end-26'});
+  if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'KAL end-27'});
+  const polyPoints=meetings.map((m,i)=>{
+    const v=polyD.cutByMeeting[m.lb];
+    return v!==undefined?{i:i+1,v,label:m.label.split('\u2013')[0]}:null;
+  }).filter(Boolean);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1.0].forEach(v=>{
+    svg+='<line x1="'+ml+'" y1="'+ys(v).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(v).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';
+  });
+  for(let i=0;i<cumCuts.length-1;i++){
+    const x1=xs(i),x2=xs(i+1),y1=ys(cumCuts[i]),y2=ys(cumCuts[i+1]);
+    svg+='<line x1="'+x1.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y1.toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2"/>';
+    svg+='<line x1="'+x2.toFixed(1)+'" y1="'+y1.toFixed(1)+'" x2="'+x2.toFixed(1)+'" y2="'+y2.toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2" stroke-dasharray="2,2"/>';
+  }
+  cumCuts.forEach((v,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(v).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';});
+  polyPoints.forEach(p=>{
+    const cx2=xs(p.i),cy2=ys(p.v),s=5;
+    svg+='<polygon points="'+cx2+','+( cy2-s)+' '+(cx2+s)+','+cy2+' '+cx2+','+(cy2+s)+' '+(cx2-s)+','+cy2+'" fill="var(--c-poly)" opacity=".85"/>';
+    svg+='<text x="'+cx2.toFixed(1)+'" y="'+(ys(p.v)-9).toFixed(1)+'" text-anchor="middle" font-size="7" fill="var(--c-poly)" font-family="var(--font-mono)">'+(p.v*100).toFixed(0)+'%</text>';
+  });
+  kalPoints.forEach(p=>{
+    svg+='<circle cx="'+xs(p.i).toFixed(1)+'" cy="'+ys(p.v).toFixed(1)+'" r="6" fill="var(--c-kal)" opacity=".85"/>';
+    svg+='<text x="'+xs(p.i).toFixed(1)+'" y="'+(ys(p.v)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-kal)" font-family="var(--font-mono)">'+(p.v*100).toFixed(0)+'%</text>';
+    svg+='<text x="'+xs(p.i).toFixed(1)+'" y="'+(H+mt+mb-4).toFixed(1)+'" text-anchor="middle" font-size="7" fill="var(--c-kal)" font-family="var(--font-sans)">'+p.label+'</text>';
+  });
+  meetings.forEach((m,i)=>{
+    if(i%2===0)svg+='<text x="'+xs(i+1).toFixed(1)+'" y="'+(H+mt+16).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+m.label.split('\u2013')[0]+'</text>';
+  });
+  svg+='<text x="'+ml+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">\u25cf CME</text>';
+  svg+='<text x="'+(ml+38)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">\u25cf Kalshi</text>';
+  svg+='<text x="'+(ml+90)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">\u25c6 Polymarket</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel7Svg(final,lb,polyD){
+  const W=680,H=90,mt=22,mb=30,ml=10,mr=10;
+  const cmeDist=Object.entries(final).map(([k,p])=>({rate:lb+parseInt(k)*.25,p:p})).sort((a,b)=>a.rate-b.rate);
+  const polyDist=Object.entries(polyD.terminalRate).map(([r,p])=>({rate:parseFloat(r)-0.25,p:p})).sort((a,b)=>a.rate-b.rate);
+  const allRates=[...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)];
+  const minR=Math.min(...allRates),maxR=Math.max(...allRates);
+  const maxP=Math.max(...cmeDist.map(d=>d.p),...polyDist.map(d=>d.p));
+  const rRange=maxR-minR||1;
+  const xs=r=>ml+(r-minR)/rRange*(W-ml-mr);
+  const bW=Math.min(28,(W-ml-mr)/Math.max(allRates.length,1)*0.38);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  [.25,.5,.75,1].forEach(v=>{const y=mt+H*(1-v/maxP*maxP);if(v<=maxP+0.05){svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';svg+='<text x="'+(ml-1).toFixed(1)+'" y="'+(y-2).toFixed(1)+'" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';}});
+  cmeDist.forEach(d=>{if(d.p<0.002)return;const x=xs(d.rate)-bW/2,h=H*(d.p/maxP),y=mt+H-h,fo=0.2+d.p*.7;svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-cme)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--c-cme)" stroke-width=".5"/>';if(d.p>.04)svg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">'+(d.p*100).toFixed(0)+'%</text>';});
+  polyDist.forEach(d=>{if(d.p<0.01)return;const x=xs(d.rate)-bW/2+2,h=H*(d.p/maxP),y=mt+H-h;svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-poly)" fill-opacity=".18" stroke="var(--c-poly)" stroke-width="1.5"/>';if(d.p>.06)svg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">'+(d.p*100).toFixed(0)+'%</text>';});
+  const labelRates=[...new Set([...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)])].sort((a,b)=>a-b);
+  labelRates.forEach(r=>{svg+='<text x="'+xs(r).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';});
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME (lower bound)</text>';
+  svg+='<text x="'+(ml+140)+'" y="14" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a1 Polymarket (upper bound \u22120.25%)</text>';
+  svg+='</svg>';
+  return svg;
+}
+
+function panel8aHtml(polyD){
+  const entries=Object.entries(polyD.fedChair).sort((a,b)=>b[1]-a[1]);
+  const hawkishness={'Kevin Warsh':'hawkish','Rick Rieder':'dovish','Other':'unknown'};
+  let h='<div style="margin-bottom:8px">';
+  entries.forEach(([name,p])=>{
+    const pct=(p*100).toFixed(0);
+    const tag=hawkishness[name]||'unknown';
+    const tagCol=tag==='hawkish'?'var(--color-text-danger)':tag==='dovish'?'var(--color-text-info)':'var(--color-text-tertiary)';
+    h+='<div style="margin-bottom:7px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px"><span style="font-size:12px;font-weight:500">'+name+'</span><span style="display:flex;gap:5px;align-items:center"><span class="k-pill" style="background:var(--color-background-secondary);color:'+tagCol+';border:.5px solid '+tagCol+'">'+tag+'</span><span style="font-size:12px;font-weight:500;font-family:var(--font-mono)">'+pct+'%</span></span></div><div style="height:16px;border-radius:3px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+pct+'%;background:var(--c-poly);opacity:.8"></div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
+  });
+  h+='</div><div style="font-size:10px;color:var(--color-text-tertiary);border-top:.5px solid var(--color-border-tertiary);padding-top:6px">Volume: $230M</div>';
+  return h;
+}
+
+function panel8bSvg(emergencyCut,polyHike){
+  const W=280,H=60,mt=10,mb=14,ml=10,mr=10;
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const items=[
+    {label:'Emergency cut before 2027',v:emergencyCut,col:'var(--c-poly)'},
+    {label:'Any hike in 2026',v:polyHike,col:'var(--color-text-danger)'},
+  ];
+  items.forEach((item,i)=>{
+    const y=mt+i*(H/2+4);
+    const barW=(W-ml-mr-100)*Math.min(1,item.v);
+    svg+='<text x="'+ml+'" y="'+(y+11).toFixed(1)+'" font-size="9" fill="var(--color-text-secondary)" font-family="var(--font-sans)">'+item.label+'</text>';
+    svg+='<rect x="'+ml+'" y="'+(y+14).toFixed(1)+'" width="'+(W-ml-mr-100).toFixed(1)+'" height="14" rx="3" fill="var(--color-border-tertiary)" opacity=".4"/>';
+    svg+='<rect x="'+ml+'" y="'+(y+14).toFixed(1)+'" width="'+Math.max(2,barW).toFixed(1)+'" height="14" rx="3" fill="'+item.col+'" opacity=".8"/>';
+    svg+='<text x="'+(ml+W-ml-mr-96).toFixed(1)+'" y="'+(y+25).toFixed(1)+'" font-size="10" font-weight="500" fill="'+item.col+'" font-family="var(--font-mono)">'+(item.v*100).toFixed(1)+'%</text>';
+  });
+  svg+='</svg>';
+  svg+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Historical precedent: Jan 2001, Sep 2001, Oct 2008, Mar 2020</div>';
+  return svg;
+}
+
+function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
+  const W=680,H=140,mt=24,mb=28,ml=36,mr=12;
+  const n=srD.length;
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const sofrRates=srD.map(s=>100-s.price);
+  const validZQ=zqAvgs.map((v,i)=>({v:v,i:i})).filter(d=>d.v!==null);
+  const validFwd=instFwd.map((v,i)=>({v:v,i:i})).filter(d=>d.v!==null);
+  const fedDots=[{i:2,rate:3.375,label:'Dec 2026 SEP'},{i:6,rate:3.00,label:'Dec 2027 SEP'}];
+  const allV=[...sofrRates,...validZQ.map(d=>d.v),...validFwd.map(d=>d.v),...fedDots.map(d=>d.rate)];
+  const minR=Math.min(...allV)-0.08,maxR=Math.max(...allV)+0.08;
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y2=Math.ceil(minR/step)*step;y2<=maxR;y2+=step){
+    const y=ys(y2);
+    svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+y.toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y2.toFixed(2)+'</text>';
+  }
+  if(validZQ.length>1){
+    for(let k=0;k<validZQ.length-1;k++){const a=validZQ[k],b=validZQ[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2" opacity=".8"/>';}
+    validZQ.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="4" fill="var(--c-cme)" opacity=".85"/>';});
+  }
+  if(validFwd.length>1){
+    for(let k=0;k<validFwd.length-1;k++){const a=validFwd[k],b=validFwd[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-sofr-fwd)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".85"/>';}
+    validFwd.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="3" fill="var(--c-sofr-fwd)" opacity=".8"/>';});
+  }
+  for(let i=0;i<sofrRates.length-1;i++){svg+='<line x1="'+xs(i).toFixed(1)+'" y1="'+ys(sofrRates[i]).toFixed(1)+'" x2="'+xs(i+1).toFixed(1)+'" y2="'+ys(sofrRates[i+1]).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".9"/>';}
+  sofrRates.forEach((r,i)=>{
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(r)-9).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-sofr)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';
+  });
+  fedDots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">'+d.label+'</text>';
+  });
+  srD.forEach((s,i)=>{svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+s.qLabel+'</text>';});
+  svg+='</svg>';
+  return svg;
+}
+
+function basisBarsSvg(zqAvgs,srD){
+  const W=320,H=80,mt=18,mb=30,ml=26,mr=8;
+  const bases=srD.map((s,i)=>zqAvgs[i]!==null?((100-s.price)-zqAvgs[i])*100:null).filter(v=>v!==null);
+  const quarters=srD.filter((_,i)=>zqAvgs[i]!==null).map(s=>s.qLabel);
+  const maxB=Math.max(...bases.map(Math.abs),0.15);
+  const bW=Math.min(30,(W-ml-mr)/Math.max(bases.length,1)*0.65);
+  const xs=i=>ml+(i+0.5)*((W-ml-mr)/Math.max(bases.length,1));
+  const yMid=mt+H/2;
+  const ys=v=>yMid-(v/maxB)*(H/2);
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  svg+='<line x1="'+ml+'" y1="'+yMid.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+yMid.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  [maxB/2,maxB].forEach(v=>{
+    [v,-v].forEach(y2=>{svg+='<line x1="'+ml+'" y1="'+ys(y2).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y2).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';});
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v.toFixed(1)+'</text>';
+    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(0).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>';
+  });
+  bases.forEach((b,i)=>{
+    const x=xs(i)-bW/2,h=Math.abs(b/maxB)*(H/2),y=b>=0?ys(b):yMid;
+    const col=b>=0?'var(--c-sofr)':'var(--color-text-danger)';
+    svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="'+col+'" opacity=".8"/>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(b>=0?ys(b)-4:ys(b)+h+10).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+col+'" font-family="var(--font-mono)" font-weight="500">'+(b>0?'+':'')+b.toFixed(1)+'</text>';
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+mb-6).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+quarters[i]+'</text>';
+  });
+  svg+='</svg>';
+  return svg;
+}
+
+function dashUnifiedSvg(chain,meetings,states,lb,compareSeries,zqAvgs,fwD,kalshiD,srD){
+  const W=760,H=150,mt=24,mb=28,ml=38,mr=12;
+  const months=fwD.map(d=>d.lb);
+  let si=0;
+  const cmeRates=months.map((_,i)=>{
+    if(fwD[i].mtg&&si<states.length-1)si++;
+    const s=states[Math.min(si,states.length-1)];
+    return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+  });
+  const kalRates=months.map(lb2=>kalshiD.kalshiRate[lb2]||null);
+  const sofrPts=srD.map(s=>{const idx=months.indexOf(s.lb);return idx>=0?{i:idx,r:100-s.price}:null;}).filter(Boolean);
+  let cmpRates=null;
+  if(compareSeries){
+    let si2=0;
+    cmpRates=months.map((_,i)=>{
+      if(fwD[i].mtg&&si2<compareSeries.states.length-1)si2++;
+      const s=compareSeries.states[Math.min(si2,compareSeries.states.length-1)];
+      return lb+Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0)*.25;
+    });
+  }
+  const fedDots=kalshiD.fedDots.map(d=>({i:months.indexOf(d.lb),rate:d.rate})).filter(d=>d.i>=0);
+  const allV=[...cmeRates,...kalRates.filter(Boolean),...sofrPts.map(d=>d.r),...fedDots.map(d=>d.rate),...(cmpRates||[])];
+  const minR=Math.min(...allV)-0.12,maxR=Math.max(...allV)+0.12;
+  const xs=i=>ml+(i/(months.length-1||1))*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+  }
+  if(cmpRates){
+    const pts=cmpRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" stroke-dasharray="7,3" opacity=".75"/>';
+    cmpRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2" fill="var(--c-overlay)" opacity=".7"/>';});
+  }
+  if(sofrPts.length>1){
+    for(let k=0;k<sofrPts.length-1;k++){const a=sofrPts[k],b=sofrPts[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.r).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.r).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".85"/>';}
+    sofrPts.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.r)-9).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-sofr)" font-family="var(--font-mono)">'+d.r.toFixed(2)+'</text>';});
+  }
+  const cPts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".9"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';});
+  let kPrev=null;
+  months.forEach((lb2,i)=>{
+    const r=kalRates[i];if(r===null)return;
+    if(kPrev)svg+='<line x1="'+xs(kPrev.i).toFixed(1)+'" y1="'+ys(kPrev.r).toFixed(1)+'" x2="'+xs(i).toFixed(1)+'" y2="'+ys(r).toFixed(1)+'" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".75"/>';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-kal)" opacity=".85"/>';
+    kPrev={i:i,r:r};
+  });
+  fedDots.forEach(d=>{
+    svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">SEP</text>';
+  });
+  months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
+  svg+='</svg>';
+  return svg;
+}
+
+function ycCurveChart(ycD){
+  const W=720,H=160,mt=24,mb=28,ml=38,mr=16;
+  const mats=ycD.map(d=>d.mat);
+  const rates=ycD.map(d=>d.rate);
+  const minM=0,maxM=31,minR=Math.min(...rates)-0.15,maxR=Math.max(...rates)+0.15;
+  const xs=m=>ml+(m-minM)/(maxM-minM)*(W-ml-mr);
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+  }
+  [0.25,0.5,1,2,5,10,30].forEach(m=>{
+    const lbl=m<1?(m*12).toFixed(0)+'mo':m+'yr';
+    svg+='<text x="'+xs(m).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    svg+='<line x1="'+xs(m).toFixed(1)+'" y1="'+mt+'" x2="'+xs(m).toFixed(1)+'" y2="'+(mt+H).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".3" stroke-dasharray="2,3"/>';
+  });
+  for(let i=0;i<ycD.length-1;i++){
+    const a=ycD[i],b=ycD[i+1];
+    svg+='<line x1="'+xs(a.mat).toFixed(1)+'" y1="'+ys(a.rate).toFixed(1)+'" x2="'+xs(b.mat).toFixed(1)+'" y2="'+ys(b.rate).toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1.2" opacity=".6"/>';
+  }
+  ycD.forEach(d=>{
+    const col=d.src==='zq'?'var(--c-cme)':'var(--c-sofr)';
+    svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+    svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+    svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)+18).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.label+'</text>';
+  });
+  svg+='<text x="'+(W/2).toFixed(1)+'" y="'+(mt+H/2).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--c-overlay)" opacity=".4" font-family="var(--font-sans)">Nelson-Siegel fit \u2014 Phase 2</text>';
+  svg+='</svg>';
+  return svg;
+}
+
 function SvgPanel({html}) {
   return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
 }
