@@ -535,6 +535,131 @@ function nsShockCurve(ycD, cumulativeDeltaFFR) {
 }
 
 // ============================================================================
+// RIDING-THE-YIELD-CURVE PURE FUNCTIONS
+// ============================================================================
+
+// mmHPR(ym, ymh, m, h, z=360) -> HPR decimal
+// Eq. 8 Bieri-Chincarini: money-market holding period return
+// H = [1 + y_{m-h}*(m-h)/z] / [1 + y_m*m/z] - 1
+// rates in percent -> divide by 100 inside
+function mmHPR(ym, ymh, m, h, z) {
+  if(z === undefined) z = 360;
+  return (1 + (ymh/100)*((m-h)/z)) / (1 + (ym/100)*(m/z)) - 1;
+}
+
+// bondHPR(ym, ymh, m, h) -> HPR decimal
+// Eq. 12: zero-coupon bond ride HPR
+// H = [(1 + y_m/100)^m / (1 + y_{m-h}/100)^{m-h}] - 1
+function bondHPR(ym, ymh, m, h) {
+  return Math.pow(1 + ym/100, m) / Math.pow(1 + ymh/100, (m-h)) - 1;
+}
+
+// rideHPR(ym, ymh, m, h) -> HPR decimal (dispatcher)
+// Uses mmHPR for m <= 1yr, bondHPR for m > 1yr
+function rideHPR(ym, ymh, m, h) {
+  return m <= 1 ? mmHPR(ym, ymh, m, h) : bondHPR(ym, ymh, m, h);
+}
+
+// mmCushion(ym, yh, m, h, z=360) -> break-even yield change (bp)
+// Eq. 15: y* = z*[(1 + ym*m/z)/(1 + yh*h/z) - 1]/(m-h)
+// cushion = y* - current y_{m-h}  (positive = room for rates to rise)
+function mmCushion(ym, yh, m, h, z) {
+  if(z === undefined) z = 360;
+  var ystar = z * ((1 + (ym/100)*(m/z)) / (1 + (yh/100)*(h/z)) - 1) / (m-h);
+  return (ystar - ym/100) * 100 * 100; // convert to bp
+}
+
+// bondCushion(ym, yh, ymh, m, h) -> break-even yield change (bp)
+// Eq. 16: y* s.t. (1+ym)^m / (1+y*)^{m-h} = (1+yh)^h
+//   y* = [(1+ym)^m/(1+yh)^h]^{1/(m-h)} - 1
+// cushion = (y* - ymh) * 100  in bp
+function bondCushion(ym, yh, ymh, m, h) {
+  if(m <= h) return 0;
+  var ratio = Math.pow(1+ym/100, m) / Math.pow(1+yh/100, h);
+  var ystar = (Math.pow(ratio, 1/(m-h)) - 1) * 100;
+  return (ystar - ymh) * 100; // bp
+}
+
+// rideCushion(ym, yh, ymh, m, h) -> cushion in bp (dispatcher)
+function rideCushion(ym, yh, ymh, m, h) {
+  return m <= 1 ? mmCushion(ym, yh, m, h) : bondCushion(ym, yh, ymh, m, h);
+}
+
+// durationNeutralWeight(dH, dR, dO=0) -> omega
+// Eq. 29: omega = (D_H - D_O) / (D_R - D_O)
+// dH = holding horizon (years), dR = riding instrument duration (years)
+function durationNeutralWeight(dH, dR, dO) {
+  if(dO === undefined) dO = 0;
+  if(dR <= dO) return 1;
+  return (dH - dO) / (dR - dO);
+}
+
+// durationNeutralXR(hRide, hOvernight, hBuyHold, omega) -> excess return decimal
+// Eq. 30: XR = omega*H_ride + (1-omega)*H_overnight - H_buyhold
+function durationNeutralXR(hRide, hOvernight, hBuyHold, omega) {
+  return omega * hRide + (1-omega) * hOvernight - hBuyHold;
+}
+
+// rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters)
+//   -> Array[7][5] of cell objects
+// Instrument rows (7): 0.5, 1, 2, 5, 7, 10, 30yr
+// Horizon cols (5):    1/12, 3/12, 6/12, 1, 1.5yr
+function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters) {
+  var MATS = [0.5, 1, 2, 5, 7, 10, 30];
+  var HORIZONS = [1/12, 3/12, 6/12, 1, 1.5];
+  var overnightRate = syncedYcD[0].rate; // 3mo as overnight proxy
+
+  // CME futures signal: is market pricing cuts? (implied < actual)
+  var cmeFuturesSignal = fwD.some(function(d){return (100-d.price) < fwLb;}) ? -1 : 1;
+
+  // Current 10-2yr slope for slope filter
+  var slope10_2 = syncedYcD[5].rate - syncedYcD[3].rate;
+
+  return MATS.map(function(m) { return HORIZONS.map(function(h) {
+    if(m <= h) return {hpr:0, xhpr:0, cushion:0, omega:0, dnXR:0, signal:'hold', annXhpr:0};
+
+    var ym  = nsYield(m,   nsFitParams);
+    var yh  = nsYield(h,   nsFitParams);
+    var ymh_fwd = nsYield(m-h, nsFitParams); // no scenario: use NS forward projection
+
+    // Scenario projection: find closest meeting at or before horizon h
+    var ymh = ymh_fwd;
+    if(scenarioCurves.length > 0) {
+      var closestSc = scenarioCurves.reduce(function(best, sc) {
+        var mIdx = fwD.findIndex(function(d){return d.lb === sc.meetingLb;});
+        var mTime = mIdx >= 0 ? mIdx/12 : 999;
+        var bestTime = best ? fwD.findIndex(function(d){return d.lb===best.meetingLb;})/12 : 999;
+        return Math.abs(mTime-h) < Math.abs(bestTime-h) ? sc : best;
+      }, null);
+      if(closestSc) ymh = nsYield(m-h, closestSc.params);
+    }
+
+    var hpr    = rideHPR(ym, ymh, m, h);
+    var hBH    = rideHPR(yh, yh, h, h); // buy-and-hold at horizon
+    var xhpr   = hpr - hBH;
+    var annXhpr = xhpr * (1/h); // annualized
+    var cushion = rideCushion(ym, yh, ymh, m, h);
+    var omega   = durationNeutralWeight(h, m);
+    var hOvernight = (overnightRate/100) * h;
+    var dnXR    = durationNeutralXR(hpr, hOvernight, hBH, omega);
+
+    // Filter rules
+    var f = rideFilters;
+    var passes = [
+      !f.positiveSlope    || slope10_2 > 0,
+      !f.positiveCushion  || cushion > 0,
+      !f.cushion75        || cushion > 15, // rough 75th pctile proxy (15bp)
+      !f.taylorRule       || taylorSignalVal !== 1,
+      !f.cmeExpectations  || cmeFuturesSignal === -1,
+    ];
+    var failCount = passes.filter(function(p){return !p;}).length;
+    var signal = failCount === 0 ? 'ride' : failCount <= 1 ? 'marginal' : 'hold';
+
+    return {ym:ym, yh:yh, ymh:ymh, hpr:hpr, xhpr:xhpr, annXhpr:annXhpr, cushion:cushion, omega:omega, dnXR:dnXR, signal:signal, h:h, m:m};
+  });});
+}
+
+// ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
 
