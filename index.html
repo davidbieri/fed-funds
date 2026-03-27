@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fed Funds Probability Tree — David Bieri</title>
-<meta name="description" content="Interactive CME FedWatch methodology implementation with Kalshi, Polymarket, and SOFR strip overlay. 12 months forward, 5 tabs, 9 prediction market panels.">
+<title>MSE — FOMC Monitor · David Bieri · Virginia Tech SPIA</title>
+<meta name="description" content="MSE: A multi-market framework for Federal Reserve policy analytics. CME FedWatch methodology, Kalshi, Polymarket, SOFR strip, Nelson-Siegel yield curve, Taylor Rule variants, and Bieri-Chincarini riding-the-yield-curve analysis.">
 <link rel="canonical" href="https://davidbieri.github.io/fed-funds/">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -20,6 +21,9 @@
   --kal:#f97316;
   --poly:#06b6d4;
   --sofr:#10b981;
+  --taylor:#8b5cf6;
+  --curve:#f59e0b;
+  --riding:#ec4899;
   --text:#e8edf5;
   --muted:#8899b4;
   --faint:#4a5e7a;
@@ -51,6 +55,8 @@ body::before{
 nav{
   display:flex;align-items:center;justify-content:space-between;
   padding:20px 0;border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:50;
+  background:var(--navy);
 }
 .nav-logo{
   font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
@@ -63,6 +69,7 @@ nav{
   transition:color .2s;
 }
 .nav-link:hover{color:var(--text)}
+.nav-link.active{color:var(--text)}
 .nav-badge{
   font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:500;
   background:rgba(59,130,246,0.12);color:var(--cme);
@@ -239,7 +246,7 @@ footer{
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-bar">
-      <span class="modal-title">FED FUNDS PROBABILITY TREE · v3.0</span>
+      <span class="modal-title">MSE — FOMC MONITOR · v3.0</span>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <iframe src="fed_funds_probability_tree.html" title="Fed Funds Probability Tree"></iframe>
@@ -249,22 +256,27 @@ footer{
 <div class="wrap">
 
   <nav>
-    <span class="nav-logo">davidbieri / fed-funds</span>
+    <span class="nav-logo">SPIA · Virginia Tech &nbsp;|&nbsp; <abbr title="Marriner S. Eccles · Mean Squared Error" style="text-decoration:none;cursor:help">MSE</abbr></span>
     <div class="nav-links">
+      <a class="nav-link" href="#tabs">Tabs</a>
+      <a class="nav-link" href="#sources">Data</a>
+      <a class="nav-link" href="#guide">Guide</a>
+      <a class="nav-link" href="#cite">Cite</a>
       <span class="nav-badge">v3.0 · Mar 2026</span>
       <a class="nav-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
     </div>
   </nav>
 
   <div class="hero">
-    <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip</div>
-    <h1 class="hero-title">Fed Funds<br><em>Probability Tree</em></h1>
-    <p class="hero-sub">An interactive implementation of the CME FedWatch methodology — 30-day ZQ futures chain, unconditional probability lattice, and a three-way prediction market comparison across Kalshi, Polymarket, and the SOFR strip. No build step, no dependencies.</p>
+    <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip · Yield Curve · Taylor Rule · Riding</div>
+    <h1 class="hero-title"><abbr title="Marriner S. Eccles · Mean Squared Error" style="text-decoration:none;cursor:help">MSE</abbr><br><em>A multi-market framework for Federal Reserve policy analytics</em></h1>
+    <p style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:500;color:var(--text);letter-spacing:.06em;margin-bottom:28px">FOMC Monitor</p>
+    <p class="hero-sub">ZQ futures chain, unconditional probability lattice, three-way prediction market comparison (Kalshi/Polymarket), SOFR strip, Nelson-Siegel term structure, five Taylor Rule variants including the Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. Nine tabs, shared state, no build step.</p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-n">12</span><span class="stat-l">months forward</span></div>
+      <div class="stat"><span class="stat-n">9</span><span class="stat-l">analytical tabs</span></div>
       <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
       <div class="stat"><span class="stat-n">9</span><span class="stat-l">comparison panels</span></div>
-      <div class="stat"><span class="stat-n">7</span><span class="stat-l">SR3 contracts</span></div>
+      <div class="stat"><span class="stat-n">5</span><span class="stat-l">Taylor variants</span></div>
     </div>
     <div class="hero-actions">
       <button class="btn-launch" onclick="openModal()">⟶ Launch Tool</button>
@@ -275,8 +287,7 @@ footer{
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-label">Five tabs</div>
+  <div class="section" id="tabs">
     <div class="tabs-grid">
       <div class="tab-card">
         <div class="tab-num">01 — FUTURES INPUTS</div>
@@ -303,10 +314,30 @@ footer{
         <div class="tab-name">SR3 Forward Curve</div>
         <div class="tab-desc">7 quarterly SR3 contracts (SR3M6–SR3Z7, Jun 2026–Dec 2027). Three-curve chart: SOFR strip, ZQ quarterly EFFR, instantaneous 3M forwards. Per-quarter basis in bp.</div>
       </div>
+      <div class="tab-card">
+        <div class="tab-num">06 — DASHBOARD</div>
+        <div class="tab-name">Unified Cross-Market View</div>
+        <div class="tab-desc">9 stat cards (EFFR start, P(≥1 cut), expected terminal, expected cuts across CME/Kal/Poly, SOFR near-term/terminal, SOFR–EFFR basis, active scenario, riding signal). Unified rate path chart overlaying CME EFFR chain, Kalshi implied, SR3 SOFR strip, Fed SEP, and compare scenario. Cross-market divergence table and policy regime summary box.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">07 — YIELD CURVE</div>
+        <div class="tab-name">Nelson-Siegel Term Structure</div>
+        <div class="tab-desc">Nelson-Siegel fitting over 7 Treasury CMT maturities (3mo–30yr) with 2,000-iteration Nelder-Mead. Log-scaled spot and instantaneous forward curves; scenario-shocked paths per FOMC meeting using Bieri-Chincarini empirical factor loadings. Factor cards: β₀ level, β₁ slope, β₂ curvature, τ decay, term premium. Short end auto-synced from ZQ chain; long end live-fetchable from Fed H.15.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">08 — TAYLOR RULE</div>
+        <div class="tab-name">Prescriptive Path Analysis</div>
+        <div class="tab-desc">Five rule variants — Taylor 1993 (α=1.5, β=0.5), Balanced/Yellen 2012 (α=β=1), Yellen Alt1 (unemployment gap via Okun's Law), inertial Clarida-Gali-Gertler (ρ=0.85), and Judd-Rudebusch ECM (Bieri-Chincarini 2005 Eqs. 23–25, designated signal source). Prescribed rate vs CME chain chart, Taylor−CME gap decomposition, per-meeting rule comparison matrix.</div>
+      </div>
+      <div class="tab-card">
+        <div class="tab-num">09 — RIDING</div>
+        <div class="tab-name">Riding the Yield Curve</div>
+        <div class="tab-desc">7 × 5 instrument–horizon HPR matrix (6mo–30yr × 1mo–18mo) of annualized excess HPR and break-even cushion in basis points using Bieri-Chincarini (2005) Eqs. 8–16, 29–30. Five-filter suite: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal, CME expectations signal. Duration-neutral barbell panel with ω-weighted decomposition vs overnight and buy-and-hold. Riding signal wired to Dashboard.</div>
+      </div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="sources">
     <div class="section-label">Data sources</div>
     <div class="markets-row">
       <div class="mkt cme">
@@ -326,22 +357,26 @@ footer{
       </div>
       <div class="mkt sofr">
         <span class="mkt-name">Federal Reserve</span>
-        <span class="mkt-desc">EFFR daily publication (NY Fed), December 2025 SEP median dot plot projections.</span>
-        <span class="mkt-tag">EFFR · SOFR · Dec 2025 SEP</span>
+        <span class="mkt-desc">EFFR/SOFR daily publications (NY Fed), December 2025 SEP median dot plot projections, and H.15 Selected Interest Rates (7-tenor CMT curve for Nelson-Siegel fitting).</span>
+        <span class="mkt-tag">EFFR · SOFR · Dec 2025 SEP · H.15 CMT</span>
       </div>
     </div>
   </div>
 
-  <div class="section">
+  <div class="section" id="guide">
     <div class="section-label">How it works</div>
 
     <!-- User guide nav -->
     <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
-      <button class="ug-ntab on" onclick="ugShow('overview',this)" style="font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--faint);padding:10px 16px;cursor:pointer;border-bottom:2px solid var(--cme);color:var(--cme);background:none;border-top:none;border-left:none;border-right:none">Overview</button>
+      <button class="ug-ntab on" onclick="ugShow('overview',this)">Overview</button>
       <button class="ug-ntab" onclick="ugShow('chain',this)">EFFR chain</button>
       <button class="ug-ntab" onclick="ugShow('tree',this)">Probability tree</button>
       <button class="ug-ntab" onclick="ugShow('prediction',this)">Prediction markets</button>
       <button class="ug-ntab" onclick="ugShow('sofr',this)">SOFR strip</button>
+      <button class="ug-ntab" onclick="ugShow('dashboard',this)">Dashboard</button>
+      <button class="ug-ntab" onclick="ugShow('yieldcurve',this)">Yield curve</button>
+      <button class="ug-ntab" onclick="ugShow('taylor',this)">Taylor rule</button>
+      <button class="ug-ntab" onclick="ugShow('riding',this)">Riding</button>
       <button class="ug-ntab" onclick="ugShow('scenarios',this)">Scenarios</button>
       <button class="ug-ntab" onclick="ugShow('refresh',this)">Live data</button>
     </div>
@@ -395,7 +430,7 @@ footer{
 
     <!-- OVERVIEW -->
     <div class="ug-page on" id="pg-overview">
-      <p class="ug-body">The tool has five tabs, all driven from the same 12-month ZQ futures price table. Every input is editable — change any price, checkbox, or day count and all tabs update instantly.</p>
+      <p class="ug-body">Nine tabs, all driven from the same 12-month ZQ futures price table via a shared <code style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--cme)">useFinance</code> memoization pipeline. Change any price, checkbox, or macro input and the entire signal chain — from EFFR anchor propagation through the Taylor signal and riding filter cascade — updates instantly.</p>
       <div class="ug-nd">
         <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
         <div class="ug-nd-arrow">→</div>
@@ -406,6 +441,14 @@ footer{
         <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">overlay</span></div>
         <div class="ug-nd-arrow">→</div>
         <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">independent</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(139,92,246,.12);color:var(--taylor);border-color:rgba(139,92,246,.25)">Taylor Rule<br><span style="font-size:9px;opacity:.7">JR ECM signal</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(245,158,11,.12);color:var(--curve);border-color:rgba(245,158,11,.25)">Yield Curve<br><span style="font-size:9px;opacity:.7">NS + shocks</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(236,72,153,.12);color:var(--riding);border-color:rgba(236,72,153,.25)">Riding<br><span style="font-size:9px;opacity:.7">HPR + filters</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(16,185,129,.12);color:var(--sofr);border-color:rgba(16,185,129,.25)">Dashboard<br><span style="font-size:9px;opacity:.7">unified view</span></div>
       </div>
       <div class="ug-stat-row">
         <div class="ug-stat"><div class="ug-stat-l">Source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
@@ -419,6 +462,10 @@ footer{
         <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice, node opacity ∝ probability, summary stats, and final rate distribution.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart (CME + Kalshi + SOFR + SEP), cross-market divergence table, regime summary, and riding signal.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting over 7 CMT maturities, Nelder-Mead optimizer, log-scale spot and forward curves, per-meeting scenario shock fan.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle">Prescriptive Path Analysis</div><div class="ug-pdesc">Five variants with editable macro inputs. JR ECM (Bieri-Chincarini 2005) is the designated policy signal source.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle">Riding the Yield Curve</div><div class="ug-pdesc">7 × 5 HPR matrix with five filter rules, duration-neutral barbell panel, and cushion gauge. Signal wired to Dashboard.</div></div>
       </div>
     </div>
 
@@ -518,6 +565,95 @@ footer{
       </div>
     </div>
 
+    <!-- DASHBOARD -->
+    <div class="ug-page" id="pg-dashboard">
+      <p class="ug-body">The Dashboard consolidates every market signal into a single view. Nine stat cards, a unified multi-source rate path chart, a cross-market divergence table, and a regime summary box — all live-updated whenever any upstream input changes.</p>
+      <div class="ug-head">Stat cards</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">EFFR start</div><div class="ug-pdesc">Current lower bound of the fed funds target range, anchor for the entire ZQ chain.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">P(≥1 cut)</div><div class="ug-pdesc">Probability of at least one 25bp cut by the 12-month horizon derived from the unconditional lattice.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Expected terminal</div><div class="ug-pdesc">Probability-weighted implied terminal rate, averaged across all final-meeting lattice nodes.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Expected cuts — CME / Kal / Poly</div><div class="ug-pdesc">Probability-weighted cut counts from each market. Cross-market disagreement signals information asymmetry.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">SOFR near-term / terminal</div><div class="ug-pdesc">SR3M6 implied SOFR vs SR3Z7 terminal, showing short-end pricing vs end-of-strip level.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">SOFR–EFFR basis</div><div class="ug-pdesc">Spread between SR3 near-term implied SOFR and ZQ-derived EFFR. Typical range 5–15 bp.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Active scenario</div><div class="ug-pdesc">Name of the currently activated ZQ scenario preset, or "None" if editing manually.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Riding signal</div><div class="ug-pdesc">Aggregate output of the Riding tab's 5-filter cascade. Green = ride, amber = marginal, red = hold.</div></div>
+      </div>
+      <div class="ug-head">Unified rate path chart</div>
+      <div class="ug-grid">
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-ptitle" style="color:var(--cme)">CME EFFR chain</div><div class="ug-pdesc">Month-by-month expected EFFR lower bound from ZQ anchor propagation.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-ptitle" style="color:var(--kal)">Kalshi implied path</div><div class="ug-pdesc">Per-meeting rate implied from Kalshi P(cut) markets, shown as dashed overlay.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--sofr)"><div class="ug-ptitle" style="color:var(--sofr)">SR3 SOFR strip</div><div class="ug-pdesc">Quarterly-average SOFR from SR3 contracts, plotted on the same axis as EFFR.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid rgba(139,92,246,.8)"><div class="ug-ptitle" style="color:var(--taylor)">Fed SEP dots</div><div class="ug-pdesc">December 2025 FOMC median projections — the official policy benchmark.</div></div>
+      </div>
+    </div>
+
+    <!-- YIELD CURVE -->
+    <div class="ug-page" id="pg-yieldcurve">
+      <p class="ug-body">The Yield Curve tab fits a Nelson-Siegel model to 7 Treasury CMT maturities and propagates per-meeting FOMC scenario shocks along the curve using Bieri-Chincarini empirical factor loadings.</p>
+      <div class="ug-head">Nelson-Siegel model</div>
+      <div class="ug-formula">
+        \[y(\tau) = \beta_0 + \beta_1 \frac{1 - e^{-\tau/\lambda}}{\tau/\lambda} + \beta_2 \left(\frac{1 - e^{-\tau/\lambda}}{\tau/\lambda} - e^{-\tau/\lambda}\right)\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">\(\beta_0\) = level (long-run) &nbsp;·&nbsp; \(\beta_1\) = slope &nbsp;·&nbsp; \(\beta_2\) = curvature &nbsp;·&nbsp; \(\lambda\) = decay</div>
+      </div>
+      <div class="ug-head">Factor cards</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">β₀ — Level</div><div class="ug-pdesc">Long-run yield to which the curve converges. Approximately the 30yr CMT.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">β₁ — Slope</div><div class="ug-pdesc">Short-end loading. Negative when curve is upward-sloping (normal). Equals 3mo minus 30yr spread.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">β₂ — Curvature</div><div class="ug-pdesc">Hump at intermediate maturities. Positive when medium-term rates deviate from simple interpolation.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">λ — Decay / τ</div><div class="ug-pdesc">Controls where the curvature hump peaks, typically 2–3 years. Optimized by Nelder-Mead.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Term premium</div><div class="ug-pdesc">\(\beta_0 - \text{EFFR}\). Compensation demanded by investors for duration risk beyond the policy rate.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">RMSE badge</div><div class="ug-pdesc">Fit quality in basis points across the 7 input tenors. Below 5 bp is excellent; above 15 bp signals a regime break.</div></div>
+      </div>
+      <div class="ug-head">Scenario shock propagation</div>
+      <p class="ug-body" style="font-size:12px">Each FOMC meeting applies cumulative rate change to the NS parameters using Bieri-Chincarini (2005) empirical loadings: 2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100 bp FFTR shift. The curve fan chart shows the resulting spot curve and instantaneous forward at each meeting date.</p>
+    </div>
+
+    <!-- TAYLOR RULE -->
+    <div class="ug-page" id="pg-taylor">
+      <p class="ug-body">Five Taylor Rule variants prescribe where the policy rate "should" be given macroeconomic inputs. The gap between each rule and the CME-implied path is the primary output — it quantifies how hawkish or dovish market pricing is relative to a given reaction function.</p>
+      <div class="ug-head">The five variants</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">Taylor 1993</div><div class="ug-pdesc">Original rule. α=1.5 on inflation gap, β=0.5 on GDP output gap. Benchmarks all subsequent variants.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">α=1.5 · β=0.5</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Balanced / Yellen 2012</div><div class="ug-pdesc">Equal weight on inflation and employment mandates. Yellen's preferred specification during the dual-mandate era.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">α=1.0 · β=1.0</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Yellen Alt1</div><div class="ug-pdesc">Replaces GDP output gap with unemployment gap via Okun's Law. Uses FOMC SEP r* as neutral rate anchor.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">Okun · SEP r*</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler (inertial)</div><div class="ug-pdesc">Partial-adjustment specification. ρ=0.85 smoothing dampens oscillations and better fits actual Fed behaviour.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">ρ=0.85</span></div></div>
+        <div class="ug-pcard" style="border:1px solid rgba(139,92,246,.4)"><div class="ug-ptitle" style="color:var(--taylor)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic error-correction specification from Bieri-Chincarini (2005) Eqs. 23–25. Highest R² for FFTR prediction (Exhibit 7). Designated signal source for the Riding filter cascade.</div><div class="ug-pills"><span class="ug-pill" style="background:rgba(139,92,246,.15);color:var(--taylor)">λ₁ · λ₂ · λ₃ · γ</span></div></div>
+      </div>
+      <div class="ug-head">Output charts</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-ptitle">Prescribed vs CME path</div><div class="ug-pdesc">All five rule paths plotted alongside the CME market-implied path. Visual gap reveals policy stance relative to each reaction function.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Taylor−CME gap</div><div class="ug-pdesc">Meeting-by-meeting spread between each rule's prescribed rate and CME implied. Positive = market pricing is too dovish vs rule.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Rule comparison matrix</div><div class="ug-pdesc">Per-meeting table showing prescribed rate from all five variants side-by-side, with the JR ECM signal column highlighted.</div></div>
+      </div>
+    </div>
+
+    <!-- RIDING -->
+    <div class="ug-page" id="pg-riding">
+      <p class="ug-body">The Riding tab implements the Bieri-Chincarini (2005) riding-the-yield-curve framework. For each instrument–horizon pair, it calculates whether you earn more by buying a longer bond and selling it after a shorter horizon (riding) than by holding an instrument that matures at the horizon date.</p>
+      <div class="ug-head">Excess holding-period return</div>
+      <div class="ug-formula">
+        \[\text{XHPR}(m, h) = \text{HPR}(m, h) - \text{mmHPR}(h)\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">\(m\) = instrument maturity &nbsp;·&nbsp; \(h\) = holding horizon &nbsp;·&nbsp; mmHPR = money-market alternative (Eq. 8)</div>
+      </div>
+      <div class="ug-formula">
+        \[\text{Cushion}(m,h) = \frac{y(m) - y(h)}{D(m,h)} \times 100\text{ bp}\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">Break-even yield rise the rider can absorb before underperforming the hold-to-maturity alternative (Eqs. 15–16)</div>
+      </div>
+      <div class="ug-head">The 7 × 5 HPR matrix</div>
+      <p class="ug-body" style="font-size:12px">Rows: 6-month, 1yr, 2yr, 3yr, 5yr, 10yr, 30yr instruments. Columns: 1mo, 3mo, 6mo, 12mo, 18mo horizons. Each cell shows annualized XHPR (pp) and cushion (bp) with ride/marginal/hold coloring. Click any cell to open the cushion detail panel with a gauge bar showing the cell's percentile relative to the 75th-percentile cutoff.</p>
+      <div class="ug-head">Five filter rules</div>
+      <div class="ug-grid">
+        <div class="ug-pcard"><div class="ug-pnum">①</div><div class="ug-ptitle">Positive slope</div><div class="ug-pdesc">2yr−3mo spread must be positive. No riding in an inverted curve environment.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">②</div><div class="ug-ptitle">Positive cushion</div><div class="ug-pdesc">Break-even cushion must exceed zero. The most basic riding prerequisite.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">③</div><div class="ug-ptitle">75th-percentile cushion</div><div class="ug-pdesc">Cushion must exceed the 75th-percentile threshold across all cells. High-conviction riding signal only.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">④</div><div class="ug-ptitle">Taylor rule signal</div><div class="ug-pdesc">JR ECM prescribed rate below CME implied — market is pricing too many cuts vs fundamentals, riding safer.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">⑤</div><div class="ug-ptitle">CME expectations signal</div><div class="ug-pdesc">P(≥1 cut) below 50% — futures market not yet pricing easing, making riding a contrarian carry trade.</div></div>
+      </div>
+      <div class="ug-head">Duration-neutral barbell</div>
+      <p class="ug-body" style="font-size:12px">For a long instrument \(m_L\) and short instrument \(m_S\) with equal duration, the barbell weight \(\omega\) is derived from Eq. 29. The panel decomposes total riding HPR into the riding premium, overnight alternative, and buy-and-hold component (Eq. 30). The aggregate riding signal feeds directly into the Dashboard stat card.</p>
+    </div>
+
     <!-- SCENARIOS -->
     <div class="ug-page" id="pg-scenarios">
       <p class="ug-body">Scenario presets are named ZQ price configurations. Activating one reprices the entire chain — probability tree, regime bar, and all prediction market panels — in one click.</p>
@@ -596,7 +732,7 @@ footer{
     card.innerHTML=`<div class="ug-ptitle">${s.label} <span class="ug-pill" style="${tagCol};font-size:9px;padding:1px 6px">${s.tag}</span></div><div class="ug-pdesc" style="margin-top:6px">${s.desc}</div>`;
     ugSceneCards.appendChild(card);
   });
-  // Render math in all visible/hidden pages on load, re-render on tab switch
+  // Render math in all visible/hidden pages on load
   function renderAllMath(){
     if(typeof renderMathInElement!=='undefined'){
       document.querySelectorAll('.ug-page').forEach(el=>{
@@ -610,15 +746,11 @@ footer{
       });
     }
   }
-  // Patch ugShow to re-render math when a tab becomes visible
-  const _ugShowOrig=ugShow;
-  // (renderAllMath runs once on load below; tabs already rendered)
   document.addEventListener('DOMContentLoaded',renderAllMath);
-  // Fallback in case DOMContentLoaded already fired
   if(document.readyState==='complete'||document.readyState==='interactive') setTimeout(renderAllMath,0);
   </script>
 
-  <div class="section">
+  <div class="section" id="cite">
     <div class="section-label">Cite this tool</div>
     <div class="cite-tabs">
       <button class="cite-tab act" onclick="switchCite('apa',this)">APA</button>
@@ -628,13 +760,13 @@ footer{
     <div class="cite-box">
       <button class="cite-copy" onclick="copyCite()">Copy</button>
       <div class="cite-content act" id="cite-apa">
-        <pre class="cite-text">Bieri, D. (2026). <em>Fed Funds probability tree: CME FedWatch methodology with Kalshi and Polymarket overlay</em> (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds</pre>
+        <pre class="cite-text">Bieri, D. (2026). <em>MSE — FOMC Monitor: A multi-market framework for Federal Reserve policy analytics</em> (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds</pre>
       </div>
       <div class="cite-content" id="cite-bib">
-        <pre class="cite-text">@software{bieri2026fedfunds,
+        <pre class="cite-text">@software{bieri2026mse,
   author    = {Bieri, David},
-  title     = {Fed Funds Probability Tree: {CME} {FedWatch} Methodology
-               with {Kalshi} and {Polymarket} Overlay},
+  title     = {{MSE} --- {FOMC} Monitor: A Multi-Market Framework
+               for {Federal Reserve} Policy Analytics},
   year      = {2026},
   version   = {3.0},
   publisher = {GitHub},
@@ -642,21 +774,25 @@ footer{
 }</pre>
       </div>
       <div class="cite-content" id="cite-chi">
-        <pre class="cite-text">Bieri, David. 2026. "Fed Funds Probability Tree: CME FedWatch Methodology with Kalshi and Polymarket Overlay." v3.0. Interactive tool. GitHub. https://github.com/davidbieri/fed-funds.</pre>
+        <pre class="cite-text">Bieri, David. 2026. "MSE — FOMC Monitor: A Multi-Market Framework for Federal Reserve Policy Analytics." v3.0. Interactive tool. GitHub. https://github.com/davidbieri/fed-funds.</pre>
       </div>
     </div>
   </div>
 
   <footer>
     <div class="footer-left">
-      Fed Funds Probability Tree · v3.0 · MIT License<br>
-      Virginia Tech · School of Public &amp; International Affairs
+      David Bieri · School of Public &amp; International Affairs · Virginia Tech<br>
+      <abbr title="Marriner S. Eccles · Mean Squared Error" style="text-decoration:none;cursor:help">MSE</abbr> — FOMC Monitor · v3.0 · MIT License<br>
+      <span style="color:var(--faint);font-size:10px">For educational and research purposes only. Not financial advice.</span><br>
+      <span style="color:var(--faint);font-size:10px;font-style:italic">MSE — after Marriner S. Eccles (1890–1977), principal economic philosopher of the New Deal, architect of the modern Federal Reserve.</span>
     </div>
     <div class="footer-right">
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
       <a class="foot-link" href="fed_funds_probability_tree.html">Tool</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+      <a class="foot-link" href="#cite">Cite</a>
+      <a class="foot-link" href="https://spia.vt.edu" target="_blank">Virginia Tech SPIA</a>
     </div>
   </footer>
 
@@ -665,7 +801,42 @@ footer{
 <script>
 function openModal(){document.getElementById('modal').classList.add('open')}
 function closeModal(){document.getElementById('modal').classList.remove('open')}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()})
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+
+// Nav scroll highlighting
+(function(){
+  const sections = ['tabs','sources','guide','cite'];
+  const navLinks = {};
+  sections.forEach(id => {
+    navLinks[id] = document.querySelector('.nav-link[href="#' + id + '"]');
+  });
+
+  function setActive(id) {
+    sections.forEach(s => { if(navLinks[s]) navLinks[s].classList.remove('active'); });
+    if(id && navLinks[id]) navLinks[id].classList.add('active');
+  }
+
+  function onScroll() {
+    // Bottom-of-page: activate cite
+    if((window.innerHeight + window.scrollY) >= document.body.scrollHeight - 60) {
+      setActive('cite');
+      return;
+    }
+    // Find the last section whose top is within the upper third of the viewport
+    const threshold = window.innerHeight * 0.35;
+    let active = null;
+    sections.forEach(id => {
+      const el = document.getElementById(id);
+      if(!el) return;
+      const top = el.getBoundingClientRect().top;
+      if(top <= threshold) active = id;
+    });
+    setActive(active);
+  }
+
+  window.addEventListener('scroll', onScroll, {passive: true});
+  onScroll();
+})();
 
 let activeCite='apa';
 function switchCite(id,btn){
