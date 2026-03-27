@@ -3344,6 +3344,105 @@ function financeNeutralRuleHtml(financeNeutralRule, trD) {
     'r*_finance = r*_standard + lfc \u00d7 NFCI \u00d7 100bp  \u00b7  NFCI: '+nfci.toFixed(2)+' \u00b7 lfc: '+nfciWeight.toFixed(1)+'</div></div>';
 }
 
+function dollarStressGaugeSvg(swapLines, basisBp) {
+  var val = Math.min(100, swapLines||0);
+  var cx=120, cy=110, r=80;
+  var angle = 180 - (val/100)*180;
+  var rad = angle*Math.PI/180;
+  var nx = cx + r*Math.cos(Math.PI-rad);
+  var ny = cy - r*Math.sin(Math.PI-rad);
+  function arcSeg(a1,a2,col) {
+    var r1=(180-a1)*Math.PI/180, r2=(180-a2)*Math.PI/180;
+    return '<path d="M '+(cx+r*Math.cos(r1)).toFixed(1)+' '+(cy-r*Math.sin(r1)).toFixed(1)+
+      ' A '+r+' '+r+' 0 0 1 '+(cx+r*Math.cos(r2)).toFixed(1)+' '+(cy-r*Math.sin(r2)).toFixed(1)+
+      '" fill="none" stroke="'+col+'" stroke-width="14"/>';
+  }
+  var ndlCol = val>25?'var(--c-kal)':val>5?'var(--c-overlay)':'var(--c-sofr)';
+  var basisCol = basisBp>30?'var(--c-kal)':basisBp>15?'var(--c-overlay)':'var(--c-sofr)';
+  return '<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" style="display:block">'+
+    arcSeg(0,5,'rgba(16,185,129,.35)')+arcSeg(5,25,'rgba(245,158,11,.35)')+arcSeg(25,100,'rgba(249,115,22,.35)')+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="'+ndlCol+'" stroke-width="2.5" stroke-linecap="round"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+ndlCol+'"/>'+
+    '<text x="'+cx+'" y="'+(cy-10)+'" fill="'+ndlCol+'" font-size="18" font-weight="500" text-anchor="middle" font-family="var(--font-mono)">$'+val.toFixed(0)+'bn</text>'+
+    '<text x="'+cx+'" y="'+(cy+6)+'" fill="var(--color-text-secondary)" font-size="9" text-anchor="middle">swap lines outstanding</text>'+
+    '<text x="196" y="28" fill="'+basisCol+'" font-size="10" text-anchor="middle">Basis</text>'+
+    '<text x="196" y="42" fill="'+basisCol+'" font-size="11" font-family="var(--font-mono)" text-anchor="middle">'+
+    (basisBp>=0?'+':'')+basisBp+'bp</text>'+
+    '<text x="196" y="56" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">'+
+    (basisBp>30?'Stressed':basisBp>15?'Elevated':'Normal')+'</text></svg>';
+}
+
+function doomLoopScatterSvg(termPremiumBp, hySpread, fsD) {
+  var w=320, h=220, padL=50, padR=20, padT=20, padB=40;
+  var chartW=w-padL-padR, chartH=h-padT-padB;
+  var xMin=-100, xMax=300, yMin=200, yMax=800;
+  var tp = termPremiumBp!==null ? termPremiumBp : 80;
+  var hy = hySpread||315;
+  var tpAlert = fsD.termPremiumAlert||100;
+  var hyAlert = fsD.hySpreadAlert||500;
+  function toX(v){return padL + ((v-xMin)/(xMax-xMin))*chartW;}
+  function toY(v){return h-padB - ((v-yMin)/(yMax-yMin))*chartH;}
+  var dotX = toX(Math.max(xMin,Math.min(xMax,tp)));
+  var dotY = toY(Math.max(yMin,Math.min(yMax,hy)));
+  var inQ1 = tp>tpAlert && hy>hyAlert;
+  var dotCol = inQ1?'var(--c-kal)':tp>tpAlert?'var(--c-overlay)':hy>hyAlert?'var(--c-poly)':'var(--c-sofr)';
+  var stateLabel = inQ1?'Doom loop active':tp>tpAlert?'Duration risk':hy>hyAlert?'Credit stress':'Risk-on';
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
+    '<rect x="'+toX(tpAlert).toFixed(1)+'" y="'+padT+'" width="'+(w-padR-toX(tpAlert)).toFixed(1)+'" height="'+(toY(hyAlert)-padT).toFixed(1)+'" fill="rgba(249,115,22,.04)"/>'+
+    '<line x1="'+toX(tpAlert).toFixed(1)+'" y1="'+padT+'" x2="'+toX(tpAlert).toFixed(1)+'" y2="'+(h-padB)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>'+
+    '<line x1="'+padL+'" y1="'+toY(hyAlert).toFixed(1)+'" x2="'+(w-padR)+'" y2="'+toY(hyAlert).toFixed(1)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>'+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<text x="'+(padL-4)+'" y="'+(h-padB+12)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+yMin+'</text>'+
+    '<text x="'+(padL-4)+'" y="'+(padT+8)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+yMax+'</text>'+
+    '<text x="'+padL+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="8">'+xMin+'</text>'+
+    '<text x="'+(w-padR)+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+xMax+'</text>'+
+    '<text x="'+(padL+chartW/2)+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Term premium (bp)</text>'+
+    '<text x="'+(padL-4)+'" y="'+(padT+chartH/2)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="end" transform="rotate(-90,'+(padL-30)+','+(padT+chartH/2)+')">HY OAS (bp)</text>'+
+    '<circle cx="'+dotX.toFixed(1)+'" cy="'+dotY.toFixed(1)+'" r="7" fill="'+dotCol+'" opacity="0.85"/>'+
+    '<text x="'+(dotX+10).toFixed(1)+'" y="'+(dotY-8).toFixed(1)+'" fill="'+dotCol+'" font-size="9">'+stateLabel+'</text>'+
+    '<text x="'+(toX(tpAlert)+3).toFixed(1)+'" y="'+(padT+8)+'" fill="var(--color-text-tertiary)" font-size="8">'+tpAlert+'bp</text>'+
+    '<text x="'+(padL+3)+'" y="'+(toY(hyAlert)-3).toFixed(1)+'" fill="var(--color-text-tertiary)" font-size="8">'+hyAlert+'bp</text></svg>';
+}
+
+function financialCyclePhaseSvg(financialCyclePhase) {
+  if (!financialCyclePhase) return '<svg viewBox="0 0 200 200"></svg>';
+  var nfciPctile = financialCyclePhase.nfciPctile||0.5;
+  var hySpreadPctile = financialCyclePhase.hySpreadPctile||0.5;
+  var swapStress = financialCyclePhase.swapStress||0;
+  var composite = financialCyclePhase.composite;
+  var phase = financialCyclePhase.phase;
+  var axes = [
+    {label:'NFCI',    val:nfciPctile},
+    {label:'HY Sprd', val:hySpreadPctile},
+    {label:'Swaps',   val:swapStress},
+    {label:'Basis',   val:0.3},
+    {label:'Term Prm',val:0.35}
+  ];
+  var n=axes.length, cx=100, cy=100, maxR=70;
+  var phaseCol = phase==='stress'?'var(--c-kal)':phase==='tightening'?'var(--c-overlay)':
+    phase==='expansionary'?'var(--c-sofr)':'var(--c-cme)';
+  function pt(i, radius) {
+    var a=(i/n)*2*Math.PI - Math.PI/2;
+    return {x: cx+radius*Math.cos(a), y: cy+radius*Math.sin(a)};
+  }
+  var rings = '';
+  [0.25,0.5,0.75,1].forEach(function(pct) {
+    var pts = axes.map(function(_,i) { var p=pt(i,maxR*pct); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+    rings += '<polygon points="'+pts+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width="0.5"/>';
+  });
+  var axLines = '';
+  axes.forEach(function(ax,i) {
+    var e=pt(i,maxR), l=pt(i,maxR+14);
+    axLines += '<line x1="'+cx+'" y1="'+cy+'" x2="'+e.x.toFixed(1)+'" y2="'+e.y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width="0.75"/>'+
+      '<text x="'+l.x.toFixed(1)+'" y="'+(l.y+4).toFixed(1)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">'+ax.label+'</text>';
+  });
+  var dataPts = axes.map(function(ax,i) { var p=pt(i,maxR*ax.val); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+  return '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="display:block">'+rings+axLines+
+    '<polygon points="'+dataPts+'" fill="'+phaseCol+'" fill-opacity="0.2" stroke="'+phaseCol+'" stroke-width="1.5"/>'+
+    '<text x="'+cx+'" y="'+(cy+4)+'" fill="'+phaseCol+'" font-size="11" font-weight="500" text-anchor="middle">'+composite+'</text></svg>';
+}
+
 function FinancialStabilityTab({state, dispatch, finance}) {
   var fin = finance;
   var pciD = state.pciD;
@@ -3393,19 +3492,79 @@ function FinancialStabilityTab({state, dispatch, finance}) {
   html+='<div class="k-note">Reference: BIS Annual Report 2016, p.79 \u2014 Borio &amp; Disyatat, "Low for long is not low enough"</div>';
   html+='</div>';
 
-  // Placeholder for Panels 3-5
-  html+='<div class="k-panel" style="color:var(--color-text-tertiary);font-size:12px;text-align:center;padding:24px">';
-  html+='Panels 3\u20135 (Dollar Stress \u00b7 Doom Loop \u00b7 Phase Clock) \u2014 Session 5-G';
+  // Panel 3 -- Global Dollar Stress
+  var basisBp = Math.round(((100-(state.srD[0]?state.srD[0].price:96.75))-(fin.zqAvgs&&fin.zqAvgs[0]?fin.zqAvgs[0]:0))*100);
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Global Dollar Stress \u2014 Swap Lines + Basis</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">Fed central bank liquidity swap outstandings (H.4.1) + SOFR\u2013EFFR basis. Non-zero swap lines signal offshore dollar scarcity. Sep 2008 peak: ~$580bn.</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">';
+  html+=dollarStressGaugeSvg(pciD.fred.swapLines||0, basisBp);
+  html+='<div style="flex:1;font-size:11px;color:var(--color-text-secondary);line-height:1.7">';
+  html+='Basis 5\u201315bp: Normal secured/unsecured spread<br>';
+  html+='Basis 15\u201330bp: Elevated \u2014 monitor for repo stress<br>';
+  html+='Basis over 30bp: Stressed \u2014 Sep 2019 analog<br>';
+  html+='Basis below 0bp: Distorted \u2014 possible collateral shortage';
+  html+='</div></div>';
+  html+='<div class="k-note">Source: FRED SWPT (weekly) \u00b7 Basis from MSE SOFR Strip tab</div>';
   html+='</div>';
 
-  // Wire the lfc slider
+  // Panel 4 -- Doom Loop Scatter
+  var termPremBp = fin.nsFitParams ? Math.round((fin.nsFitParams.beta0 - state.fwLb)*100) : null;
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Doom Loop Monitor \u2014 Term Premium vs. HY Spreads</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">BIS Ch.V: feedback loop between sovereign funding costs and credit spreads. Top-right quadrant (both elevated) = doom loop active.</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:10px">';
+  html+=doomLoopScatterSvg(termPremBp, pciD.fred.hySpread||315, fsD);
+  html+='<div style="flex:1">';
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;font-size:10px;color:var(--color-text-secondary)">';
+  html+='Term premium alert (bp): <input type="number" min="0" max="300" step="25" value="'+fsD.termPremiumAlert+'" data-fs-input="termPremiumAlert" class="fw-in" style="width:70px"/>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:10px;color:var(--color-text-secondary)">';
+  html+='HY spread alert (bp): <input type="number" min="200" max="1000" step="50" value="'+fsD.hySpreadAlert+'" data-fs-input="hySpreadAlert" class="fw-in" style="width:70px"/>';
+  html+='</div>';
+  if(termPremBp===null){
+    html+='<div style="font-size:10px;color:var(--c-overlay);margin-top:8px">Run NS fit in Yield Curve tab to populate term premium axis</div>';
+  }
+  html+='</div></div>';
+  html+='<div class="k-note">Term premium: \u03b20 \u2212 EFFR (NS fit) \u00b7 HY spread: FRED BAMLH0A0HYM2 \u00b7 Ref: BIS 2016 Ch.V</div>';
+  html+='</div>';
+
+  // Panel 5 -- Financial Cycle Phase Clock
+  var fcp = fin.financialCyclePhase;
+  var phaseDesc = '';
+  if(fcp){
+    if(fcp.phase==='expansionary') phaseDesc='Financial conditions supportive. BIS leaning-with-wind risk low.';
+    else if(fcp.phase==='midcycle') phaseDesc='Conditions broadly neutral. Monitor NFCI for directional shift.';
+    else if(fcp.phase==='tightening') phaseDesc='Finance-neutral r* above standard r*. Rate cuts have additional transmission value.';
+    else if(fcp.phase==='stress') phaseDesc='Late-cycle stress elevated. BIS doom loop risk rising. Term premium and HY spread warrant joint monitoring.';
+  }
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Financial Cycle Phase Clock</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">5-axis composite stress index. Phase: <b>'+(fcp?fcp.phaseLabel:'--')+'</b> \u00b7 Score: <b>'+(fcp?fcp.composite:'--')+'</b>/100</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:10px">';
+  html+=financialCyclePhaseSvg(fcp);
+  html+='<div style="flex:1;font-size:11px;color:var(--color-text-secondary);line-height:1.8">'+phaseDesc+'</div>';
+  html+='</div>';
+  html+='<div class="k-note">NFCI (FRED NFCI) \u00b7 HY spread (FRED BAMLH0A0HYM2) \u00b7 Swap lines (FRED SWPT) \u00b7 Ref: Borio et al. (2016), Mehrling (2016)</div>';
+  html+='</div>';
+
+  // Wire the lfc slider and alert inputs
   useEffect(function(){
-    var el = document.querySelector('[data-fs-slider="nfciWeight"]');
-    if(el){
-      var handler = function(e){dispatch({type:'UPDATE_FS_PARAM',key:'nfciWeight',value:parseFloat(e.target.value)});};
-      el.addEventListener('input', handler);
-      return function(){el.removeEventListener('input', handler);};
+    var cleanups = [];
+    var slider = document.querySelector('[data-fs-slider="nfciWeight"]');
+    if(slider){
+      var sliderH = function(e){dispatch({type:'UPDATE_FS_PARAM',key:'nfciWeight',value:parseFloat(e.target.value)});};
+      slider.addEventListener('input', sliderH);
+      cleanups.push(function(){slider.removeEventListener('input', sliderH);});
     }
+    var inputs = document.querySelectorAll('[data-fs-input]');
+    inputs.forEach(function(inp){
+      var key = inp.getAttribute('data-fs-input');
+      var h = function(e){dispatch({type:'UPDATE_FS_PARAM',key:key,value:parseInt(e.target.value)||0});};
+      inp.addEventListener('change', h);
+      cleanups.push(function(){inp.removeEventListener('change', h);});
+    });
+    return function(){cleanups.forEach(function(fn){fn();});};
   });
 
   return React.createElement(SvgPanel, {html: html});
