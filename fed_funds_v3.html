@@ -2445,7 +2445,7 @@ function sentimentGapBarsSvg(sentimentResult, meetings) {
 }
 
 function DashboardTab({state, finance}) {
-  const {chain, meetings, states, final, zqAvgs, compareSeries, pciComponents, pciResult, sentimentResult} = finance;
+  const {chain, meetings, states, final, zqAvgs, compareSeries, pciComponents, pciResult, sentimentResult, financeNeutralRule, financialCyclePhase} = finance;
   const fin = finance;
   const lb = state.fwLb;
   const fwD = state.fwD;
@@ -2497,6 +2497,19 @@ function DashboardTab({state, finance}) {
   html+='<div class="fw-stat"><div class="fw-stat-l">Signal strength</div><div class="fw-stat-v" style="color:var(--c-cme)">'+(pciComponents?(pciComponents.signalStrength*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">ZQ strip slope</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Transmission</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+(pciComponents?(pciComponents.transmission*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">SOFR-EFFR basis</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">PCI Score</div><div class="fw-stat-v" style="color:'+pciRegimeCol+'">'+(pciResult?pciResult.score:'--')+'</div><div class="fw-stat-s">'+(pciResult?pciResult.label:'--')+'</div></div>';
+
+  // -- Financial Stability stat row --
+  var nfciVal = state.pciD.fred.nfci||0;
+  var nfciStatCol = nfciVal < -0.5 ? 'var(--c-sofr)' : nfciVal > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  var leanBp = financeNeutralRule ? financeNeutralRule.leaningPremiumBp : 0;
+  var leanCol = Math.abs(leanBp)<25 ? 'var(--c-sofr)' : leanBp>0 ? 'var(--c-kal)' : 'var(--c-overlay)';
+  var fcpLabel = financialCyclePhase ? financialCyclePhase.phaseLabel : '--';
+  var fcpPhase = financialCyclePhase ? financialCyclePhase.phase : 'midcycle';
+  var fcpCol = fcpPhase==='stress'?'var(--c-kal)':fcpPhase==='tightening'?'var(--c-overlay)':fcpPhase==='expansionary'?'var(--c-sofr)':'var(--c-cme)';
+  html+='<div style="grid-column:1/-1;border-top:1px solid var(--color-border-tertiary);padding-top:12px;margin-top:4px;font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Financial Stability</div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">NFCI</div><div class="fw-stat-v" style="color:'+nfciStatCol+';font-size:15px">'+nfciVal.toFixed(2)+'</div><div class="fw-stat-s">'+(nfciVal<-0.5?'Loose':nfciVal>0.5?'Tight':'Neutral')+'</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Leaning premium</div><div class="fw-stat-v" style="color:'+leanCol+';font-size:15px">'+(leanBp>=0?'+':'')+leanBp.toFixed(0)+'bp</div><div class="fw-stat-s">BIS r* adj.</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Cycle phase</div><div class="fw-stat-v" style="color:'+fcpCol+';font-size:13px">'+fcpLabel+'</div><div class="fw-stat-s">Composite '+(financialCyclePhase?financialCyclePhase.composite:'--')+'/100</div></div>';
   html+='</div>';
 
   // -- 2. Unified rate path chart --
@@ -3443,16 +3456,21 @@ function financialCyclePhaseSvg(financialCyclePhase) {
     '<text x="'+cx+'" y="'+(cy+4)+'" fill="'+phaseCol+'" font-size="11" font-weight="500" text-anchor="middle">'+composite+'</text></svg>';
 }
 
-function FinancialStabilityTab({state, dispatch, finance}) {
+function FinancialStabilityTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
   var fin = finance;
   var pciD = state.pciD;
   var fsD = state.fsD;
 
   var html = '';
 
-  // Header
-  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">';
+  // Header with fetch buttons
+  html+='<div class="k-fetch-bar" style="flex-wrap:wrap;gap:8px">';
   html+='<div style="font-size:13px;color:var(--color-text-secondary)">BIS/Mehrling financial cycle framework \u2014 NFCI \u00b7 Swap lines \u00b7 HY spreads</div>';
+  html+='<span style="flex:1"></span>';
+  html+='<button class="refresh-btn" id="mpt-btn"'+(fetching.mpt?' disabled':'')+' onclick="window.__mptFetch()"><span'+(fetching.mpt?' class="spin"':'')+'>&#x27f3;</span> Fetch MPT</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.mpt||pciD.mpt.source)+'</span>';
+  html+='<button class="refresh-btn" id="fred-btn"'+(fetching.fred?' disabled':'')+' onclick="window.__fredFetch()"><span'+(fetching.fred?' class="spin"':'')+'>&#x27f3;</span> Fetch FRED</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.fred||(pciD.fred.fetchDate?'FRED \u00b7 '+pciD.fred.fetchDate:'Seed data'))+'</span>';
   html+='</div>';
 
   // Panel 1 -- Financial Conditions vs Policy Stance
@@ -3567,6 +3585,13 @@ function FinancialStabilityTab({state, dispatch, finance}) {
     return function(){cleanups.forEach(function(fn){fn();});};
   });
 
+  // Wire fetch buttons
+  useEffect(function(){
+    window.__mptFetch=function(){fetchMPT(state,dispatch,apiKey,setFetching,setRefreshStatus);};
+    window.__fredFetch=function(){fetchFRED(state,dispatch,apiKey,setFetching,setRefreshStatus);};
+    return function(){delete window.__mptFetch;delete window.__fredFetch;};
+  });
+
   return React.createElement(SvgPanel, {html: html});
 }
 
@@ -3578,8 +3603,8 @@ function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const finance = useFinance(state);
   const [apiKey, setApiKey] = useState('');
-  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:''});
-  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false});
+  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:'', mpt:'', fred:''});
+  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false, mpt:false, fred:false});
 
   useEffect(() => {
     try {
@@ -3630,7 +3655,7 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 9 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 10 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
@@ -3659,7 +3684,9 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {state.fwActive==='stability' && <FinancialStabilityTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='stability' && <FinancialStabilityTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','stability'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
