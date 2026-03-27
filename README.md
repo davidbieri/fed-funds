@@ -1,4 +1,4 @@
-# MSE — FOMC Monitor
+# MSE 
 
 **A multi-market framework for Federal Reserve policy analytics.**
 
@@ -17,7 +17,7 @@
 
 ## Overview
 
-MSE (FOMC Monitor) implements the CME FedWatch methodology from first principles — deriving per-meeting cut/hold/hike probabilities from 30-day Fed Funds (ZQ) futures prices — and extends it with four layers of analytical context: prediction market comparison (Kalshi and Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure modeling, Taylor Rule prescriptive analysis, and a complete Bieri-Chincarini (2005) riding-the-yield-curve calculator.
+MSE implements the CME FedWatch methodology from first principles — deriving per-meeting cut/hold/hike probabilities from 30-day Fed Funds (ZQ) futures prices — and extends it with four layers of analytical context: prediction market comparison (Kalshi and Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure modeling, Taylor Rule prescriptive analysis, and a complete Bieri-Chincarini (2005) riding-the-yield-curve calculator.
 
 All nine tabs share a single state machine. Changing any upstream input — a ZQ price, a macro variable, a scenario preset — propagates instantly through the entire `useFinance` memoization pipeline to every downstream tab.
 
