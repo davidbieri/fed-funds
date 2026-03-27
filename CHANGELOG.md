@@ -4,6 +4,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
+## [Unreleased]
+
+No sessions in progress.
+
+---
+
 ## [4.0] — March 2026
 
 ### Added — Policy Confidence Index (PCI)
