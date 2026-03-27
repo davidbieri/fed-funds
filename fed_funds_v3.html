@@ -3281,6 +3281,137 @@ function RidingTab({state, dispatch, finance}) {
 }
 
 // ============================================================================
+// FINANCIAL STABILITY TAB
+// ============================================================================
+
+function fsConditionsChartSvg(pciD, chain) {
+  var w=560, h=200, padL=50, padR=20, padT=20, padB=30;
+  var chartW=w-padL-padR, chartH=h-padT-padB;
+  var nfci = pciD.fred.nfci||0;
+  var nfciPctile = pciD.fred.nfciPctile||0.5;
+  var regime = nfci < -0.5 ? 'Loose' : nfci > 0.5 ? 'Tight' : 'Neutral';
+  var regimeCol = nfci < -0.5 ? 'var(--c-sofr)' : nfci > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  // EFFR path from chain (right axis 0-6%)
+  var chainPts = chain && chain.length ? chain.map(function(c,i) {
+    var x = padL + (i/(chain.length-1))*chartW;
+    var y = h-padB - (((c.end||0)/6)*chartH);
+    return x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ') : '';
+  // NFCI loose/tight shading (left axis -2 to +2)
+  var looseY = h-padB - (((-(-0.5)+2)/4)*chartH);
+  var tightY = h-padB - (((-0.5+2)/4)*chartH);
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
+    '<rect x="'+padL+'" y="'+looseY.toFixed(1)+'" width="'+chartW+'" height="'+(h-padB-looseY).toFixed(1)+'" fill="rgba(16,185,129,.06)"/>'+
+    '<rect x="'+padL+'" y="'+padT+'" width="'+chartW+'" height="'+(tightY-padT).toFixed(1)+'" fill="rgba(249,115,22,.06)"/>'+
+    (chainPts?'<polyline points="'+chainPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2"/>':'')+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<text x="'+(w-padR-4)+'" y="26" fill="'+regimeCol+'" font-size="11" text-anchor="end">NFCI '+nfci.toFixed(2)+'</text>'+
+    '<text x="'+(w-padR-4)+'" y="40" fill="var(--color-text-tertiary)" font-size="9" text-anchor="end">'+
+    regime+' \u00b7 '+(nfciPctile*100).toFixed(0)+'th pctile</text>'+
+    '<text x="'+(padL+4)+'" y="'+(h-padB-4)+'" fill="var(--c-cme)" font-size="9">EFFR path (ZQ)</text>'+
+    '<text x="'+(padL+4)+'" y="'+(padT+12)+'" fill="var(--c-kal)" font-size="8" opacity=".5">Tight</text>'+
+    '<text x="'+(padL+4)+'" y="'+(h-padB-14)+'" fill="var(--c-sofr)" font-size="8" opacity=".5">Loose</text></svg>';
+}
+
+function financeNeutralRuleHtml(financeNeutralRule, trD) {
+  if (!financeNeutralRule) return '<p style="color:var(--color-text-secondary);font-size:12px">Taylor Rule data not loaded</p>';
+  var rStarFinance = financeNeutralRule.rStarFinance;
+  var leaningPremiumBp = financeNeutralRule.leaningPremiumBp;
+  var nfci = financeNeutralRule.nfci;
+  var nfciWeight = financeNeutralRule.nfciWeight;
+  var rStar = trD ? (trD.naturalRate||0.5) : 0.5;
+  var premCol = Math.abs(leaningPremiumBp)<25?'var(--c-sofr)':leaningPremiumBp>0?'var(--c-kal)':'var(--c-overlay)';
+  var premLabel = Math.abs(leaningPremiumBp)<25
+    ? 'Policy broadly neutral to financial conditions'
+    : leaningPremiumBp>0 ? 'Policy leaning WITH financial tightness \u2014 amplifying instability (BIS warning)'
+    : 'Policy easing despite financial looseness \u2014 boom risk';
+  return '<div style="font-family:var(--font-mono);font-size:11px">'+
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'+
+    '<tr style="border-bottom:1px solid var(--color-border-tertiary)">'+
+    '<th style="text-align:left;color:var(--color-text-tertiary);font-weight:500;padding:4px 0;font-size:10px"></th>'+
+    '<th style="color:var(--c-cme);font-weight:500;padding:4px 6px;font-size:10px">Standard r*</th>'+
+    '<th style="color:var(--c-taylor);font-weight:500;padding:4px 6px;font-size:10px">Finance-Neutral r*</th>'+
+    '<th style="color:var(--c-overlay);font-weight:500;padding:4px 6px;font-size:10px">Leaning Premium</th></tr>'+
+    '<tr><td style="color:var(--color-text-secondary);padding:5px 0">r*</td>'+
+    '<td style="padding:5px 6px">'+rStar.toFixed(2)+'%</td>'+
+    '<td style="padding:5px 6px">'+rStarFinance.toFixed(2)+'%</td>'+
+    '<td style="color:var(--c-overlay);padding:5px 6px">'+(leaningPremiumBp>=0?'+':'')+leaningPremiumBp.toFixed(0)+'bp</td></tr>'+
+    '</table>'+
+    '<div style="padding:8px;border-radius:4px;background:var(--color-background-secondary);'+
+    'border-left:3px solid '+premCol+';color:'+premCol+';font-size:10px">'+premLabel+'</div>'+
+    '<div style="color:var(--color-text-tertiary);font-size:9px;margin-top:8px">'+
+    'r*_finance = r*_standard + lfc \u00d7 NFCI \u00d7 100bp  \u00b7  NFCI: '+nfci.toFixed(2)+' \u00b7 lfc: '+nfciWeight.toFixed(1)+'</div></div>';
+}
+
+function FinancialStabilityTab({state, dispatch, finance}) {
+  var fin = finance;
+  var pciD = state.pciD;
+  var fsD = state.fsD;
+
+  var html = '';
+
+  // Header
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">';
+  html+='<div style="font-size:13px;color:var(--color-text-secondary)">BIS/Mehrling financial cycle framework \u2014 NFCI \u00b7 Swap lines \u00b7 HY spreads</div>';
+  html+='</div>';
+
+  // Panel 1 -- Financial Conditions vs Policy Stance
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Financial Conditions vs. Policy Stance</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">NFCI (Chicago Fed, weekly) overlaid with ZQ-implied EFFR path. Green band = NFCI below \u22120.5 (loose) \u00b7 Red band = above +0.5 (tight).</div>';
+  html+=fsConditionsChartSvg(pciD, fin.chain);
+
+  // Stat cards
+  var nfci = pciD.fred.nfci||0;
+  var nfciPctile = pciD.fred.nfciPctile||0.5;
+  var swapLines = pciD.fred.swapLines||0;
+  var hySpread = pciD.fred.hySpread||315;
+  var hyPctile = pciD.fred.hySpreadPctile||0.35;
+  var nfciCol = nfci < -0.5 ? 'var(--c-sofr)' : nfci > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  var swapCol = swapLines > 5 ? 'var(--c-kal)' : 'var(--c-sofr)';
+  var hyCol = hyPctile > 0.75 ? 'var(--c-kal)' : hyPctile < 0.25 ? 'var(--c-sofr)' : 'var(--color-text-secondary)';
+
+  html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">NFCI</div><div class="fw-stat-v" style="color:'+nfciCol+';font-size:15px">'+nfci.toFixed(2)+'</div><div class="fw-stat-s">'+(nfciPctile*100).toFixed(0)+'th pctile</div></div>';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">Swap Lines</div><div class="fw-stat-v" style="color:'+swapCol+';font-size:15px">$'+swapLines.toFixed(0)+'bn</div><div class="fw-stat-s">'+(swapLines>5?'Active':'Inactive')+'</div></div>';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">HY OAS</div><div class="fw-stat-v" style="color:'+hyCol+';font-size:15px">'+hySpread+'bp</div><div class="fw-stat-s">'+(hyPctile*100).toFixed(0)+'th pctile</div></div>';
+  html+='</div>';
+  html+='<div class="k-note">NFCI: FRED NFCI \u00b7 Swap lines: FRED SWPT \u00b7 HY spread: FRED BAMLH0A0HYM2</div>';
+  html+='</div>';
+
+  // Panel 2 -- Finance-Neutral Taylor Rule
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Finance-Neutral Taylor Rule (BIS/Borio 2016)</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">r*_finance = r*_standard + lfc \u00d7 NFCI \u00d7 100bp. Leaning premium = additional tightening warranted by financial conditions.</div>';
+  html+=financeNeutralRuleHtml(fin.financeNeutralRule, state.trD);
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-top:10px">';
+  html+='<span style="font-size:11px;color:var(--color-text-secondary);font-family:var(--font-mono)">lfc:</span>';
+  html+='<input type="range" min="0" max="1" step="0.1" value="'+fsD.nfciWeight+'" style="width:120px" data-fs-slider="nfciWeight"/>';
+  html+='<span style="font-size:11px;color:var(--c-cme);font-family:var(--font-mono)">'+fsD.nfciWeight.toFixed(1)+'</span>';
+  html+='</div>';
+  html+='<div class="k-note">Reference: BIS Annual Report 2016, p.79 \u2014 Borio &amp; Disyatat, "Low for long is not low enough"</div>';
+  html+='</div>';
+
+  // Placeholder for Panels 3-5
+  html+='<div class="k-panel" style="color:var(--color-text-tertiary);font-size:12px;text-align:center;padding:24px">';
+  html+='Panels 3\u20135 (Dollar Stress \u00b7 Doom Loop \u00b7 Phase Clock) \u2014 Session 5-G';
+  html+='</div>';
+
+  // Wire the lfc slider
+  useEffect(function(){
+    var el = document.querySelector('[data-fs-slider="nfciWeight"]');
+    if(el){
+      var handler = function(e){dispatch({type:'UPDATE_FS_PARAM',key:'nfciWeight',value:parseFloat(e.target.value)});};
+      el.addEventListener('input', handler);
+      return function(){el.removeEventListener('input', handler);};
+    }
+  });
+
+  return React.createElement(SvgPanel, {html: html});
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -3313,6 +3444,7 @@ function App() {
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
     {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
     {id:'riding',     label:'\ud83d\udcca Riding'},
+    {id:'stability',  label:'\ud83c\udf10 Stability'},
   ];
 
   return (
@@ -3368,7 +3500,8 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
+      {state.fwActive==='stability' && <FinancialStabilityTab state={state} dispatch={dispatch} finance={finance}/>}
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','stability'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
