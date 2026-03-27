@@ -1958,6 +1958,247 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   return <SvgPanel html={html}/>;
 }
 
+function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {meetings, chain, zqAvgs, instFwd} = finance;
+  const lb = state.fwLb;
+  const srd = state.srD;
+  const fwd = state.fwD;
+
+  window.__srDispatch = (i,v) => dispatch({
+    type:'UPDATE_SR_PRICE', i, value:parseFloat(v)||state.srD[i].price
+  });
+
+  useEffect(()=>{
+    window.__sofrFetch=()=>fetchSOFR(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    return ()=>{delete window.__sofrFetch;};
+  });
+
+  // -- Fetch bar --
+  let html='<div class="k-fetch-bar">';
+  html+='<button class="refresh-btn" id="sofr-btn"'+(fetching.sofr?' disabled':'')+' onclick="window.__sofrFetch()"><span'+(fetching.sofr?' class="spin"':'')+'>&#x27f3;</span> Fetch SR3 data</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.sofr||'Seed data \u2014 click to fetch live SR3 prices')+'</span>';
+  html+='<span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">';
+  html+='<span class="k-dot" style="background:var(--c-sofr)"></span> SR3 implied SOFR &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-cme)"></span> ZQ quarterly avg EFFR &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-sofr-fwd);border:1px dashed var(--c-sofr)"></span> 3M inst. forward &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP dots';
+  html+='</span></div>';
+
+  // -- Panel A: contract table --
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">SR3 contract strip \u2014 3-month SOFR futures (CME)</span><span class="k-contract">SR3M6 \u2192 SR3Z7</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt">';
+  html+='<thead><tr><th>Contract</th><th>Quarter</th><th>SR3 price</th>';
+  html+='<th>Impl. SOFR</th><th>ZQ avg EFFR</th><th>Basis (bp)</th><th>3M inst. fwd</th>';
+  html+='</tr></thead><tbody>';
+  srd.forEach((s,i)=>{
+    const sofrRate=(100-s.price).toFixed(4);
+    const zqAvg=zqAvgs[i];
+    const basis=zqAvg!==null?((100-s.price-zqAvg)*100).toFixed(1):'\u2014';
+    const bCol=basis!=='\u2014'?(parseFloat(basis)>0?'var(--color-text-info)':'var(--color-text-danger)'):'var(--color-text-tertiary)';
+    const fwdVal=instFwd[i]!==null?instFwd[i].toFixed(4):'\u2014';
+    html+='<tr>';
+    html+='<td style="font-family:var(--font-mono);font-size:11px;color:var(--c-sofr)">'+s.ticker+'</td>';
+    html+='<td style="white-space:nowrap">'+s.qLabel+'</td>';
+    html+='<td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="'+s.price+'" style="width:72px" onchange="window.__srDispatch('+i+',this.value)"></td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrRate+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+(zqAvg!==null?zqAvg.toFixed(4)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+bCol+'">'+(basis!=='\u2014'?(parseFloat(basis)>0?'+':'')+basis:basis)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr-fwd)">'+(fwdVal!=='\u2014'?fwdVal+'%':fwdVal)+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">Basis = (SR3 implied SOFR \u2212 ZQ quarterly avg EFFR) \u00d7 100, in basis points. Historically 5\u201315bp reflecting the repo/deposit spread between SOFR and EFFR. Instantaneous forward = 2\u00d7r<sub>t+1</sub> \u2212 r<sub>t</sub> \u2014 the marginal rate the market prices for each successive quarter, stripping out the averaging effect of the futures contract.</div>';
+  html+='</div>';
+
+  // -- Panel B: main chart --
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Forward rate curves \u2014 SR3 SOFR strip vs ZQ EFFR chain vs Fed SEP</span>';
+  html+='<span class="k-contract">SR3 vs ZQ vs Dec 2025 SEP</span></div>';
+  html+=sofrMainChart(zqAvgs,instFwd,lb,srd,state.kalshiD);
+  html+='<div class="k-note">Three forward rate curves on a common axis. The SR3 strip (green) typically trades a few basis points above the ZQ-derived EFFR path (blue) \u2014 this persistent basis reflects the credit/liquidity premium embedded in SOFR. The instantaneous forward curve (dashed green) extracts the marginal rate implied by each successive quarterly contract, removing the averaging effect; it will lead the SR3 rate lower at inflection points in the easing cycle. Purple circles: Fed December 2025 SEP median projections at year-end 2026 and 2027 horizons.</div>';
+  html+='</div>';
+
+  // -- Panels C1 + C2 --
+  html+='<div class="k-grid">';
+
+  // Basis bars
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">SOFR\u2013EFFR basis by quarter (bp)</span><span class="k-contract">SR3 \u2212 ZQ avg</span></div>';
+  html+=basisBarsSvg(zqAvgs,srd);
+  html+='<div class="k-note">Positive basis = SOFR trades above EFFR, as expected. A widening basis signals stress in overnight repo markets or increased demand for SOFR-linked instruments. A compression toward zero would suggest convergence of money market conditions.</div>';
+  html+='</div>';
+
+  // Key stats panel
+  const currentBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const sofrTerminal=(100-srd[srd.length-1].price).toFixed(2);
+  const effrTerminal=fwd[fwd.length-1]?(100-fwd[fwd.length-1].price).toFixed(2):'\u2014';
+  const stripSlope=((100-srd[srd.length-1].price)-(100-srd[0].price)).toFixed(2);
+  const fwdMin=instFwd.filter(v=>v!==null);
+  const troughFwd=fwdMin.length?Math.min(...fwdMin).toFixed(2):'\u2014';
+  const troughQtr=fwdMin.length?srd[instFwd.indexOf(Math.min(...fwdMin))].qLabel:'\u2014';
+
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Strip summary statistics</span></div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Near-term basis</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+(currentBasis!=='\u2014'?'+':'')+currentBasis+' bp</div><div class="fw-stat-s">SR3M6 \u2212 ZQ Q2 avg</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal (Dec 27)</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+sofrTerminal+'%</div><div class="fw-stat-s">SR3Z7 implied</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">EFFR terminal (Mar 27)</div><div class="fw-stat-v" style="color:var(--c-cme);font-size:16px">'+effrTerminal+'%</div><div class="fw-stat-s">ZQ Mar 2027 implied</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Strip slope</div><div class="fw-stat-v" style="color:'+(parseFloat(stripSlope)<0?'var(--color-text-info)':'var(--color-text-danger)')+';font-size:16px">'+stripSlope+'%</div><div class="fw-stat-s">Dec 27 minus Jun 26</div></div>';
+  html+='<div class="fw-stat" style="grid-column:1/-1"><div class="fw-stat-l">Forward trough</div><div class="fw-stat-v" style="color:var(--c-sofr-fwd);font-size:16px">'+troughFwd+'%</div><div class="fw-stat-s">Inst. fwd minimum \u2014 '+troughQtr+'</div></div>';
+  html+='</div>';
+  html+='<div class="k-note">The instantaneous forward trough marks the quarter where the SR3 strip prices the most aggressive easing \u2014 where the marginal rate bottoms before potentially rising toward neutral. This is distinct from the terminal rate level implied by the strip\'s endpoint.</div>';
+  html+='</div>';
+  html+='</div>';
+
+  return <SvgPanel html={html}/>;
+}
+
+function DashboardTab({state, finance}) {
+  const {chain, meetings, states, final, zqAvgs, compareSeries} = finance;
+  const lb = state.fwLb;
+  const fwD = state.fwD;
+  const kD = state.kalshiD;
+  const pD = state.polyD;
+  const srd = state.srD;
+  const rideData = finance.rideData;
+
+  // -- 1. Summary stat bar --
+  let se='3.64';
+  for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start.toFixed(2);break;}}
+  const pC1=Object.entries(final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+  const expC=Object.entries(final).reduce((s,[k,p])=>s+(-parseInt(k))*p,0);
+  const expR=(lb-expC*.25).toFixed(2);
+  const cmeExpCC=Object.entries(cmeCutCountDist(final,fwD)).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const sofrNear=(100-srd[0].price).toFixed(2);
+  const sofrTerm=(100-srd[srd.length-1].price).toFixed(2);
+  const nearBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const activeName=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline (seed)';
+  const cSeries=compareSeries;
+
+  // Riding signal card
+  const defaultCell = rideData?.[3]?.[1];
+  const rideSignalVal = defaultCell?.signal || '\u2014';
+  const rideCardHtml = '<div class="fw-stat"><div class="fw-stat-l">Riding signal</div><div class="fw-stat-v" style="font-size:13px;color:'+(rideSignalVal==='ride'?'var(--color-text-success)':rideSignalVal==='hold'?'var(--color-text-danger)':'var(--color-text-secondary)')+'">'+
+    (rideSignalVal==='ride'?'RIDE \u2713':rideSignalVal==='hold'?'HOLD \u2717':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo \u00b7 '+
+    Object.values(state.rideFilters||{}).filter(Boolean).length+' filters active</div></div>';
+
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">';
+  html+='<div class="fw-stat"><div class="fw-stat-l">EFFR start</div><div class="fw-stat-v">'+se+'%</div><div class="fw-stat-s">Current effective</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div><div class="fw-stat-s">CME 12-month</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Exp. terminal</div><div class="fw-stat-v">'+expR+'%</div><div class="fw-stat-s">CME implied lb</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Exp. cuts 2026</div><div class="fw-stat-v" style="font-size:15px">';
+  html+='<span style="color:var(--c-cme)">'+cmeExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
+  html+='<span style="color:var(--c-kal)">'+kalExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
+  html+='<span style="color:var(--c-poly)">'+polyExpCC.toFixed(1)+'</span>';
+  html+='</div><div class="fw-stat-s">CME \u00b7 Kal \u00b7 Poly</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR near-term</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrNear+'%</div><div class="fw-stat-s">SR3M6 (Q2 2026)</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrTerm+'%</div><div class="fw-stat-s">SR3Z7 (Q4 2027)</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">'+activeName+'</div>'+(cSeries?'<div class="fw-stat-s" style="color:var(--c-overlay)">vs '+cSeries.label+'</div>':'<div class="fw-stat-s">No compare</div>')+'</div>';
+  html+=rideCardHtml;
+  html+='</div>';
+
+  // -- 2. Unified rate path chart --
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Unified rate path \u2014 CME EFFR chain \u00b7 Kalshi implied \u00b7 SR3 SOFR strip \u00b7 Compare scenario</span>';
+  html+='<span style="display:flex;gap:8px;font-size:10px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap">';
+  html+='<span><span class="k-dot" style="background:var(--c-cme)"></span>CME</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-kal)"></span>Kalshi</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-sofr)"></span>SR3 SOFR</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-dots)"></span>Fed SEP</span>';
+  if(cSeries) html+='<span><span class="k-dot" style="background:var(--c-overlay)"></span>'+cSeries.label+'</span>';
+  html+='</span></div>';
+  html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs,fwD,kD,srd);
+  html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026\u2013Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' \u2192 '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
+  html+='</div>';
+
+  // -- 3. Cross-market divergence table --
+  const comps=getMeetingComps(meetings,kD,pD);
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Cross-market divergence \u2014 all sources per meeting</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt">';
+  html+='<thead><tr><th>Meeting</th><th>CME exp. rate</th><th>Kalshi imp.</th><th>Kal\u2212CME</th>';
+  html+='<th>CME P(cut)</th><th>Kal P(cut)</th><th>Poly P(cut)</th><th>SOFR (qtr)</th><th>Basis bp</th>';
+  html+='</tr></thead><tbody>';
+  let si3=0;
+  meetings.forEach((m,mi)=>{
+    while(si3<fwD.length&&fwD[si3].lb!==m.lb)si3++;
+    const s=states[mi+1]||states[states.length-1];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    const cmeRate=(lb+ek*.25).toFixed(2);
+    const kalRate=kD.kalshiRate[m.lb]?kD.kalshiRate[m.lb].toFixed(2):'\u2014';
+    const kalDiff=kD.kalshiRate[m.lb]?((kD.kalshiRate[m.lb]-(lb+ek*.25))*100).toFixed(0)+'bp':'\u2014';
+    const kd2=kD.meetings[m.lb],pd2=pD.meetings[m.lb];
+    const cmeCut=((m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0));
+    const kCut=kd2?(kd2.cut25||0)+(kd2.cut50||0):null;
+    const pCut=pd2?(pd2.cut25||0)+(pd2.cut50||0):null;
+    const srRow=srd.find(s2=>s2.lb===m.lb);
+    const zqAvgIdx=srd.findIndex(s2=>s2.lb===m.lb);
+    const basis=srRow&&zqAvgs[zqAvgIdx]!==null?((100-srRow.price-zqAvgs[zqAvgIdx])*100).toFixed(1)+'bp':'\u2014';
+    const sofrR=srRow?(100-srRow.price).toFixed(2)+'%':'\u2014';
+    const diffCol=kD.kalshiRate[m.lb]?(parseFloat(kalDiff)>5?'var(--c-kal)':parseFloat(kalDiff)<-5?'var(--color-text-danger)':'var(--color-text-tertiary)'):'var(--color-text-tertiary)';
+    html+='<tr>';
+    html+='<td style="white-space:nowrap;font-weight:500">'+(m.label||m.lb)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+cmeRate+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+kalRate+(kalRate!=='\u2014'?'%':'')+'</td>';
+    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+diffCol+'">'+kalDiff+'</td>';
+    html+='<td style="font-family:var(--font-mono)">'+(cmeCut*100).toFixed(1)+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+(kCut!==null?(kCut*100).toFixed(1)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-poly)">'+(pCut!==null?(pCut*100).toFixed(1)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrR+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:'+(basis!=='\u2014'&&parseFloat(basis)>0?'var(--c-sofr)':'var(--color-text-danger)')+'">'+basis+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">Single table reading all four live data stores simultaneously. Kal\u2212CME in bp: the spread between Kalshi\'s implied rate and the CME-derived expected EFFR at that meeting date \u2014 the key cross-market dislocation signal. SOFR column and basis only shown for quarterly contract dates (SR3 alignment).</div>';
+  html+='</div>';
+
+  // -- 4. Regime summary box --
+  const hikeRisk=getCmeHikeProb(meetings);
+  const regimeColor=hikeRisk>0.10?'var(--color-text-danger)':pC1>0.70?'var(--color-text-info)':'var(--color-text-secondary)';
+  const regimeLabel=hikeRisk>0.15?'Re-tightening risk':hikeRisk>0.08?'Elevated hike tail':pC1>0.85?'Strong easing path':pC1>0.50?'Moderate easing bias':'Policy on hold';
+  const warshP=(pD.fedChair['Kevin Warsh']||0),riederP=(pD.fedChair['Rick Rieder']||0);
+  const regimeRisk=warshP>0.40?'High hawkish regime-change risk':warshP>0.25?'Moderate regime-change risk':'Low regime-change risk';
+  html+='<div class="k-grid">';
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Policy regime summary</span></div>';
+  html+='<div style="font-size:22px;font-weight:500;color:'+regimeColor+';margin-bottom:8px">'+regimeLabel+'</div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">';
+  html+='<div>CME hike tail: <b style="color:var(--color-text-warning)">'+(hikeRisk*100).toFixed(1)+'%</b></div>';
+  html+='<div>Kalshi hike any: <b style="color:var(--c-kal)">'+(kD.hikeAny*100).toFixed(1)+'%</b></div>';
+  html+='<div>Poly hike 2026: <b style="color:var(--c-poly)">'+(pD.hikeAny*100).toFixed(1)+'%</b></div>';
+  html+='<div>Emergency cut: <b style="color:var(--c-poly)">'+(pD.emergencyCut*100).toFixed(1)+'%</b></div>';
+  html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
+  html+='Chair regime risk: <b>'+regimeRisk+'</b><br>';
+  html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% \u00b7 Rieder '+(riederP*100).toFixed(0)+'%</span>';
+  html+='</div></div></div>';
+
+  // Scenario delta panel
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Scenario delta \u2014 compare vs active</span></div>';
+  if(cSeries){
+    html+='<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>'+activeName+'</b> \u00b7 Compare: <b style="color:var(--c-overlay)">'+cSeries.label+'</b></div>';
+    const actExp=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+    const cExp=Object.entries(cSeries.final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+    const delta=((cExp-actExp)*100).toFixed(0);
+    const deltaCol=parseInt(delta)<0?'var(--color-text-info)':parseInt(delta)>0?'var(--color-text-danger)':'var(--color-text-secondary)';
+    const actP1=Object.entries(final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+    const cP1=Object.entries(cSeries.final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    html+='<div class="fw-stat"><div class="fw-stat-l">Rate delta</div><div class="fw-stat-v" style="font-size:16px;color:'+deltaCol+'">'+(parseInt(delta)>0?'+':'')+delta+' bp</div><div class="fw-stat-s">Compare vs active terminal</div></div>';
+    html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut) delta</div><div class="fw-stat-v" style="font-size:16px;color:var(--c-overlay)">'+((cP1-actP1)*100).toFixed(1)+'pp</div><div class="fw-stat-s">Compare minus active</div></div>';
+    html+='</div>';
+  } else {
+    html+='<div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Set a compare scenario in the Futures Inputs tab to see the cross-scenario delta here \u2014 terminal rate difference in bp, P(\u22651 cut) spread, and path divergence.</div>';
+  }
+  html+='</div></div>';
+
+  return <SvgPanel html={html}/>;
+}
+
 function buildRuleComparisonTable(trRates, effrStart, fwLb) {
   const rules = [
     {key:'taylor93',      label:'Taylor 1993',        note:'Original \u2014 r*=2%, \u03b2=0.5, GDP gap'},
@@ -2707,12 +2948,16 @@ function App() {
       {state.fwActive==='kalshi' && <KalshiTab state={state} dispatch={dispatch} finance={finance}
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {state.fwActive==='sofr' && <SofrTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {state.fwActive==='dashboard' && <DashboardTab state={state} finance={finance}/>}
       {state.fwActive==='taylor' && <TaylorRuleTab state={state} dispatch={dispatch} finance={finance}/>}
       {state.fwActive==='yieldcurve' && <YieldCurveTab state={state} dispatch={dispatch} finance={finance}
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','taylor','yieldcurve','riding'].includes(state.fwActive) &&
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
