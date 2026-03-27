@@ -1064,6 +1064,59 @@ async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus)
   finally{setFetching(f=>({...f, sofr:false}));}
 }
 
+async function fetchMPT(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, mpt:true}));
+  setRefreshStatus(s=>({...s, mpt:'Searching Atlanta Fed MPT data\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Visit https://www.atlantafed.org/research-and-data/data/market-probability-tracker and find the most recent probability distribution data for SOFR futures options. For each of the four nearest quarterly SR3 contracts (e.g. Jun, Sep, Dec, Mar), extract: the 25th percentile rate, median rate, and 75th percentile rate of the implied SOFR distribution, plus the probability of rates being more than 50bp below current and more than 50bp above current EFFR. Current EFFR: ${state.fwLb}%. Return ONLY valid JSON, no markdown:\n{"contracts":[{"label":"Jun-18","p25":-50,"p50":-25,"p75":25,"iqr":75,"skew":0.0,"leftTail":0.15,"rightTail":0.08},{"label":"Sep-17","p25":-75,"p50":-50,"p75":0,"iqr":75,"skew":0.1,"leftTail":0.22,"rightTail":0.05},{"label":"Dec-10","p25":-100,"p50":-75,"p75":-25,"iqr":75,"skew":-0.1,"leftTail":0.28,"rightTail":0.04},{"label":"Mar-18","p25":-125,"p50":-100,"p75":-50,"iqr":75,"skew":0.0,"leftTail":0.32,"rightTail":0.03}]}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    if(!p.contracts||!Array.isArray(p.contracts))throw new Error('Missing contracts array');
+    const meetingData={};
+    p.contracts.forEach(c=>{meetingData[c.label]={p25:c.p25,p50:c.p50,p75:c.p75,iqr:c.iqr,skew:c.skew,leftTail:c.leftTail,rightTail:c.rightTail};});
+    dispatch({type:'APPLY_LIVE_MPT', payload:{meetingData}});
+    setRefreshStatus(s=>({...s, mpt:'MPT data updated'}));
+  }catch(e){setRefreshStatus(s=>({...s, mpt:'\u26a0 MPT fetch failed \u2014 using seed conviction data'}));}
+  finally{setFetching(f=>({...f, mpt:false}));}
+}
+
+async function fetchFRED(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, fred:true}));
+  setRefreshStatus(s=>({...s, fred:'Fetching FRED financial conditions data\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Fetch the latest values from FRED for these three series:\n1. NFCI - Chicago Fed National Financial Conditions Index (weekly). Get the latest value AND the last 52 weekly observations as an array.\n2. SWPT - Federal Reserve central bank liquidity swap outstandings (weekly). Get the latest value in billions of dollars.\n3. BAMLH0A0HYM2 - ICE BofA US High Yield Index OAS (daily). Get the latest value in basis points AND the last 52 weekly observations.\nReturn ONLY valid JSON, no markdown:\n{"nfci":-0.56,"nfciHistory":[{"date":"2025-03-14","value":-0.55}],"swapLines":0.0,"hySpread":315,"hySpreadHistory":[{"date":"2025-03-14","value":312}]}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    function pctileRank(history,latest){const vals=history.map(h=>h.value).filter(v=>v!=null);return vals.length?vals.filter(v=>v<=latest).length/vals.length:0.5;}
+    const nfci=p.nfci;
+    const nfciHistory=Array.isArray(p.nfciHistory)?p.nfciHistory:[];
+    const nfciPctile=pctileRank(nfciHistory,nfci);
+    const swapLines=p.swapLines!=null?p.swapLines:0;
+    const hySpread=p.hySpread;
+    const hySpreadHistory=Array.isArray(p.hySpreadHistory)?p.hySpreadHistory:[];
+    const hySpreadPctile=pctileRank(hySpreadHistory,hySpread);
+    dispatch({type:'APPLY_LIVE_FRED', payload:{nfci,nfciHistory,nfciPctile,swapLines,hySpread,hySpreadPctile}});
+    setRefreshStatus(s=>({...s, fred:'FRED data updated'}));
+  }catch(e){setRefreshStatus(s=>({...s, fred:'\u26a0 FRED fetch failed \u2014 using seed data'}));}
+  finally{setFetching(f=>({...f, fred:false}));}
+}
+
 async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, yc:true}));
   setRefreshStatus(s=>({...s, yc:'Fetching Treasury CMT rates\u2026'}));
