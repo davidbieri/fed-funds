@@ -674,6 +674,70 @@ const INITIAL_STATE = {
   srD: srD.map(r=>({...r})),
   ycD: ycD.map(r=>({...r})),
   rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  pciD: {
+    mpt: {
+      meetingData: {
+        'Jun-18': { p25:-50, p50:-25, p75:25,  iqr:75, skew:0.0,  leftTail:0.15, rightTail:0.08 },
+        'Sep-17': { p25:-75, p50:-50, p75:0,   iqr:75, skew:0.1,  leftTail:0.22, rightTail:0.05 },
+        'Dec-10': { p25:-100,p50:-75, p75:-25, iqr:75, skew:-0.1, leftTail:0.28, rightTail:0.04 },
+        'Mar-18': { p25:-125,p50:-100,p75:-50, iqr:75, skew:0.0,  leftTail:0.32, rightTail:0.03 }
+      },
+      fetchDate: null,
+      source: 'Atlanta Fed MPT --- options on SR3 futures'
+    },
+    fred: {
+      nfci: -0.56,
+      nfciHistory: [],
+      nfciPctile: 0.18,
+      swapLines: 0.0,
+      hySpread: 315,
+      hySpreadPctile: 0.35,
+      fetchDate: null
+    },
+    pci: {
+      score: null,
+      components: { signalStrength:null, transmission:null,
+                    conviction:null, sentimentAlignment:null },
+      weights: { signalStrength:0.35, transmission:0.25,
+                 conviction:0.25, sentimentAlignment:0.15 },
+      regime: null,
+      label: null
+    },
+    sentiment: {
+      sentimentGap: [], platformDiv: [], crowdLeader: null,
+      avgCrowdEntropy: null, convergenceRate: null
+    }
+  },
+  fsD: {
+    basisHistory: [],
+    basisStats: {
+      mean: null, median: null, stdev: null,
+      zScore: null, halfLife: null, regime: null
+    },
+    kalshiBasis: {
+      meetings: {},
+      avgBasis: null,
+      maxAbsBasis: null,
+      basisDirection: null
+    },
+    polyBasis: {
+      meetings: {},
+      avgBasis: null,
+      maxAbsBasis: null,
+      basisDirection: null
+    },
+    crossBasis: {
+      kalshiVsPoly: {},
+      avgDivergence: null,
+      agreementPct: null
+    },
+    regimeSignals: {
+      basisRegime: null,
+      trendDirection: null,
+      volatilityState: null,
+      lastUpdate: null
+    }
+  },
   rideSelected: {matIdx:3, hIdx:1},
   taylor: {
     piStar: 2.0,       // inflation target (%)
@@ -799,6 +863,26 @@ function reducer(state, action){
       return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
     case 'SET_RIDE_SELECTED':
       return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
+    case 'UPDATE_PCI_MPT':
+      return {...state, pciD:{...state.pciD, mpt:{...state.pciD.mpt, ...action.data}}};
+    case 'UPDATE_PCI_FRED':
+      return {...state, pciD:{...state.pciD, fred:{...state.pciD.fred, ...action.data}}};
+    case 'UPDATE_PCI_SCORE':
+      return {...state, pciD:{...state.pciD, pci:{...state.pciD.pci, ...action.data}}};
+    case 'UPDATE_PCI_SENTIMENT':
+      return {...state, pciD:{...state.pciD, sentiment:{...state.pciD.sentiment, ...action.data}}};
+    case 'UPDATE_FS_BASIS_HISTORY':
+      return {...state, fsD:{...state.fsD, basisHistory:action.data}};
+    case 'UPDATE_FS_BASIS_STATS':
+      return {...state, fsD:{...state.fsD, basisStats:{...state.fsD.basisStats, ...action.data}}};
+    case 'UPDATE_FS_KALSHI_BASIS':
+      return {...state, fsD:{...state.fsD, kalshiBasis:{...state.fsD.kalshiBasis, ...action.data}}};
+    case 'UPDATE_FS_POLY_BASIS':
+      return {...state, fsD:{...state.fsD, polyBasis:{...state.fsD.polyBasis, ...action.data}}};
+    case 'UPDATE_FS_CROSS_BASIS':
+      return {...state, fsD:{...state.fsD, crossBasis:{...state.fsD.crossBasis, ...action.data}}};
+    case 'UPDATE_FS_REGIME':
+      return {...state, fsD:{...state.fsD, regimeSignals:{...state.fsD.regimeSignals, ...action.data}}};
     default:
       return state;
   }
