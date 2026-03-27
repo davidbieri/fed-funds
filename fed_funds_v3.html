@@ -108,40 +108,64 @@ const FW_SEED=[
 ];
 
 const SCENARIOS={
+  'baseline':{
+    label:'Market consensus (restore seed)',
+    shortLabel:'Baseline',era:'neutral',totalBp:'\u221264bp (implied)',endRate:'3.00',
+    decisions:['hold','\u221225bp','\u221225bp','\u221225bp','\u221225bp','\u221225bp','\u221225bp','\u221225bp'],
+    desc:'Current CME seed data as loaded. Approximately 64bp of cuts priced over 12 months \u2014 the consensus soft-landing easing path as of Mar 2026.',
+    prices:[96.36,96.40,96.50,96.58,96.65,96.72,96.78,96.85,96.90,96.94,96.97,97.00]},
   'soft-landing-95':{
+    label:'Soft Landing \u2014 Greenspan 1995',
     shortLabel:'Soft Landing \'95',era:'easing',totalBp:'-25bp',endRate:'3.39',
+    decisions:['hold','\u221225bp','hold','hold','hold','hold','hold','hold'],
     desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign \u2014 growth never faltered. The most benign plausible outcome.',
     prices:[96.36,96.36,96.47,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61]},
   'insurance-98':{
+    label:'Insurance Cuts \u2014 LTCM/Russia 1998 / 2019',
     shortLabel:'Insurance \'98/\'19',era:'easing',totalBp:'-75bp',endRate:'2.89',
+    decisions:['hold','\u221225bp','\u221225bp','\u221225bp','hold','hold','hold','hold'],
     desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment \u2014 easing that stops once tail risk subsides.',
     prices:[96.36,96.36,96.47,96.63,96.86,96.98,97.11,97.11,97.11,97.11,97.11,97.11]},
   'measured-pace':{
+    label:'Measured Pace \u2014 quarterly cadence (2015\u201318 reversed)',
     shortLabel:'Measured Pace',era:'easing',totalBp:'-100bp',endRate:'2.64',
+    decisions:['hold','\u221225bp','hold','\u221225bp','hold','\u221225bp','hold','\u221225bp'],
     desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence \u2014 methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
     prices:[96.36,96.36,96.47,96.61,96.61,96.73,96.86,96.86,97.04,97.11,97.11,97.22]},
   'mild-recession-90':{
+    label:'Mild Recession \u2014 S&L Crisis / Gulf War 1990\u201391',
     shortLabel:'Recession \'90-91',era:'easing',totalBp:'-150bp',endRate:'2.14',
+    decisions:['\u221225bp','\u221225bp','\u221225bp','\u221225bp','\u221225bp','\u221225bp','hold','hold'],
     desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession \u2014 persistent incremental pressure, no financial seizure.',
     prices:[96.38,96.61,96.72,96.88,97.11,97.23,97.38,97.61,97.79,97.86,97.86,97.86]},
   'dotcom-01':{
+    label:'Dot-com Bust \u2014 2001 recession',
     shortLabel:'Dot-com \'01',era:'easing',totalBp:'-225bp',endRate:'1.39',
+    decisions:['hold','\u221250bp','\u221250bp','\u221250bp','\u221225bp','\u221225bp','\u221225bp','hold'],
     desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure \u2014 2001 dot-com collapse analog.',
     prices:[96.36,96.36,96.58,96.91,97.36,97.59,97.88,98.11,98.29,98.39,98.61,98.61]},
   'gfc-08':{
+    label:'GFC Emergency \u2014 2008 financial crisis',
     shortLabel:'GFC \'08',era:'crisis',totalBp:'-300bp',endRate:'0.64',
+    decisions:['\u221225bp','\u221250bp','\u221275bp','\u221275bp','\u221250bp','\u221225bp','hold','hold'],
     desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) \u2014 reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
     prices:[96.38,96.61,96.83,97.18,97.86,98.21,98.66,99.11,99.29,99.36,99.36,99.36]},
   'volcker-82':{
+    label:'Volcker Disinflation \u2014 1981\u201383 easing reversal',
     shortLabel:'Volcker \'82',era:'crisis',totalBp:'-350bp',endRate:'0.14',
+    decisions:['\u221250bp','\u221275bp','\u221275bp','\u221275bp','\u221250bp','\u221225bp','hold','hold'],
     desc:'Maximum historical easing velocity: 50+75+75+75+50+25bp. After Volcker broke inflation in 1981-82 the Fed cut ~1100bp from peak. A stress-test of the tree at the lower bound.',
     prices:[96.39,96.86,97.19,97.68,98.36,98.71,99.16,99.61,99.79,99.86,99.86,99.86]},
   'stagflation-70s':{
+    label:'Stop-Go Stagflation \u2014 Burns/Miller Fed 1970s',
     shortLabel:'Stagflation \'70s',era:'tightening',totalBp:'+100bp',endRate:'4.64',
+    decisions:['hold','hold','+25bp','+25bp','hold','+25bp','hold','+25bp'],
     desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era \u2014 premature loosening followed by stubborn inflation forcing re-tightening.',
     prices:[96.36,96.36,96.36,96.34,96.11,95.99,95.86,95.86,95.68,95.61,95.61,95.50]},
   'renorm-22':{
+    label:'Re-normalization \u2014 2022 hiking replay',
     shortLabel:'Re-norm \'22',era:'tightening',totalBp:'+350bp',endRate:'7.14',
+    decisions:['+50bp','+75bp','+75bp','+75bp','+50bp','+25bp','hold','hold'],
     desc:'Full 2022 replay from today\'s starting rate: 50+75+75+75+50+25bp = +350bp driving EFFR to ~7.14%. Inflation re-accelerates or new Fed Chair abandons the easing path.',
     prices:[96.33,95.86,95.54,95.04,94.36,94.01,93.56,93.11,92.93,92.86,92.86,92.86]},
 };
@@ -1911,6 +1935,7 @@ function SvgPanel({html}) {
 
 function FuturesInputsTab({state, dispatch, finance}) {
   const ERA = {
+    neutral:    {label:'Neutral',    color:'var(--color-text-secondary)',bg:'var(--color-background-secondary)',border:'var(--color-border-secondary)'},
     easing:     {label:'Easing',     color:'var(--c-cme)',             bg:'var(--color-background-info)',    border:'var(--color-border-info)'},
     crisis:     {label:'Crisis',     color:'var(--color-text-danger)', bg:'var(--color-background-danger)',  border:'#fca5a5'},
     tightening: {label:'Tightening', color:'var(--color-text-warning)',bg:'#fff7ed',                         border:'#fed7aa'},
@@ -1923,7 +1948,7 @@ function FuturesInputsTab({state, dispatch, finance}) {
         <div style={{fontSize:'10px',fontWeight:500,color:'var(--color-text-tertiary)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'7px'}}>
           Historical scenario &mdash; click to apply &middot; click active to deactivate
         </div>
-        {['easing','crisis','tightening'].map(era=>{
+        {['neutral','easing','crisis','tightening'].map(era=>{
           const e=ERA[era];
           return (
             <div key={era} style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',marginBottom:'5px'}}>
@@ -1943,10 +1968,24 @@ function FuturesInputsTab({state, dispatch, finance}) {
           );
         })}
         {activeSc&&(
-          <div style={{display:'flex',alignItems:'flex-start',gap:'8px',padding:'7px 10px',background:'var(--color-background-info)',border:'.5px solid var(--color-border-info)',borderRadius:'var(--border-radius-md)',marginTop:'4px',fontSize:'11px',color:'var(--color-text-info)',lineHeight:1.5,flexWrap:'wrap'}}>
-            <span style={{fontWeight:600,whiteSpace:'nowrap'}}>{activeSc.shortLabel} ({activeSc.totalBp} &rarr; {activeSc.endRate}%)</span>
-            <span style={{color:'var(--color-text-secondary)',flex:1}}>{activeSc.desc}</span>
-            <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'\u2715'}</button>
+          <div style={{background:'var(--color-background-info)',border:'.5px solid var(--color-border-info)',borderRadius:'var(--border-radius-md)',marginTop:'4px',padding:'7px 10px'}}>
+            <div style={{display:'flex',alignItems:'flex-start',gap:'8px',fontSize:'11px',color:'var(--color-text-info)',lineHeight:1.5,flexWrap:'wrap'}}>
+              <span style={{fontWeight:600,whiteSpace:'nowrap'}}>{activeSc.shortLabel} ({activeSc.totalBp} &rarr; {activeSc.endRate}%)</span>
+              <span style={{color:'var(--color-text-secondary)',flex:1}}>{activeSc.desc}</span>
+              <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'\u2715'}</button>
+            </div>
+            {activeSc.decisions&&state.fwActiveScenario!=='baseline'&&(
+              <div style={{display:'flex',gap:'4px',marginTop:'6px',paddingTop:'6px',borderTop:'.5px solid var(--color-border-info)',flexWrap:'wrap'}}>
+                {['Apr','Jun','Jul','Sep','Oct','Dec','Jan','Mar'].map((ml,i)=>{
+                  const d=activeSc.decisions[i];
+                  const dc=d==='hold'?'var(--color-text-tertiary)':d.startsWith('\u2212')?'var(--color-text-info)':'var(--c-stress-hi, #dc2626)';
+                  return (<div key={ml} style={{textAlign:'center',minWidth:'28px'}}>
+                    <div style={{fontSize:'8px',color:'var(--color-text-tertiary)'}}>{ml}</div>
+                    <div style={{fontSize:'9px',fontWeight:600,color:dc,padding:'2px 5px'}}>{d}</div>
+                  </div>);
+                })}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1954,7 +1993,7 @@ function FuturesInputsTab({state, dispatch, finance}) {
         <div style={{fontSize:'10px',fontWeight:500,color:'var(--c-overlay)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'6px'}}>
           {'\u2194'} Compare overlay &mdash; amber on dot plot &amp; final distribution &middot; click active to remove
         </div>
-        {['easing','crisis','tightening'].map(era=>(
+        {['neutral','easing','crisis','tightening'].map(era=>(
           <div key={era} style={{display:'flex',alignItems:'center',gap:'5px',flexWrap:'wrap',marginBottom:'4px'}}>
             <span style={{fontSize:'9px',fontWeight:600,textTransform:'uppercase',letterSpacing:'.07em',color:'var(--color-text-tertiary)',minWidth:'54px'}}>{ERA[era].label}</span>
             {Object.entries(SCENARIOS).filter(([,s])=>s.era===era).map(([key,sc])=>{
