@@ -17,7 +17,7 @@
   --border-radius-md:8px;
   --font-sans:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
   --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
-  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;
+  --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;--c-taylor:#e11d48;--c-taylor-mod:#f43f5e;
   --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
 }
 @media(prefers-color-scheme:dark){
@@ -27,7 +27,7 @@
     --color-background-primary:#18181b;--color-background-secondary:#27272a;
     --color-background-info:#1e3a5f;--color-background-danger:#450a0a;--color-background-success:#14532d;
     --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
-    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;
+    --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;--c-taylor:#fb7185;--c-taylor-mod:#fda4af;
     --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
   }
 }
@@ -353,6 +353,313 @@ function getCompareSeries(fwCompareScenario,fwD,fwLb){
 }
 
 // ============================================================================
+// TAYLOR RULE PURE FUNCTIONS
+// ============================================================================
+
+function taylorRate(pi, piStar, y, yStar, rStar, alpha, beta) {
+  // r = rStar + piStar + alpha*(pi - piStar) + beta*(y - yStar)
+  // Equivalently: r = rStar + pi + (alpha-1)*(pi - piStar) + beta*(y - yStar)
+  return rStar + piStar + alpha * (pi - piStar) + beta * (y - yStar);
+}
+
+function taylorInertial(prescribed, prevRate, rho) {
+  // Clarida-Gali-Gertler: r_t = rho * r_{t-1} + (1 - rho) * r_taylor
+  return rho * prevRate + (1 - rho) * prescribed;
+}
+
+function taylorMeetingPath(taylor, meetings, effrStart, lb) {
+  const {piStar, piNow, piEnd, yStar, yNow, yEnd, rStar,
+         alphaClassic, betaClassic, alphaBalanced, betaBalanced, inertia} = taylor;
+  const n = meetings.length;
+  const classic = [], balanced = [], inertialC = [], inertialB = [];
+  let prevC = effrStart, prevB = effrStart;
+  for (let i = 0; i < n; i++) {
+    const t = n > 1 ? i / (n - 1) : 0;
+    const pi = piNow + t * (piEnd - piNow);
+    const y = yNow + t * (yEnd - yNow);
+    const rc = taylorRate(pi, piStar, y, yStar, rStar, alphaClassic, betaClassic);
+    const rb = taylorRate(pi, piStar, y, yStar, rStar, alphaBalanced, betaBalanced);
+    classic.push(rc);
+    balanced.push(rb);
+    const ic = taylorInertial(rc, prevC, inertia);
+    const ib = taylorInertial(rb, prevB, inertia);
+    inertialC.push(ic);
+    inertialB.push(ib);
+    prevC = ic;
+    prevB = ib;
+  }
+  return {classic, balanced, inertialC, inertialB};
+}
+
+function taylorRateJR(trD, prevFFR, prevGap) {
+  // Judd-Rudebusch ECM --- Equations 23-25 from Bieri-Chincarini (2005).
+  // Target rate from ECM specification (Eq. 23):
+  //   i*_t = r* + pi* + lambda1*(pi_t - pi*) + lambda2*gap_t + lambda3*gap_{t-1}
+  // where gap = outputGap (% potential GDP) or -2*(u - u*) depending on gapMeasure
+  const pi       = trD.inflationRate      ?? 2.8;
+  const piStar   = trD.inflationTarget    ?? 2.0;
+  const rStar    = trD.naturalRate        ?? 0.5;
+  const gap      = trD.gapMeasure === 'unemployment'
+    ? -2 * ((trD.unemploymentRate ?? 4.1) - (trD.unemploymentNatural ?? 4.1))
+    : (trD.outputGap ?? -0.5);
+  const lambda1  = trD.jrLambda1 ?? 1.5;
+  const lambda2  = trD.jrLambda2 ?? 0.5;
+  const lambda3  = trD.jrLambda3 ?? 0.3;
+  const gamma    = trD.jrGamma   ?? 0.85;
+
+  const iStar = rStar + piStar + lambda1 * (pi - piStar) + lambda2 * gap + lambda3 * prevGap;
+
+  // Partial adjustment toward i*_t (Eq. 24):
+  //   delta_i_t = gamma*(i*_t - i_{t-1})
+  //   i_t = i_{t-1} + gamma*(i*_t - i_{t-1})
+  const prescribed = prevFFR + gamma * (iStar - prevFFR);
+  return Math.max(0, prescribed);
+}
+
+function taylorRateYellen(trD) {
+  // Yellen Alt1 --- Atlanta Fed alternative using unemployment gap and FOMC SEP r*.
+  // Same form as Taylor 1993 but:
+  //   gap = -2*(u - u*)  (Okun's Law approximation of output gap)
+  //   r*  = FOMC SEP median longer-run real FFR (trD.naturalRate)
+  //   inflation weight fixed at 1.5, gap weight fixed at 1.0 (balanced approach)
+  const pi     = trD.inflationRate       ?? 2.8;
+  const piStar = trD.inflationTarget     ?? 2.0;
+  const rStar  = trD.naturalRate         ?? 0.5;
+  const u      = trD.unemploymentRate    ?? 4.1;
+  const uStar  = trD.unemploymentNatural ?? 4.1;
+  const gap    = -2 * (u - uStar);
+  return rStar + piStar + 1.5 * (pi - piStar) + 1.0 * gap;
+}
+
+// ============================================================================
+// NELSON-SIEGEL YIELD CURVE PURE FUNCTIONS
+// ============================================================================
+
+// nsYield(mat, params) -> rate (%)
+// Nelson-Siegel spot rate for maturity mat (in years):
+//   y(m) = b0 + b1*[(1-exp(-m/tau))/(m/tau)] + b2*[(1-exp(-m/tau))/(m/tau) - exp(-m/tau)]
+// params = {beta0, beta1, beta2, tau}
+// Returns rate in percent (e.g. 4.31, not 0.0431)
+function nsYield(mat, params) {
+  const {beta0, beta1, beta2, tau} = params;
+  if(mat <= 0) return beta0 + beta1;
+  const x = mat / tau;
+  const f1 = (1 - Math.exp(-x)) / x;
+  const f2 = f1 - Math.exp(-x);
+  return beta0 + beta1 * f1 + beta2 * f2;
+}
+
+// nsForward(mat, params) -> rate (%)
+// Instantaneous forward rate:
+//   f(m) = b0 + b1*exp(-m/tau) + b2*(m/tau)*exp(-m/tau)
+function nsForward(mat, params) {
+  const {beta0, beta1, beta2, tau} = params;
+  if(mat <= 0) return beta0 + beta1;
+  const x = mat / tau;
+  return beta0 + beta1 * Math.exp(-x) + beta2 * x * Math.exp(-x);
+}
+
+// nsFit(points) -> {beta0, beta1, beta2, tau, rmse}
+// Nelder-Mead minimization over 4 parameters.
+// points = [{mat, rate}] -- the ycD array (7 maturity points)
+// Constraints enforced by penalty: beta0 > 0, beta0+beta1 > 0, tau > 0.1
+// Returns best params + RMSE in basis points
+function nsFit(points) {
+  const ssr = (p) => {
+    const [b0, b1, b2, tau] = p;
+    if(tau <= 0.05 || b0 <= 0) return 1e9;
+    return points.reduce((s, pt) => {
+      const fit = nsYield(pt.mat, {beta0:b0, beta1:b1, beta2:b2, tau});
+      return s + (fit - pt.rate) ** 2;
+    }, 0);
+  };
+  // Nelder-Mead
+  let simplex = [
+    [4, -0.5, 0.5, 2],
+    [5, -1.5, 1.0, 1.5],
+    [3.5, -0.3, 1.5, 3],
+    [4.5, -1.0, 0.5, 1],
+    [4, -0.8, 2.0, 2.5],
+  ].map(p => ({p, v: ssr(p)}));
+  const N = 4;
+  for(let iter = 0; iter < 2000; iter++) {
+    simplex.sort((a, b) => a.v - b.v);
+    if(simplex[0].v < 1e-10) break;
+    const centroid = Array(N).fill(0).map((_, i) =>
+      simplex.slice(0, N).reduce((s, pt) => s + pt.p[i], 0) / N);
+    const worst = simplex[N];
+    const reflected = centroid.map((c, i) => 2*c - worst.p[i]);
+    const vr = ssr(reflected);
+    if(vr < simplex[0].v) {
+      const expanded = centroid.map((c, i) => 3*c - 2*worst.p[i]);
+      simplex[N] = ssr(expanded) < vr ? {p:expanded, v:ssr(expanded)} : {p:reflected, v:vr};
+    } else if(vr < simplex[N-1].v) {
+      simplex[N] = {p:reflected, v:vr};
+    } else {
+      const contracted = centroid.map((c, i) => 0.5*(c + worst.p[i]));
+      if(ssr(contracted) < worst.v) {
+        simplex[N] = {p:contracted, v:ssr(contracted)};
+      } else {
+        const best = simplex[0].p;
+        simplex = simplex.map(s => {
+          const np = s.p.map((x, i) => 0.5*(x + best[i]));
+          return {p:np, v:ssr(np)};
+        });
+      }
+    }
+  }
+  simplex.sort((a, b) => a.v - b.v);
+  const [b0, b1, b2, tau] = simplex[0].p;
+  const rmse = Math.sqrt(simplex[0].v / points.length) * 100; // in bp
+  return {beta0:b0, beta1:b1, beta2:b2, tau, rmse};
+}
+
+// nsShockCurve(ycD, cumulativeDeltaFFR) -> ycD-shaped array with shocked rates
+// Applies Bieri-Chincarini empirical factor model to project yield curve
+// impact of cumulative funds rate change (in bp):
+//   dy_3mo  ~ +1.00 * dFFR/100  (short end moves 1:1)
+//   dy_6mo  ~ +0.85 * dFFR/100
+//   dy_1yr  ~ +0.70 * dFFR/100
+//   dy_2yr  ~ +0.50 * dFFR/100
+//   dy_5yr  ~ +0.30 * dFFR/100
+//   dy_10yr ~ +0.10 * dFFR/100  (Exhibit 5: 100bp hike -> ~25bp flattening 10-2yr)
+//   dy_30yr ~ +0.05 * dFFR/100
+// cumulativeDeltaFFR is in basis points (negative = cuts)
+function nsShockCurve(ycD, cumulativeDeltaFFR) {
+  const loadings = [1.00, 0.85, 0.70, 0.50, 0.30, 0.10, 0.05];
+  const deltaFrac = cumulativeDeltaFFR / 100;
+  return ycD.map((pt, i) => ({
+    ...pt,
+    rate: pt.rate + loadings[i] * deltaFrac
+  }));
+}
+
+// ============================================================================
+// RIDING-THE-YIELD-CURVE PURE FUNCTIONS
+// ============================================================================
+
+// mmHPR(ym, ymh, m, h, z=360) -> HPR decimal
+// Eq. 8 Bieri-Chincarini: money-market holding period return
+// H = [1 + y_{m-h}*(m-h)/z] / [1 + y_m*m/z] - 1
+// rates in percent -> divide by 100 inside
+function mmHPR(ym, ymh, m, h, z) {
+  if(z === undefined) z = 360;
+  return (1 + (ymh/100)*((m-h)/z)) / (1 + (ym/100)*(m/z)) - 1;
+}
+
+// bondHPR(ym, ymh, m, h) -> HPR decimal
+// Eq. 12: zero-coupon bond ride HPR
+// H = [(1 + y_m/100)^m / (1 + y_{m-h}/100)^{m-h}] - 1
+function bondHPR(ym, ymh, m, h) {
+  return Math.pow(1 + ym/100, m) / Math.pow(1 + ymh/100, (m-h)) - 1;
+}
+
+// rideHPR(ym, ymh, m, h) -> HPR decimal (dispatcher)
+// Uses mmHPR for m <= 1yr, bondHPR for m > 1yr
+function rideHPR(ym, ymh, m, h) {
+  return m <= 1 ? mmHPR(ym, ymh, m, h) : bondHPR(ym, ymh, m, h);
+}
+
+// mmCushion(ym, yh, m, h, z=360) -> break-even yield change (bp)
+// Eq. 15: y* = z*[(1 + ym*m/z)/(1 + yh*h/z) - 1]/(m-h)
+// cushion = y* - current y_{m-h}  (positive = room for rates to rise)
+function mmCushion(ym, yh, m, h, z) {
+  if(z === undefined) z = 360;
+  var ystar = z * ((1 + (ym/100)*(m/z)) / (1 + (yh/100)*(h/z)) - 1) / (m-h);
+  return (ystar - ym/100) * 100 * 100; // convert to bp
+}
+
+// bondCushion(ym, yh, ymh, m, h) -> break-even yield change (bp)
+// Eq. 16: y* s.t. (1+ym)^m / (1+y*)^{m-h} = (1+yh)^h
+//   y* = [(1+ym)^m/(1+yh)^h]^{1/(m-h)} - 1
+// cushion = (y* - ymh) * 100  in bp
+function bondCushion(ym, yh, ymh, m, h) {
+  if(m <= h) return 0;
+  var ratio = Math.pow(1+ym/100, m) / Math.pow(1+yh/100, h);
+  var ystar = (Math.pow(ratio, 1/(m-h)) - 1) * 100;
+  return (ystar - ymh) * 100; // bp
+}
+
+// rideCushion(ym, yh, ymh, m, h) -> cushion in bp (dispatcher)
+function rideCushion(ym, yh, ymh, m, h) {
+  return m <= 1 ? mmCushion(ym, yh, m, h) : bondCushion(ym, yh, ymh, m, h);
+}
+
+// durationNeutralWeight(dH, dR, dO=0) -> omega
+// Eq. 29: omega = (D_H - D_O) / (D_R - D_O)
+// dH = holding horizon (years), dR = riding instrument duration (years)
+function durationNeutralWeight(dH, dR, dO) {
+  if(dO === undefined) dO = 0;
+  if(dR <= dO) return 1;
+  return (dH - dO) / (dR - dO);
+}
+
+// durationNeutralXR(hRide, hOvernight, hBuyHold, omega) -> excess return decimal
+// Eq. 30: XR = omega*H_ride + (1-omega)*H_overnight - H_buyhold
+function durationNeutralXR(hRide, hOvernight, hBuyHold, omega) {
+  return omega * hRide + (1-omega) * hOvernight - hBuyHold;
+}
+
+// rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters)
+//   -> Array[7][5] of cell objects
+// Instrument rows (7): 0.5, 1, 2, 5, 7, 10, 30yr
+// Horizon cols (5):    1/12, 3/12, 6/12, 1, 1.5yr
+function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters) {
+  var MATS = [0.5, 1, 2, 5, 7, 10, 30];
+  var HORIZONS = [1/12, 3/12, 6/12, 1, 1.5];
+  var overnightRate = syncedYcD[0].rate; // 3mo as overnight proxy
+
+  // CME futures signal: is market pricing cuts? (implied < actual)
+  var cmeFuturesSignal = fwD.some(function(d){return (100-d.price) < fwLb;}) ? -1 : 1;
+
+  // Current 10-2yr slope for slope filter
+  var slope10_2 = syncedYcD[5].rate - syncedYcD[3].rate;
+
+  return MATS.map(function(m) { return HORIZONS.map(function(h) {
+    if(m <= h) return {hpr:0, xhpr:0, cushion:0, omega:0, dnXR:0, signal:'hold', annXhpr:0};
+
+    var ym  = nsYield(m,   nsFitParams);
+    var yh  = nsYield(h,   nsFitParams);
+    var ymh_fwd = nsYield(m-h, nsFitParams); // no scenario: use NS forward projection
+
+    // Scenario projection: find closest meeting at or before horizon h
+    var ymh = ymh_fwd;
+    if(scenarioCurves.length > 0) {
+      var closestSc = scenarioCurves.reduce(function(best, sc) {
+        var mIdx = fwD.findIndex(function(d){return d.lb === sc.meetingLb;});
+        var mTime = mIdx >= 0 ? mIdx/12 : 999;
+        var bestTime = best ? fwD.findIndex(function(d){return d.lb===best.meetingLb;})/12 : 999;
+        return Math.abs(mTime-h) < Math.abs(bestTime-h) ? sc : best;
+      }, null);
+      if(closestSc) ymh = nsYield(m-h, closestSc.params);
+    }
+
+    var hpr    = rideHPR(ym, ymh, m, h);
+    var hBH    = rideHPR(yh, yh, h, h); // buy-and-hold at horizon
+    var xhpr   = hpr - hBH;
+    var annXhpr = xhpr * (1/h); // annualized
+    var cushion = rideCushion(ym, yh, ymh, m, h);
+    var omega   = durationNeutralWeight(h, m);
+    var hOvernight = (overnightRate/100) * h;
+    var dnXR    = durationNeutralXR(hpr, hOvernight, hBH, omega);
+
+    // Filter rules
+    var f = rideFilters;
+    var passes = [
+      !f.positiveSlope    || slope10_2 > 0,
+      !f.positiveCushion  || cushion > 0,
+      !f.cushion75        || cushion > 15, // rough 75th pctile proxy (15bp)
+      !f.taylorRule       || taylorSignalVal !== 1,
+      !f.cmeExpectations  || cmeFuturesSignal === -1,
+    ];
+    var failCount = passes.filter(function(p){return !p;}).length;
+    var signal = failCount === 0 ? 'ride' : failCount <= 1 ? 'marginal' : 'hold';
+
+    return {ym:ym, yh:yh, ymh:ymh, hpr:hpr, xhpr:xhpr, annXhpr:annXhpr, cushion:cushion, omega:omega, dnXR:dnXR, signal:signal, h:h, m:m};
+  });});
+}
+
+// ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
 
@@ -368,6 +675,38 @@ const INITIAL_STATE = {
   ycD: ycD.map(r=>({...r})),
   rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
   rideSelected: {matIdx:3, hIdx:1},
+  taylor: {
+    piStar: 2.0,       // inflation target (%)
+    piNow: 2.8,        // current PCE inflation (%)
+    piEnd: 2.4,        // end-of-horizon PCE forecast (%)
+    yStar: 1.8,        // potential GDP growth (%)
+    yNow: 2.3,         // current GDP growth (%)
+    yEnd: 1.9,         // end-of-horizon GDP forecast (%)
+    rStar: 0.5,        // neutral real rate (%)
+    alphaClassic: 1.5, // Taylor 1993 inflation coefficient
+    betaClassic: 0.5,  // Taylor 1993 output gap coefficient
+    alphaBalanced: 1.0,// balanced-approach (Yellen) inflation coeff
+    betaBalanced: 1.0, // balanced-approach output gap coeff
+    inertia: 0.85,     // Clarida-Gali-Gertler smoothing coefficient
+  },
+  trD: {
+    fetched: false,
+    asOf: null,
+    source: 'Seed data',
+    inflationRate: 2.8,        // current PCE inflation (% yr/yr)
+    inflationTarget: 2.0,      // FOMC target (%)
+    naturalRate: 0.5,          // neutral real rate r* (%)
+    outputGap: -0.5,           // CBO output gap (% potential GDP)
+    unemploymentRate: 4.1,     // current U-3 (%)
+    unemploymentNatural: 4.1,  // CBO NAIRU (%)
+    gapMeasure: 'output',      // 'output' | 'unemployment'
+    rhoSmoothing: 0.85,        // CGG inertia coefficient
+    jrLambda1: 1.5,            // JR inflation deviation weight
+    jrLambda2: 0.5,            // JR contemporaneous gap weight
+    jrLambda3: 0.3,            // JR lagged gap weight
+    jrGamma: 0.85,             // JR partial adjustment speed
+    ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
+  },
 };
 
 function reducer(state, action){
@@ -450,6 +789,16 @@ function reducer(state, action){
       if(s.compare&&SCENARIOS[s.compare]&&s.compare!==next.fwActiveScenario) next.fwCompareScenario=s.compare;
       return next;
     }
+    case 'UPDATE_TAYLOR':
+      return {...state, taylor: {...state.taylor, [action.key]: action.value}};
+    case 'UPDATE_TR':
+      return {...state, trD: {...state.trD, [action.key]: action.value}};
+    case 'APPLY_LIVE_TAYLOR':
+      return {...state, trD: {...state.trD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'TOGGLE_RIDE_FILTER':
+      return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
+    case 'SET_RIDE_SELECTED':
+      return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
     default:
       return state;
   }
@@ -472,8 +821,90 @@ function useFinance(state) {
     for(let i=0;i<state.fwD.length;i++){
       if(state.fwD[i].mtg && chain[i].start !== null){effrStart=chain[i].start; break;}
     }
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb]);
+    // Taylor rule prescriptions (all 4 variants)
+    const t = state.trD ?? {};
+    const prevGap = t.outputGap ?? -0.5;
+    const gap = t.gapMeasure === 'unemployment'
+      ? -2 * ((t.unemploymentRate ?? 4.1) - (t.unemploymentNatural ?? 4.1))
+      : (t.outputGap ?? -0.5);
+    const trRates = {
+      taylor93:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 0.5*gap,
+      balanced:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 1.0*gap,
+      yellen:        taylorRateYellen(t),
+      juddRudebusch: taylorRateJR(t, state.fwLb, prevGap),
+    };
+    // CGG inertial (backward-compatible with existing chart)
+    trRates.cgg = state.fwLb + (1 - (t.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
+
+    // Taylor signal: JR is the primary signal (Bieri-Chincarini Exhibit 7)
+    const jrPrescribed = trRates.juddRudebusch;
+    const taylorSignalVal = Math.abs(jrPrescribed - effrStart) < 0.125 ? 0
+      : jrPrescribed < effrStart ? -1 : 1;
+    const taylorJRRate = jrPrescribed;
+
+    // JR implied path: apply taylorRateJR meeting-by-meeting, carrying forward prevFFR
+    const jrImpliedPath = (() => {
+      let prev = state.fwLb;
+      const pg = t.outputGap ?? -0.5;
+      return meetings.map(row => {
+        const rate = taylorRateJR(t, prev, pg);
+        prev = rate;
+        return rate;
+      });
+    })();
+
+    // NS curve fit from current ycD
+    const nsFitParams = nsFit(syncedYcD.map(d => ({mat: d.mat, rate: d.rate})));
+
+    // Smooth fitted curve (200 points from 0.08yr to 30yr)
+    const nsCurvePoints = Array.from({length:200}, (_, i) => {
+      const mat = 0.08 + (i / 199) * 29.92;
+      return {mat, rate: nsYield(mat, nsFitParams)};
+    });
+
+    // Forward curve (same 200 points)
+    const nsForwardPoints = Array.from({length:200}, (_, i) => {
+      const mat = 0.08 + (i / 199) * 29.92;
+      return {mat, rate: nsForward(mat, nsFitParams)};
+    });
+
+    // NS factor interpretation
+    const nsFactors = {
+      level:     nsFitParams.beta0,
+      slope:     nsFitParams.beta1,
+      curvature: nsFitParams.beta2,
+      decay:     nsFitParams.tau,
+      rmse:      nsFitParams.rmse,
+    };
+
+    // Term premium proxy (beta0 = long-run level minus current short rate)
+    const termPremium = nsFitParams.beta0 - effrStart;
+
+    // Scenario-shocked curves -- one per FOMC meeting
+    // Cumulative delta at each meeting = sum of all cuts/hikes from start to that meeting
+    let cumDelta = 0;
+    const scenarioCurves = meetings.map((m, idx) => {
+      const ci = state.fwD.findIndex(d => d.lb === m.lb);
+      const deltaBp = (ci >= 0 && chain[ci] && chain[ci].start !== null && chain[ci].end !== null)
+        ? (chain[ci].end - chain[ci].start) * 100
+        : 0;
+      cumDelta += deltaBp;
+      const shockedYcD = nsShockCurve(syncedYcD, cumDelta);
+      const shockedParams = nsFit(shockedYcD.map(d => ({mat:d.mat, rate:d.rate})));
+      return {
+        meetingLb: m.lb,
+        label: m.label || m.lb,
+        cumDeltaBp: cumDelta,
+        ycD: shockedYcD,
+        params: shockedParams,
+      };
+    });
+
+    // Riding-the-yield-curve matrix
+    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
 }
 
 // ============================================================================
@@ -1025,6 +1456,146 @@ function ycCurveChart(ycD){
   return svg;
 }
 
+function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jrPath) {
+  const W=720, H=180, mt=28, mb=32, ml=38, mr=14;
+  const n=meetings.length;
+  if(n===0) return '<div style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</div>';
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+
+  // CME expected rate path
+  const cmeRates=[];
+  let si=0;
+  const allMonths=meetings.map(m=>m.lb);
+  for(let i=0;i<n;i++){
+    const s=states[i+1]||states[states.length-1];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    cmeRates.push(lb+ek*.25);
+  }
+
+  const {classic, balanced, inertialC, inertialB}=taylorPaths;
+  const jrV=jrPath||[];
+  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB,...jrV];
+  const minR=Math.min(...allV)-0.15, maxR=Math.max(...allV)+0.15;
+  const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
+
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+
+  // Grid
+  const step=0.25;
+  for(let y=Math.ceil(minR/step)*step;y<=maxR;y+=step){
+    svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'%</text>';
+  }
+
+  // Neutral rate band
+  const rNeutral=taylor.rStar+taylor.piStar;
+  if(rNeutral>=minR&&rNeutral<=maxR){
+    svg+='<line x1="'+ml+'" y1="'+ys(rNeutral).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(rNeutral).toFixed(1)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="8,4" opacity=".5"/>';
+    svg+='<text x="'+(W-mr-2).toFixed(1)+'" y="'+(ys(rNeutral)-5).toFixed(1)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">r* neutral '+rNeutral.toFixed(2)+'%</text>';
+  }
+
+  // Classic Taylor (thinner rose — JR takes the heavy line)
+  const cPts=classic.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="10,4" opacity=".65"/>';
+  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-taylor)" opacity=".65"/>';});
+
+  // Balanced approach (dashed rose lighter)
+  const bPts=balanced.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+bPts+'" fill="none" stroke="var(--c-taylor-mod)" stroke-width="2" stroke-dasharray="7,4" opacity=".85"/>';
+  balanced.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-taylor-mod)" opacity=".8"/>';});
+
+  // Inertial classic (thin dotted)
+  const icPts=inertialC.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+icPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="3,3" opacity=".6"/>';
+
+  // Judd-Rudebusch path (rose solid, heavy — signal source)
+  if(jrV.length){
+    const jrPts=jrV.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+jrPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2.5" opacity=".95"/>';
+    jrV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-taylor)" stroke="var(--color-background-primary)" stroke-width="1" opacity=".95"/>';});
+  }
+
+  // CME implied path (blue)
+  const cmePts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cmePts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".85"/>';
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-cme)" opacity=".85"/>';});
+
+  // Current EFFR marker
+  svg+='<circle cx="'+ml+'" cy="'+ys(effrStart).toFixed(1)+'" r="5" fill="var(--color-text-primary)" opacity=".6"/>';
+  svg+='<text x="'+(ml+8).toFixed(1)+'" y="'+(ys(effrStart)-6).toFixed(1)+'" font-size="8" fill="var(--color-text-secondary)" font-family="var(--font-mono)">EFFR '+effrStart.toFixed(2)+'%</text>';
+
+  // X-axis labels
+  meetings.forEach((m,i)=>{
+    const shortLbl=m.label.replace(/\d{4}/,'').trim()||m.lb.replace(/ 20\d\d/,'');
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+
+  // Legend
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="600">\u25cf JR ECM (signal)</text>';
+  svg+='<text x="'+(ml+115)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".65">- - Classic</text>';
+  svg+='<text x="'+(ml+175)+'" y="14" font-size="8" fill="var(--c-taylor-mod)" font-family="var(--font-sans)">- - Balanced</text>';
+  svg+='<text x="'+(ml+255)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".5">... CGG</text>';
+  svg+='<text x="'+(ml+305)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf CME implied</text>';
+
+  svg+='</svg>';
+  return svg;
+}
+
+function taylorGapSvg(meetings, cmeRates, classic, balanced) {
+  const W=720, H=80, mt=20, mb=28, ml=38, mr=14;
+  const n=meetings.length;
+  if(n===0) return '';
+  const xs=i=>ml+(i/(n-1||1))*(W-ml-mr);
+  const gapsC=classic.map((r,i)=>r-cmeRates[i]);
+  const gapsB=balanced.map((r,i)=>r-cmeRates[i]);
+  const maxG=Math.max(...gapsC.map(Math.abs),...gapsB.map(Math.abs),0.15);
+  const yMid=mt+H/2;
+  const ys=v=>yMid-(v/maxG)*(H/2);
+
+  let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+  svg+='<line x1="'+ml+'" y1="'+yMid.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+yMid.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+yMid.toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>';
+  [maxG/2, maxG].forEach(v=>{
+    [v,-v].forEach(g=>{
+      svg+='<line x1="'+ml+'" y1="'+ys(g).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(g).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    });
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v>0?'+':'')+v.toFixed(2)+'</text>';
+    svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(-v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(-v).toFixed(2)+'</text>';
+  });
+
+  // Classic gap area fill
+  let areaAbove='M '+xs(0).toFixed(1)+' '+yMid.toFixed(1);
+  let areaBelow='M '+xs(0).toFixed(1)+' '+yMid.toFixed(1);
+  gapsC.forEach((g,i)=>{
+    const x=xs(i), y=ys(g);
+    if(g>=0) areaAbove+=' L '+x.toFixed(1)+' '+y.toFixed(1);
+    else areaBelow+=' L '+x.toFixed(1)+' '+y.toFixed(1);
+  });
+
+  // Classic gap line
+  const cPts=gapsC.map((g,i)=>xs(i).toFixed(1)+','+ys(g).toFixed(1)).join(' ');
+  svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2" opacity=".85"/>';
+  gapsC.forEach((g,i)=>{
+    const col=g>0.05?'var(--color-text-danger)':g<-0.05?'var(--color-text-info)':'var(--color-text-tertiary)';
+    svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(g).toFixed(1)+'" r="3" fill="'+col+'" opacity=".8"/>';
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(g)+(g>=0?-7:11)).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+col+'" font-family="var(--font-mono)">'+(g>0?'+':'')+g.toFixed(2)+'</text>';
+  });
+
+  // Balanced gap line
+  const bPts=gapsB.map((g,i)=>xs(i).toFixed(1)+','+ys(g).toFixed(1)).join(' ');
+  svg+='<polyline points="'+bPts+'" fill="none" stroke="var(--c-taylor-mod)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".7"/>';
+
+  // X labels
+  meetings.forEach((m,i)=>{
+    const shortLbl=m.label.replace(/\d{4}/,'').trim()||m.lb.replace(/ 20\d\d/,'');
+    if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
+  });
+
+  svg+='<text x="'+ml+'" y="12" font-size="8" fill="var(--color-text-secondary)" font-family="var(--font-sans)">Taylor minus CME (pp) --- positive = Taylor says tighter</text>';
+  svg+='</svg>';
+  return svg;
+}
+
 function SvgPanel({html}) {
   return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
 }
@@ -1108,6 +1679,20 @@ function FuturesInputsTab({state, dispatch, finance}) {
           onBlur={e=>dispatch({type:'SET_LB',lb:parseFloat(e.target.value)||3.50})}/>
         <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>%</span>
       </div>
+      {finance.rideData && (function(){
+        var cell = finance.rideData[3] && finance.rideData[3][1] ? finance.rideData[3][1] : null;
+        if(!cell) return null;
+        return (
+          <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.75rem',fontSize:'11px'}}>
+            <span style={{color:'var(--color-text-secondary)'}}>Riding signal (2yr/3mo):</span>
+            <span style={{fontWeight:600,color:cell.signal==='ride'?'var(--color-text-success)':cell.signal==='hold'?'var(--color-text-danger)':'var(--color-text-warning)'}}>
+              {cell.signal==='ride'?'RIDE \u2713':cell.signal==='hold'?'HOLD \u2717':'Marginal'}
+            </span>
+            <span style={{color:'var(--color-text-tertiary)'}}>Cushion: {cell.cushion>=0?'+':''}{cell.cushion.toFixed(0)}bp</span>
+            <span style={{color:'var(--c-taylor)'}}>Taylor: {finance.taylorSignalVal===-1?'\u2193 cut':finance.taylorSignalVal===1?'\u2191 hike':'neutral'}</span>
+          </div>
+        );
+      })()}
       <div style={{overflowX:'auto'}}>
         <table className="fwt">
           <thead><tr><th>Month</th><th>ZQ price</th><th>Impl. avg EFFR</th><th>FOMC mtg</th><th>Label</th><th>N (to mtg)</th><th>M (after)</th></tr></thead>
@@ -1373,6 +1958,917 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   return <SvgPanel html={html}/>;
 }
 
+function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {meetings, chain, zqAvgs, instFwd} = finance;
+  const lb = state.fwLb;
+  const srd = state.srD;
+  const fwd = state.fwD;
+
+  window.__srDispatch = (i,v) => dispatch({
+    type:'UPDATE_SR_PRICE', i, value:parseFloat(v)||state.srD[i].price
+  });
+
+  useEffect(()=>{
+    window.__sofrFetch=()=>fetchSOFR(state,dispatch,apiKey,setFetching,setRefreshStatus);
+    return ()=>{delete window.__sofrFetch;};
+  });
+
+  // -- Fetch bar --
+  let html='<div class="k-fetch-bar">';
+  html+='<button class="refresh-btn" id="sofr-btn"'+(fetching.sofr?' disabled':'')+' onclick="window.__sofrFetch()"><span'+(fetching.sofr?' class="spin"':'')+'>&#x27f3;</span> Fetch SR3 data</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.sofr||'Seed data \u2014 click to fetch live SR3 prices')+'</span>';
+  html+='<span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">';
+  html+='<span class="k-dot" style="background:var(--c-sofr)"></span> SR3 implied SOFR &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-cme)"></span> ZQ quarterly avg EFFR &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-sofr-fwd);border:1px dashed var(--c-sofr)"></span> 3M inst. forward &nbsp;';
+  html+='<span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP dots';
+  html+='</span></div>';
+
+  // -- Panel A: contract table --
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">SR3 contract strip \u2014 3-month SOFR futures (CME)</span><span class="k-contract">SR3M6 \u2192 SR3Z7</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt">';
+  html+='<thead><tr><th>Contract</th><th>Quarter</th><th>SR3 price</th>';
+  html+='<th>Impl. SOFR</th><th>ZQ avg EFFR</th><th>Basis (bp)</th><th>3M inst. fwd</th>';
+  html+='</tr></thead><tbody>';
+  srd.forEach((s,i)=>{
+    const sofrRate=(100-s.price).toFixed(4);
+    const zqAvg=zqAvgs[i];
+    const basis=zqAvg!==null?((100-s.price-zqAvg)*100).toFixed(1):'\u2014';
+    const bCol=basis!=='\u2014'?(parseFloat(basis)>0?'var(--color-text-info)':'var(--color-text-danger)'):'var(--color-text-tertiary)';
+    const fwdVal=instFwd[i]!==null?instFwd[i].toFixed(4):'\u2014';
+    html+='<tr>';
+    html+='<td style="font-family:var(--font-mono);font-size:11px;color:var(--c-sofr)">'+s.ticker+'</td>';
+    html+='<td style="white-space:nowrap">'+s.qLabel+'</td>';
+    html+='<td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="'+s.price+'" style="width:72px" onchange="window.__srDispatch('+i+',this.value)"></td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrRate+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+(zqAvg!==null?zqAvg.toFixed(4)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+bCol+'">'+(basis!=='\u2014'?(parseFloat(basis)>0?'+':'')+basis:basis)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr-fwd)">'+(fwdVal!=='\u2014'?fwdVal+'%':fwdVal)+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">Basis = (SR3 implied SOFR \u2212 ZQ quarterly avg EFFR) \u00d7 100, in basis points. Historically 5\u201315bp reflecting the repo/deposit spread between SOFR and EFFR. Instantaneous forward = 2\u00d7r<sub>t+1</sub> \u2212 r<sub>t</sub> \u2014 the marginal rate the market prices for each successive quarter, stripping out the averaging effect of the futures contract.</div>';
+  html+='</div>';
+
+  // -- Panel B: main chart --
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Forward rate curves \u2014 SR3 SOFR strip vs ZQ EFFR chain vs Fed SEP</span>';
+  html+='<span class="k-contract">SR3 vs ZQ vs Dec 2025 SEP</span></div>';
+  html+=sofrMainChart(zqAvgs,instFwd,lb,srd,state.kalshiD);
+  html+='<div class="k-note">Three forward rate curves on a common axis. The SR3 strip (green) typically trades a few basis points above the ZQ-derived EFFR path (blue) \u2014 this persistent basis reflects the credit/liquidity premium embedded in SOFR. The instantaneous forward curve (dashed green) extracts the marginal rate implied by each successive quarterly contract, removing the averaging effect; it will lead the SR3 rate lower at inflection points in the easing cycle. Purple circles: Fed December 2025 SEP median projections at year-end 2026 and 2027 horizons.</div>';
+  html+='</div>';
+
+  // -- Panels C1 + C2 --
+  html+='<div class="k-grid">';
+
+  // Basis bars
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">SOFR\u2013EFFR basis by quarter (bp)</span><span class="k-contract">SR3 \u2212 ZQ avg</span></div>';
+  html+=basisBarsSvg(zqAvgs,srd);
+  html+='<div class="k-note">Positive basis = SOFR trades above EFFR, as expected. A widening basis signals stress in overnight repo markets or increased demand for SOFR-linked instruments. A compression toward zero would suggest convergence of money market conditions.</div>';
+  html+='</div>';
+
+  // Key stats panel
+  const currentBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const sofrTerminal=(100-srd[srd.length-1].price).toFixed(2);
+  const effrTerminal=fwd[fwd.length-1]?(100-fwd[fwd.length-1].price).toFixed(2):'\u2014';
+  const stripSlope=((100-srd[srd.length-1].price)-(100-srd[0].price)).toFixed(2);
+  const fwdMin=instFwd.filter(v=>v!==null);
+  const troughFwd=fwdMin.length?Math.min(...fwdMin).toFixed(2):'\u2014';
+  const troughQtr=fwdMin.length?srd[instFwd.indexOf(Math.min(...fwdMin))].qLabel:'\u2014';
+
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Strip summary statistics</span></div>';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Near-term basis</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+(currentBasis!=='\u2014'?'+':'')+currentBasis+' bp</div><div class="fw-stat-s">SR3M6 \u2212 ZQ Q2 avg</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal (Dec 27)</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+sofrTerminal+'%</div><div class="fw-stat-s">SR3Z7 implied</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">EFFR terminal (Mar 27)</div><div class="fw-stat-v" style="color:var(--c-cme);font-size:16px">'+effrTerminal+'%</div><div class="fw-stat-s">ZQ Mar 2027 implied</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Strip slope</div><div class="fw-stat-v" style="color:'+(parseFloat(stripSlope)<0?'var(--color-text-info)':'var(--color-text-danger)')+';font-size:16px">'+stripSlope+'%</div><div class="fw-stat-s">Dec 27 minus Jun 26</div></div>';
+  html+='<div class="fw-stat" style="grid-column:1/-1"><div class="fw-stat-l">Forward trough</div><div class="fw-stat-v" style="color:var(--c-sofr-fwd);font-size:16px">'+troughFwd+'%</div><div class="fw-stat-s">Inst. fwd minimum \u2014 '+troughQtr+'</div></div>';
+  html+='</div>';
+  html+='<div class="k-note">The instantaneous forward trough marks the quarter where the SR3 strip prices the most aggressive easing \u2014 where the marginal rate bottoms before potentially rising toward neutral. This is distinct from the terminal rate level implied by the strip\'s endpoint.</div>';
+  html+='</div>';
+  html+='</div>';
+
+  return <SvgPanel html={html}/>;
+}
+
+function DashboardTab({state, finance}) {
+  const {chain, meetings, states, final, zqAvgs, compareSeries} = finance;
+  const lb = state.fwLb;
+  const fwD = state.fwD;
+  const kD = state.kalshiD;
+  const pD = state.polyD;
+  const srd = state.srD;
+  const rideData = finance.rideData;
+
+  // -- 1. Summary stat bar --
+  let se='3.64';
+  for(let i=0;i<fwD.length;i++){if(fwD[i].mtg&&chain[i].start!==null){se=chain[i].start.toFixed(2);break;}}
+  const pC1=Object.entries(final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+  const expC=Object.entries(final).reduce((s,[k,p])=>s+(-parseInt(k))*p,0);
+  const expR=(lb-expC*.25).toFixed(2);
+  const cmeExpCC=Object.entries(cmeCutCountDist(final,fwD)).reduce((s,[k,p])=>s+parseInt(k)*p,0);
+  const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
+  const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
+  const sofrNear=(100-srd[0].price).toFixed(2);
+  const sofrTerm=(100-srd[srd.length-1].price).toFixed(2);
+  const nearBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const activeName=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline (seed)';
+  const cSeries=compareSeries;
+
+  // Riding signal card
+  const defaultCell = rideData?.[3]?.[1];
+  const rideSignalVal = defaultCell?.signal || '\u2014';
+  const rideCardHtml = '<div class="fw-stat"><div class="fw-stat-l">Riding signal</div><div class="fw-stat-v" style="font-size:13px;color:'+(rideSignalVal==='ride'?'var(--color-text-success)':rideSignalVal==='hold'?'var(--color-text-danger)':'var(--color-text-secondary)')+'">'+
+    (rideSignalVal==='ride'?'RIDE \u2713':rideSignalVal==='hold'?'HOLD \u2717':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo \u00b7 '+
+    Object.values(state.rideFilters||{}).filter(Boolean).length+' filters active</div></div>';
+
+  let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">';
+  html+='<div class="fw-stat"><div class="fw-stat-l">EFFR start</div><div class="fw-stat-v">'+se+'%</div><div class="fw-stat-s">Current effective</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div><div class="fw-stat-s">CME 12-month</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Exp. terminal</div><div class="fw-stat-v">'+expR+'%</div><div class="fw-stat-s">CME implied lb</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Exp. cuts 2026</div><div class="fw-stat-v" style="font-size:15px">';
+  html+='<span style="color:var(--c-cme)">'+cmeExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
+  html+='<span style="color:var(--c-kal)">'+kalExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
+  html+='<span style="color:var(--c-poly)">'+polyExpCC.toFixed(1)+'</span>';
+  html+='</div><div class="fw-stat-s">CME \u00b7 Kal \u00b7 Poly</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR near-term</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrNear+'%</div><div class="fw-stat-s">SR3M6 (Q2 2026)</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrTerm+'%</div><div class="fw-stat-s">SR3Z7 (Q4 2027)</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">'+activeName+'</div>'+(cSeries?'<div class="fw-stat-s" style="color:var(--c-overlay)">vs '+cSeries.label+'</div>':'<div class="fw-stat-s">No compare</div>')+'</div>';
+  html+=rideCardHtml;
+  html+='</div>';
+
+  // -- 2. Unified rate path chart --
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Unified rate path \u2014 CME EFFR chain \u00b7 Kalshi implied \u00b7 SR3 SOFR strip \u00b7 Compare scenario</span>';
+  html+='<span style="display:flex;gap:8px;font-size:10px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap">';
+  html+='<span><span class="k-dot" style="background:var(--c-cme)"></span>CME</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-kal)"></span>Kalshi</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-sofr)"></span>SR3 SOFR</span>';
+  html+='<span><span class="k-dot" style="background:var(--c-dots)"></span>Fed SEP</span>';
+  if(cSeries) html+='<span><span class="k-dot" style="background:var(--c-overlay)"></span>'+cSeries.label+'</span>';
+  html+='</span></div>';
+  html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs,fwD,kD,srd);
+  html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026\u2013Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' \u2192 '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
+  html+='</div>';
+
+  // -- 3. Cross-market divergence table --
+  const comps=getMeetingComps(meetings,kD,pD);
+  html+='<div class="k-panel k-full" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Cross-market divergence \u2014 all sources per meeting</span></div>';
+  html+='<div style="overflow-x:auto"><table class="fwt">';
+  html+='<thead><tr><th>Meeting</th><th>CME exp. rate</th><th>Kalshi imp.</th><th>Kal\u2212CME</th>';
+  html+='<th>CME P(cut)</th><th>Kal P(cut)</th><th>Poly P(cut)</th><th>SOFR (qtr)</th><th>Basis bp</th>';
+  html+='</tr></thead><tbody>';
+  let si3=0;
+  meetings.forEach((m,mi)=>{
+    while(si3<fwD.length&&fwD[si3].lb!==m.lb)si3++;
+    const s=states[mi+1]||states[states.length-1];
+    const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
+    const cmeRate=(lb+ek*.25).toFixed(2);
+    const kalRate=kD.kalshiRate[m.lb]?kD.kalshiRate[m.lb].toFixed(2):'\u2014';
+    const kalDiff=kD.kalshiRate[m.lb]?((kD.kalshiRate[m.lb]-(lb+ek*.25))*100).toFixed(0)+'bp':'\u2014';
+    const kd2=kD.meetings[m.lb],pd2=pD.meetings[m.lb];
+    const cmeCut=((m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0));
+    const kCut=kd2?(kd2.cut25||0)+(kd2.cut50||0):null;
+    const pCut=pd2?(pd2.cut25||0)+(pd2.cut50||0):null;
+    const srRow=srd.find(s2=>s2.lb===m.lb);
+    const zqAvgIdx=srd.findIndex(s2=>s2.lb===m.lb);
+    const basis=srRow&&zqAvgs[zqAvgIdx]!==null?((100-srRow.price-zqAvgs[zqAvgIdx])*100).toFixed(1)+'bp':'\u2014';
+    const sofrR=srRow?(100-srRow.price).toFixed(2)+'%':'\u2014';
+    const diffCol=kD.kalshiRate[m.lb]?(parseFloat(kalDiff)>5?'var(--c-kal)':parseFloat(kalDiff)<-5?'var(--color-text-danger)':'var(--color-text-tertiary)'):'var(--color-text-tertiary)';
+    html+='<tr>';
+    html+='<td style="white-space:nowrap;font-weight:500">'+(m.label||m.lb)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+cmeRate+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+kalRate+(kalRate!=='\u2014'?'%':'')+'</td>';
+    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+diffCol+'">'+kalDiff+'</td>';
+    html+='<td style="font-family:var(--font-mono)">'+(cmeCut*100).toFixed(1)+'%</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+(kCut!==null?(kCut*100).toFixed(1)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-poly)">'+(pCut!==null?(pCut*100).toFixed(1)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrR+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:'+(basis!=='\u2014'&&parseFloat(basis)>0?'var(--c-sofr)':'var(--color-text-danger)')+'">'+basis+'</td>';
+    html+='</tr>';
+  });
+  html+='</tbody></table></div>';
+  html+='<div class="k-note">Single table reading all four live data stores simultaneously. Kal\u2212CME in bp: the spread between Kalshi\'s implied rate and the CME-derived expected EFFR at that meeting date \u2014 the key cross-market dislocation signal. SOFR column and basis only shown for quarterly contract dates (SR3 alignment).</div>';
+  html+='</div>';
+
+  // -- 4. Regime summary box --
+  const hikeRisk=getCmeHikeProb(meetings);
+  const regimeColor=hikeRisk>0.10?'var(--color-text-danger)':pC1>0.70?'var(--color-text-info)':'var(--color-text-secondary)';
+  const regimeLabel=hikeRisk>0.15?'Re-tightening risk':hikeRisk>0.08?'Elevated hike tail':pC1>0.85?'Strong easing path':pC1>0.50?'Moderate easing bias':'Policy on hold';
+  const warshP=(pD.fedChair['Kevin Warsh']||0),riederP=(pD.fedChair['Rick Rieder']||0);
+  const regimeRisk=warshP>0.40?'High hawkish regime-change risk':warshP>0.25?'Moderate regime-change risk':'Low regime-change risk';
+  html+='<div class="k-grid">';
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Policy regime summary</span></div>';
+  html+='<div style="font-size:22px;font-weight:500;color:'+regimeColor+';margin-bottom:8px">'+regimeLabel+'</div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);line-height:1.7">';
+  html+='<div>CME hike tail: <b style="color:var(--color-text-warning)">'+(hikeRisk*100).toFixed(1)+'%</b></div>';
+  html+='<div>Kalshi hike any: <b style="color:var(--c-kal)">'+(kD.hikeAny*100).toFixed(1)+'%</b></div>';
+  html+='<div>Poly hike 2026: <b style="color:var(--c-poly)">'+(pD.hikeAny*100).toFixed(1)+'%</b></div>';
+  html+='<div>Emergency cut: <b style="color:var(--c-poly)">'+(pD.emergencyCut*100).toFixed(1)+'%</b></div>';
+  html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
+  html+='Chair regime risk: <b>'+regimeRisk+'</b><br>';
+  html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% \u00b7 Rieder '+(riederP*100).toFixed(0)+'%</span>';
+  html+='</div></div></div>';
+
+  // Scenario delta panel
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Scenario delta \u2014 compare vs active</span></div>';
+  if(cSeries){
+    html+='<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>'+activeName+'</b> \u00b7 Compare: <b style="color:var(--c-overlay)">'+cSeries.label+'</b></div>';
+    const actExp=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+    const cExp=Object.entries(cSeries.final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
+    const delta=((cExp-actExp)*100).toFixed(0);
+    const deltaCol=parseInt(delta)<0?'var(--color-text-info)':parseInt(delta)>0?'var(--color-text-danger)':'var(--color-text-secondary)';
+    const actP1=Object.entries(final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+    const cP1=Object.entries(cSeries.final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
+    html+='<div class="fw-stat"><div class="fw-stat-l">Rate delta</div><div class="fw-stat-v" style="font-size:16px;color:'+deltaCol+'">'+(parseInt(delta)>0?'+':'')+delta+' bp</div><div class="fw-stat-s">Compare vs active terminal</div></div>';
+    html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut) delta</div><div class="fw-stat-v" style="font-size:16px;color:var(--c-overlay)">'+((cP1-actP1)*100).toFixed(1)+'pp</div><div class="fw-stat-s">Compare minus active</div></div>';
+    html+='</div>';
+  } else {
+    html+='<div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Set a compare scenario in the Futures Inputs tab to see the cross-scenario delta here \u2014 terminal rate difference in bp, P(\u22651 cut) spread, and path divergence.</div>';
+  }
+  html+='</div></div>';
+
+  return <SvgPanel html={html}/>;
+}
+
+function buildRuleComparisonTable(trRates, effrStart, fwLb) {
+  const rules = [
+    {key:'taylor93',      label:'Taylor 1993',        note:'Original \u2014 r*=2%, \u03b2=0.5, GDP gap'},
+    {key:'yellen',        label:'Yellen Alt1',         note:'Unemployment gap, FOMC SEP r*, \u03b2=1.0'},
+    {key:'balanced',      label:'Balanced approach',   note:'\u03b2=1.0 (Yellen 2012/2017 speeches)'},
+    {key:'cgg',           label:'CGG Inertial',        note:'\u03c1=0.85 smoothing around Taylor 1993'},
+    {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM \u2014 highest R\u00b2 for \u0394FFTR prediction'},
+  ];
+  const threshold = 0.125;
+  var h = '<table class="fwt"><thead><tr><th>Rule</th><th>Prescribed</th><th>Gap vs EFFR (bp)</th><th>Signal</th><th>Notes</th></tr></thead><tbody>';
+  rules.forEach(function(r) {
+    var rate = trRates[r.key];
+    if(rate === undefined) return;
+    var gap = (rate - effrStart) * 100;
+    var signal = Math.abs(gap) < threshold*100 ? 0 : gap > 0 ? 1 : -1;
+    var sigLabel = signal === 0 ? '= Neutral' : signal === 1 ? '\u2191 Hike' : '\u2193 Cut';
+    var sigCol = signal === 0 ? 'var(--color-text-tertiary)' : signal === 1 ? 'var(--color-text-danger)' : 'var(--color-text-info)';
+    var isJR = r.key === 'juddRudebusch';
+    h += '<tr style="'+(isJR?'background:var(--color-background-info)':'')+'">';
+    h += '<td style="font-weight:'+(isJR?600:400)+';white-space:nowrap">'+r.label;
+    if(isJR) h += ' <span style="font-size:9px;color:var(--c-taylor);background:rgba(225,29,72,.1);padding:1px 5px;border-radius:8px;margin-left:4px">signal source</span>';
+    h += '</td>';
+    h += '<td style="font-family:var(--font-mono);color:var(--c-taylor)">'+rate.toFixed(2)+'%</td>';
+    h += '<td style="font-family:var(--font-mono);color:'+(gap>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(gap>0?'+':'')+gap.toFixed(0)+'</td>';
+    h += '<td style="font-weight:600;color:'+sigCol+'">'+sigLabel+'</td>';
+    h += '<td style="font-size:10px;color:var(--color-text-tertiary)">'+r.note+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
+function TaylorRuleTab({state, dispatch, finance}) {
+  const {meetings, states, effrStart, trRates, jrImpliedPath} = finance;
+  const lb = state.fwLb;
+  const t = state.taylor;
+  const tr = state.trD;
+
+  const taylorPaths = useMemo(() =>
+    taylorMeetingPath(t, meetings, effrStart, lb),
+    [t, meetings, effrStart, lb]
+  );
+
+  // CME expected rates at each meeting
+  const cmeRates = useMemo(() => {
+    return meetings.map((m, i) => {
+      const s = states[i + 1] || states[states.length - 1];
+      const ek = Object.entries(s).reduce((sum, [k, p]) => sum + parseInt(k) * p, 0);
+      return lb + ek * 0.25;
+    });
+  }, [meetings, states, lb]);
+
+  const classicNow = taylorPaths.classic[0];
+  const balancedNow = taylorPaths.balanced[0];
+  const inertialNow = taylorPaths.inertialC[0];
+  const jrNow = trRates.juddRudebusch;
+  const yellenNow = trRates.yellen;
+  const gapNow = jrNow !== undefined ? jrNow - effrStart : 0;
+  const rNeutral = t.rStar + t.piStar;
+
+  const ruleVariant = tr.ruleVariant || 'taylor93';
+
+  const paramField = (label, key, min, max, step, unit) => {
+    return '<tr><td style="font-size:11px;white-space:nowrap;padding:4px 8px">'+label+'</td>'
+      +'<td style="padding:4px 8px"><input type="number" class="fw-in" style="width:65px" '
+      +'value="'+t[key]+'" min="'+min+'" max="'+max+'" step="'+step+'" '
+      +'data-taylor-key="'+key+'"/></td>'
+      +'<td style="font-size:10px;color:var(--color-text-tertiary);padding:4px 8px">'+unit+'</td></tr>';
+  };
+
+  const trField = (label, key, min, max, step, unit) => {
+    return '<tr><td style="font-size:11px;white-space:nowrap;padding:4px 8px">'+label+'</td>'
+      +'<td style="padding:4px 8px"><input type="number" class="fw-in" style="width:65px" '
+      +'value="'+tr[key]+'" min="'+min+'" max="'+max+'" step="'+step+'" '
+      +'data-tr-key="'+key+'"/></td>'
+      +'<td style="font-size:10px;color:var(--color-text-tertiary);padding:4px 8px">'+unit+'</td></tr>';
+  };
+
+  let html = '';
+
+  // --- Rule variant chips ---
+  const variants = [
+    {key:'taylor93', label:'Taylor 1993'},
+    {key:'balanced', label:'Balanced'},
+    {key:'cgg',      label:'CGG Inertial'},
+    {key:'yellen',   label:'Yellen Alt1'},
+    {key:'juddRudebusch', label:'Judd-Rudebusch'},
+  ];
+  html += '<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin-bottom:6px;width:fit-content;flex-wrap:wrap">';
+  variants.forEach(v => {
+    const isAct = ruleVariant === v.key;
+    html += '<div class="fw-tab'+(isAct?' act':'')+'" data-rule-variant="'+v.key+'" style="cursor:pointer'+(v.key==='juddRudebusch'&&isAct?';border-color:var(--c-taylor)':'')+'">';
+    html += v.label;
+    if(v.key==='juddRudebusch') html += ' <span style="font-size:8px;color:var(--c-taylor);margin-left:2px">\u2605</span>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:1rem;line-height:1.5">Signal source: Judd-Rudebusch ECM (highest predictive R\u00b2 for FFTR changes, Bieri-Chincarini 2005 Exhibit 7)</div>';
+
+  // Summary cards
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem">';
+  html += '<div class="fw-stat"><div class="fw-stat-l">JR ECM</div><div class="fw-stat-v" style="color:var(--c-taylor)">'+(jrNow!==undefined?jrNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">signal source</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Classic Taylor</div><div class="fw-stat-v" style="color:var(--c-taylor);opacity:.7">'+(classicNow!==undefined?classicNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">Taylor \'93</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Yellen Alt1</div><div class="fw-stat-v" style="color:var(--c-taylor-mod)">'+(yellenNow!==undefined?yellenNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">unemployment gap</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">JR gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':gapNow<-0.05?'policy too tight':'near neutral')+'</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
+  html += '</div>';
+
+  // Parameter tables side by side
+  html += '<div class="k-grid" style="margin-bottom:14px">';
+
+  // Macro inputs
+  html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Macro inputs</span></div>';
+  html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
+  html += paramField('Inflation target (\u03c0*)', 'piStar', 0, 10, 0.1, '%');
+  html += paramField('Current PCE inflation', 'piNow', -2, 15, 0.1, '% yr/yr');
+  html += paramField('End-horizon PCE forecast', 'piEnd', -2, 15, 0.1, '% yr/yr');
+  html += paramField('Potential GDP growth (y*)', 'yStar', -2, 8, 0.1, '%');
+  html += paramField('Current GDP growth', 'yNow', -5, 10, 0.1, '%');
+  html += paramField('End-horizon GDP forecast', 'yEnd', -5, 10, 0.1, '%');
+  html += paramField('Neutral real rate (r*)', 'rStar', -2, 5, 0.1, '%');
+  html += '</tbody></table>';
+  // Gap measure toggle
+  html += '<div style="margin-top:8px;display:flex;gap:4px;align-items:center">';
+  html += '<span style="font-size:10px;color:var(--color-text-tertiary);margin-right:4px">Gap measure:</span>';
+  html += '<div data-gap-measure="output" class="fw-tab'+(tr.gapMeasure==='output'||!tr.gapMeasure?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">GDP output gap</div>';
+  html += '<div data-gap-measure="unemployment" class="fw-tab'+(tr.gapMeasure==='unemployment'?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">Unemployment gap (2\u00d7)</div>';
+  html += '</div>';
+  // Unemployment fields (shown when unemployment gap selected)
+  if(tr.gapMeasure==='unemployment'){
+    html += '<table class="fwt" style="margin-top:6px"><tbody>';
+    html += trField('Unemployment rate (u)', 'unemploymentRate', 0, 15, 0.1, '%');
+    html += trField('Natural rate (u*)', 'unemploymentNatural', 0, 10, 0.1, 'NAIRU');
+    html += '</tbody></table>';
+  }
+  html += '<div class="k-note">PCE = personal consumption expenditures price index. Inflation and output are linearly interpolated across meetings.</div>';
+  html += '</div>';
+
+  // Rule coefficients + JR parameters
+  html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Rule coefficients</span></div>';
+  html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
+  html += paramField('Classic \u03b1 (inflation)', 'alphaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Classic \u03b2 (output gap)', 'betaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Balanced \u03b1 (inflation)', 'alphaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Balanced \u03b2 (output gap)', 'betaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Inertia \u03c1 (smoothing)', 'inertia', 0, 0.99, 0.05, 'Clarida-Gali-Gertler');
+  html += '</tbody></table>';
+  // JR ECM parameters
+  html += '<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--color-border-tertiary)">';
+  html += '<div style="font-size:10px;font-weight:500;color:var(--c-taylor);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Judd-Rudebusch ECM parameters</div>';
+  html += '<table class="fwt"><tbody>';
+  html += trField('\u03bb\u2081 (inflation weight)', 'jrLambda1', 0.5, 3.0, 0.25, 'Eq. 23');
+  html += trField('\u03bb\u2082 (gap weight)', 'jrLambda2', 0.0, 2.0, 0.25, 'Eq. 23');
+  html += trField('\u03bb\u2083 (lagged gap)', 'jrLambda3', 0.0, 1.0, 0.10, 'Eq. 23');
+  html += trField('\u03b3 (adjustment speed)', 'jrGamma', 0.50, 0.99, 0.05, 'Eq. 24');
+  html += '</tbody></table>';
+  html += '</div>';
+  html += '<div class="k-note"><b>Classic:</b> r = r* + \u03c0* + \u03b1(\u03c0 \u2212 \u03c0*) + \u03b2(y \u2212 y*). Taylor 1993: \u03b1=1.5, \u03b2=0.5.<br>';
+  html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.<br>';
+  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + \u03c0* + \u03bb\u2081(\u03c0\u2212\u03c0*) + \u03bb\u2082\u00b7gap<sub>t</sub> + \u03bb\u2083\u00b7gap<sub>t-1</sub>; \u0394i<sub>t</sub> = \u03b3(i*<sub>t</sub> \u2212 i<sub>t-1</sub>).</div>';
+  html += '</div></div>';
+
+  // Main chart — now includes JR path
+  html += '<div class="k-panel" style="margin-bottom:14px">';
+  html += '<div class="k-hdr"><span class="k-title">Prescribed rate path vs CME market-implied path</span></div>';
+  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t, jrImpliedPath);
+  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
+  html += '</div>';
+
+  // Gap chart
+  html += '<div class="k-panel" style="margin-bottom:14px">';
+  html += '<div class="k-hdr"><span class="k-title">Taylor\u2212CME gap (prescriptive minus market)</span></div>';
+  html += taylorGapSvg(meetings, cmeRates, taylorPaths.classic, taylorPaths.balanced);
+  html += '<div class="k-note">Positive gap = Taylor says policy is too loose (rate should be higher). Negative = Taylor says policy is too tight. Solid = classic, dashed = balanced. Red/blue coloring at \u00b15bp threshold.</div>';
+  html += '</div>';
+
+  // Decomposition table — now includes JR column
+  html += '<div class="k-panel" style="margin-bottom:14px">';
+  html += '<div class="k-hdr"><span class="k-title">Meeting-by-meeting decomposition</span></div>';
+  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
+  const n = meetings.length;
+  for (let i = 0; i < n; i++) {
+    const t2 = n > 1 ? i / (n - 1) : 0;
+    const pi = t.piNow + t2 * (t.piEnd - t.piNow);
+    const y = t.yNow + t2 * (t.yEnd - t.yNow);
+    const jrRate = jrImpliedPath[i] !== undefined ? jrImpliedPath[i] : 0;
+    const gap = jrRate - cmeRates[i];
+    const gCol = gap > 0.05 ? 'var(--color-text-danger)' : gap < -0.05 ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
+    const shortLbl = meetings[i].label.split('\u2013')[0] || meetings[i].lb;
+    html += '<tr>';
+    html += '<td style="white-space:nowrap;font-size:11px">' + shortLbl + '</td>';
+    html += '<td style="font-family:var(--font-mono)">' + pi.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono)">' + y.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor);opacity:.7">' + taylorPaths.classic[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-taylor-mod)">' + taylorPaths.balanced[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);font-weight:600;color:var(--c-taylor)">' + jrRate.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-cme)">' + cmeRates[i].toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:' + gCol + '">' + (gap > 0 ? '+' : '') + gap.toFixed(2) + '</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  html += '<div class="k-note">Inflation and output gap are linearly interpolated from current to end-of-horizon values across meeting dates. Gap = JR ECM minus CME implied.</div>';
+  html += '</div>';
+
+  // Rule comparison matrix
+  html += '<div class="k-panel" style="margin-top:12px">';
+  html += '<div class="k-hdr"><span class="k-title">Rule comparison matrix \u2014 all variants at current inputs</span>';
+  html += '<span class="k-contract">Bieri-Chincarini (2005) Exhibit 7 \u00b7 Atlanta Fed Taylor Rule Utility</span></div>';
+  html += '<div style="overflow-x:auto">';
+  html += buildRuleComparisonTable(trRates, effrStart, lb);
+  html += '</div>';
+  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter \u2014 it has the highest R\u00b2 for predicting actual FFTR changes (Exhibit 7: R\u00b2=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term \u03bb\u2083 captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative \u2014 it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
+  html += '</div>';
+
+  // Wire onchange events for parameter inputs + variant chips + gap measure
+  useEffect(() => {
+    const taylorHandler = (e) => {
+      const key = e.target.dataset.taylorKey;
+      if (!key) return;
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) dispatch({type: 'UPDATE_TAYLOR', key, value: val});
+    };
+    const trHandler = (e) => {
+      const key = e.target.dataset.trKey;
+      if (!key) return;
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val)) dispatch({type: 'UPDATE_TR', key, value: val});
+    };
+    const variantHandler = (e) => {
+      const v = e.currentTarget.dataset.ruleVariant;
+      if (v) dispatch({type: 'UPDATE_TR', key: 'ruleVariant', value: v});
+    };
+    const gapHandler = (e) => {
+      const v = e.currentTarget.dataset.gapMeasure;
+      if (v) dispatch({type: 'UPDATE_TR', key: 'gapMeasure', value: v});
+    };
+    document.querySelectorAll('[data-taylor-key]').forEach(el => el.addEventListener('change', taylorHandler));
+    document.querySelectorAll('[data-tr-key]').forEach(el => el.addEventListener('change', trHandler));
+    document.querySelectorAll('[data-rule-variant]').forEach(el => el.addEventListener('click', variantHandler));
+    document.querySelectorAll('[data-gap-measure]').forEach(el => el.addEventListener('click', gapHandler));
+    return () => {
+      document.querySelectorAll('[data-taylor-key]').forEach(el => el.removeEventListener('change', taylorHandler));
+      document.querySelectorAll('[data-tr-key]').forEach(el => el.removeEventListener('change', trHandler));
+      document.querySelectorAll('[data-rule-variant]').forEach(el => el.removeEventListener('click', variantHandler));
+      document.querySelectorAll('[data-gap-measure]').forEach(el => el.removeEventListener('click', gapHandler));
+    };
+  });
+
+  return <SvgPanel html={html}/>;
+}
+
+function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD} = finance;
+  const [selectedMeeting, setSelectedMeeting] = React.useState(null);
+  const [showAll, setShowAll] = React.useState(false);
+  const [model, setModel] = React.useState('ns');
+
+  // Bridge for onchange in HTML string inputs
+  window.__ycDispatch = (i, v) => dispatch({type:'UPDATE_YC_RATE', i, value:parseFloat(v)||state.ycD[i].rate});
+
+  // -- Fetch bar --
+  const fetchStatus = refreshStatus?.yc || 'Seed data \u2014 3mo/6mo/1yr from ZQ chain \u00b7 2yr\u201330yr enter manually or fetch';
+  const isFetching = fetching?.yc || false;
+
+  // -- Curve SVG --
+  function buildCurveChart() {
+    const W=720, H=170, mt=24, mb=30, ml=40, mr=16;
+    const allRates = [...syncedYcD.map(d=>d.rate), ...nsCurvePoints.map(d=>d.rate)];
+    const minR = Math.min(...allRates) - 0.15;
+    const maxR = Math.max(...allRates) + 0.15;
+    const xs = m => ml + (Math.log(m+0.1)/Math.log(30.1)) * (W-ml-mr);
+    const ys = v => mt + H * (1-(v-minR)/(maxR-minR));
+    let svg = '<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
+
+    // Y grid
+    const step=0.25;
+    for(let y=Math.ceil(minR/step)*step; y<=maxR; y+=step){
+      svg+='<line x1="'+ml+'" y1="'+ys(y).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+      svg+='<text x="'+(ml-4).toFixed(1)+'" y="'+ys(y).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y.toFixed(2)+'</text>';
+    }
+
+    // X axis labels (log scale maturity)
+    [{m:0.25,l:'3mo'},{m:0.5,l:'6mo'},{m:1,l:'1yr'},{m:2,l:'2yr'},{m:5,l:'5yr'},{m:10,l:'10yr'},{m:30,l:'30yr'}].forEach(function(d){
+      svg+='<line x1="'+xs(d.m).toFixed(1)+'" y1="'+mt+'" x2="'+xs(d.m).toFixed(1)+'" y2="'+(mt+H).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".3" stroke-dasharray="2,3"/>';
+      svg+='<text x="'+xs(d.m).toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.l+'</text>';
+    });
+
+    // Scenario shocked curves (if any)
+    var curvesToShow = showAll ? scenarioCurves : (selectedMeeting ? scenarioCurves.filter(function(c){return c.meetingLb===selectedMeeting;}) : []);
+    curvesToShow.forEach(function(sc, idx) {
+      var opacity = showAll ? (0.12 + idx*(0.7/Math.max(scenarioCurves.length-1,1))).toFixed(2) : '0.7';
+      var pts = Array.from({length:80},function(_,i){var m=0.08+(i/79)*29.92;return xs(m).toFixed(1)+','+ys(nsYield(m,sc.params)).toFixed(1);}).join(' ');
+      svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.5" opacity="'+opacity+'" stroke-dasharray="4,2"/>';
+    });
+
+    // NS instantaneous forward (dashed amber)
+    var fwdPts = nsForwardPoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
+    svg+='<polyline points="'+fwdPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".5"/>';
+
+    // NS spot curve (amber solid)
+    var nsPts = nsCurvePoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
+    svg+='<polyline points="'+nsPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" opacity=".9"/>';
+
+    // Raw data points -- connect with gray line first
+    for(var i=0;i<syncedYcD.length-1;i++){
+      var a=syncedYcD[i], b=syncedYcD[i+1];
+      svg+='<line x1="'+xs(a.mat).toFixed(1)+'" y1="'+ys(a.rate).toFixed(1)+'" x2="'+xs(b.mat).toFixed(1)+'" y2="'+ys(b.rate).toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1" opacity=".5"/>';
+    }
+    syncedYcD.forEach(function(d){
+      var col = d.src==='zq' ? 'var(--c-cme)' : 'var(--c-sofr)';
+      svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+      svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
+    });
+
+    // Legend
+    svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf ZQ-derived</text>';
+    svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
+    svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
+    svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd \u00b7 --- scenario</text>';
+    svg+='</svg>';
+    return svg;
+  }
+
+  // -- Shock impact table --
+  function buildShockTable() {
+    var mats = [{m:2,l:'2yr'},{m:5,l:'5yr'},{m:10,l:'10yr'},{m:30,l:'30yr'}];
+    var loadings = {2:0.50, 5:0.30, 10:0.10, 30:0.05};
+    var h = '<table class="fwt"><thead><tr><th>Meeting</th><th>EFFR \u0394 (bp)</th>';
+    mats.forEach(function(d){h+='<th>'+d.l+' \u0394 (bp)</th>';});
+    h+='<th>10\u22122yr \u0394 (bp)</th><th>Riding signal</th></tr></thead><tbody>';
+    scenarioCurves.forEach(function(sc) {
+      var slopeChg = (sc.cumDeltaBp * (loadings[2] - loadings[10])).toFixed(1);
+      var signal = parseFloat(slopeChg) < -5 ? '\ud83d\udfe2 Ride' : parseFloat(slopeChg) > 5 ? '\ud83d\udd34 Hold' : '\ud83d\udfe1 Marginal';
+      var dc = sc.cumDeltaBp < -5 ? 'var(--color-text-info)' : sc.cumDeltaBp > 5 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)';
+      h+='<tr><td style="white-space:nowrap;font-weight:500">'+sc.label+'</td>';
+      h+='<td style="font-family:var(--font-mono);color:'+dc+'">'+(sc.cumDeltaBp > 0 ? '+':'')+sc.cumDeltaBp.toFixed(0)+'</td>';
+      mats.forEach(function(mt){
+        var d=(sc.cumDeltaBp*loadings[mt.m]).toFixed(1);
+        var col=parseFloat(d)<0?'var(--color-text-info)':parseFloat(d)>0?'var(--color-text-danger)':'var(--color-text-tertiary)';
+        h+='<td style="font-family:var(--font-mono);color:'+col+'">'+(parseFloat(d)>0?'+':'')+d+'</td>';
+      });
+      h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(slopeChg)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(parseFloat(slopeChg)>0?'+':'')+slopeChg+'</td>';
+      h+='<td>'+signal+'</td></tr>';
+    });
+    h+='</tbody></table>';
+    return h;
+  }
+
+  // -- CMT input table --
+  function buildCmtTable() {
+    var short = syncedYcD[0].rate;
+    var h = '<table class="fwt"><thead><tr><th>Tenor</th><th>Rate (%)</th><th>Source</th><th>Spread vs 3mo (bp)</th></tr></thead><tbody>';
+    syncedYcD.forEach(function(row, i) {
+      var spread = ((row.rate - short) * 100).toFixed(1);
+      var spreadCol = parseFloat(spread) > 0 ? 'var(--color-text-success)' : parseFloat(spread) < 0 ? 'var(--color-text-danger)' : 'var(--color-text-tertiary)';
+      var srcBadge = row.src==='live'
+        ? '<span class="k-pill k-up">live</span>'
+        : row.src==='zq'
+          ? '<span class="k-pill" style="background:var(--c-cme-a);color:var(--c-cme)">ZQ</span>'
+          : '<span class="k-pill k-neu">manual</span>';
+      h+='<tr><td style="font-weight:500;font-family:var(--font-mono)">'+row.label+'</td>';
+      h+='<td><input class="fw-in" type="number" step="0.01" min="0" max="20" value="'+row.rate.toFixed(2)+'" '+(row.editable?'':'disabled style="opacity:.6"')+' style="width:68px" onchange="window.__ycDispatch('+i+', this.value)"/>';
+      h+='<span style="font-size:10px;color:var(--color-text-tertiary);margin-left:4px">%</span></td>';
+      h+='<td>'+srcBadge+'</td>';
+      h+='<td style="font-family:var(--font-mono);color:'+spreadCol+'">'+(parseFloat(spread)>0?'+':'')+spread+' bp</td></tr>';
+    });
+    h+='</tbody></table>';
+    return h;
+  }
+
+  var slope10_2 = ((syncedYcD[5].rate - syncedYcD[3].rate)*100).toFixed(1);
+  var slope2_3mo = ((syncedYcD[3].rate - syncedYcD[0].rate)*100).toFixed(1);
+  var curveShape = parseFloat(slope10_2) > 50 ? 'Normal / steep' : parseFloat(slope10_2) > 10 ? 'Normal / flat' : parseFloat(slope10_2) > -10 ? 'Near flat / mixed' : 'Inverted';
+
+  return (
+    <div>
+      {/* Fetch bar */}
+      <div className="k-fetch-bar">
+        <button className="refresh-btn" disabled={isFetching}
+          onClick={()=>fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus)}>
+          {isFetching ? '\u27f3 ...' : '\u27f3 Fetch CMT rates'}
+        </button>
+        <span className="k-seed-note">{fetchStatus}</span>
+        <span style={{marginLeft:'auto',fontSize:'10px',color:'var(--color-text-tertiary)',display:'flex',gap:'10px'}}>
+          <span><span className="k-dot" style={{background:'var(--c-cme)'}}></span> ZQ-derived</span>
+          <span><span className="k-dot" style={{background:'var(--c-sofr)'}}></span> CMT</span>
+          <span><span className="k-dot" style={{background:'var(--c-overlay)'}}></span> NS fit</span>
+        </span>
+      </div>
+
+      {/* CMT input table */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Treasury CMT par rates \u2014 input grid</span>
+          <span className="k-contract">Federal Reserve H.15 \u00b7 daily</span>
+        </div>
+        <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildCmtTable()}}/>
+        <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginTop:'8px'}}>
+          {[
+            {l:'10yr\u22122yr slope', v:slope10_2+'bp', col:parseFloat(slope10_2)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'2yr\u22123mo slope',  v:slope2_3mo+'bp', col:parseFloat(slope2_3mo)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'Curve shape', v:curveShape, col:'var(--color-text-primary)'},
+            {l:'NS RMSE', v:nsFactors.rmse.toFixed(1)+'bp', col:'var(--c-overlay)'},
+          ].map(function(d){return(
+            <div key={d.l} className="fw-stat" style={{padding:'6px 10px'}}>
+              <div className="fw-stat-l">{d.l}</div>
+              <div className="fw-stat-v" style={{fontSize:'15px',color:d.col}}>{d.v}</div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      {/* NS factor cards */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Nelson-Siegel factors</span>
+          <span style={{display:'flex',gap:'6px',alignItems:'center'}}>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Model:</span>
+            {['ns','nss'].map(function(m){return(
+              <button key={m} onClick={()=>setModel(m)}
+                style={{padding:'2px 8px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(model===m?'var(--c-overlay)':'var(--color-border-secondary)'),background:model===m?'var(--c-overlay-a)':'transparent',color:model===m?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+                {m.toUpperCase()}
+              </button>
+            );})}
+            {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson \u2014 Phase 3 extension)</span>}
+          </span>
+        </div>
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
+          {[
+            {l:'Level \u03b2\u2080', v:nsFactors.level.toFixed(3)+'%', sub:'Long-run rate', col:'var(--c-overlay)'},
+            {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
+            {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
+            {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
+            {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
+          ].map(function(d){return(
+            <div key={d.l} className="fw-stat">
+              <div className="fw-stat-l">{d.l}</div>
+              <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
+              <div className="fw-stat-s">{d.sub}</div>
+            </div>
+          );})}
+        </div>
+      </div>
+
+      {/* Curve chart */}
+      <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+        <div className="k-hdr">
+          <span className="k-title">Yield curve \u2014 CMT data + Nelson-Siegel fit + scenario paths</span>
+          <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
+            <button onClick={()=>setShowAll(!showAll)}
+              style={{padding:'2px 8px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(showAll?'var(--c-overlay)':'var(--color-border-secondary)'),background:showAll?'var(--c-overlay-a)':'transparent',color:showAll?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+              {showAll ? 'Showing all meetings' : 'Show all meetings'}
+            </button>
+            {!showAll && scenarioCurves.map(function(sc){return(
+              <button key={sc.meetingLb} onClick={()=>setSelectedMeeting(selectedMeeting===sc.meetingLb?null:sc.meetingLb)}
+                style={{padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-border-secondary)'),background:selectedMeeting===sc.meetingLb?'var(--c-overlay-a)':'transparent',color:selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-text-secondary)'}}>
+                {sc.label.split('\u2013')[0].replace(/ 20\d\d/,'')}
+                {sc.cumDeltaBp!==0&&<span style={{fontSize:'9px',marginLeft:'3px',opacity:.7}}>{sc.cumDeltaBp>0?'+':''}{sc.cumDeltaBp.toFixed(0)}bp</span>}
+              </button>
+            );})}
+          </div>
+        </div>
+        <SvgPanel html={buildCurveChart()}/>
+        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting. X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp. Click a meeting button to overlay the shocked curve for that meeting.</div>
+      </div>
+
+      {/* Shock impact table */}
+      <div className="k-panel k-full">
+        <div className="k-hdr">
+          <span className="k-title">Yield curve impact by FOMC meeting \u2014 Bieri-Chincarini empirical coefficients</span>
+          <span className="k-contract">Exhibit 5: \u221225bp slope per 100bp FFTR hike</span>
+        </div>
+        <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildShockTable()}}/>
+        <div className="k-note">Maturity loadings: 2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100bp FFR change. Slope \u0394 = 2yr loading minus 10yr loading \u00d7 cumulative delta. Green = curve steepening (riding more favorable), red = flattening/inverting. Riding signal feeds the Phase 4 calculator.</div>
+      </div>
+    </div>
+  );
+}
+
+function RidingTab({state, dispatch, finance}) {
+  const {rideData, nsFitParams, syncedYcD} = finance;
+  const MATS = ['6mo','1yr','2yr','5yr','7yr','10yr','30yr'];
+  const HORIZONS = ['1mo','3mo','6mo','12mo','18mo'];
+  const FILTERS = [
+    {key:'positiveSlope',    label:'Positive slope'},
+    {key:'positiveCushion',  label:'Positive cushion'},
+    {key:'cushion75',        label:'75th pctile cushion'},
+    {key:'taylorRule',       label:'Taylor rule signal'},
+    {key:'cmeExpectations',  label:'CME signal'},
+  ];
+
+  const sel = state.rideSelected;
+  const selectedCell = rideData[sel.matIdx] && rideData[sel.matIdx][sel.hIdx] ? rideData[sel.matIdx][sel.hIdx] : null;
+
+  const signalBg = {ride:'#dcfce7', hold:'#fee2e2', marginal:'#fef9c3'};
+  const signalColor = {ride:'var(--color-text-success)', hold:'var(--color-text-danger)', marginal:'var(--color-text-warning)'};
+
+  return (
+    <div>
+      {/* Filter chips */}
+      <div style={{display:'flex',alignItems:'center',gap:'6px',flexWrap:'wrap',padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.75rem'}}>
+        <span style={{fontSize:'10px',fontWeight:500,color:'var(--color-text-tertiary)',textTransform:'uppercase',letterSpacing:'.06em',marginRight:'4px'}}>Active filters:</span>
+        {FILTERS.map(function(f){
+          var on = state.rideFilters[f.key];
+          return (
+            <button key={f.key} onClick={()=>dispatch({type:'TOGGLE_RIDE_FILTER',key:f.key})}
+              style={{padding:'3px 10px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(on?'var(--color-border-info)':'var(--color-border-secondary)'),background:on?'var(--color-background-info)':'transparent',color:on?'var(--color-text-info)':'var(--color-text-tertiary)',fontWeight:on?600:400}}>
+              {f.label} {on?'\u2713':''}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Matrix */}
+      <div className="k-panel" style={{marginBottom:'12px'}}>
+        <div className="k-hdr"><span className="k-title">HPR matrix \u2014 instrument \u00d7 horizon (click cell for detail)</span></div>
+        <div style={{overflowX:'auto'}}>
+          <table className="fwt">
+            <thead>
+              <tr>
+                <th>Instrument</th>
+                {HORIZONS.map(function(h){return <th key={h}>{h}</th>;})}
+              </tr>
+            </thead>
+            <tbody>
+              {MATS.map(function(mat,mi){return(
+                <tr key={mat}>
+                  <td style={{fontWeight:500,fontFamily:'var(--font-mono)'}}>{mat}</td>
+                  {HORIZONS.map(function(hor,hi){
+                    var cell = rideData[mi] && rideData[mi][hi] ? rideData[mi][hi] : null;
+                    if(!cell || cell.signal===undefined) return <td key={hor} style={{opacity:.3,fontSize:'11px',textAlign:'center'}}>\u2014</td>;
+                    var isSel = sel.matIdx===mi && sel.hIdx===hi;
+                    return (
+                      <td key={hor}
+                        onClick={()=>dispatch({type:'SET_RIDE_SELECTED',matIdx:mi,hIdx:hi})}
+                        style={{background:signalBg[cell.signal],cursor:'pointer',border:isSel?'2px solid var(--c-cme)':'2px solid transparent',padding:'5px 8px',minWidth:'72px'}}>
+                        <div style={{fontWeight:600,fontSize:'12px',color:signalColor[cell.signal],fontFamily:'var(--font-mono)'}}>
+                          {cell.annXhpr>=0?'+':''}{(cell.annXhpr*100).toFixed(2)}pp
+                        </div>
+                        <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+                          {cell.cushion>=0?'+':''}{cell.cushion.toFixed(0)}bp
+                        </div>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );})}
+            </tbody>
+          </table>
+        </div>
+        <div className="k-note" style={{marginTop:'8px'}}>XHPR = annualized excess HPR vs buy-and-hold. Cushion = break-even yield change (bp). Color: \ud83d\udfe2 ride / \ud83d\udd34 hold / \ud83d\udfe1 marginal based on active filters. Source: Bieri-Chincarini (2005) Eqs. 8\u201316.</div>
+      </div>
+
+      {/* Cushion detail for selected cell */}
+      {selectedCell && selectedCell.m > selectedCell.h && (
+        <div className="k-grid" style={{marginBottom:'12px'}}>
+          <div className="k-panel">
+            <div className="k-hdr">
+              <span className="k-title">Cushion detail \u2014 {MATS[sel.matIdx]} instrument, {HORIZONS[sel.hIdx]} horizon</span>
+            </div>
+            {/* Cushion gauge bar */}
+            <div style={{marginBottom:'12px'}}>
+              <div style={{fontSize:'22px',fontWeight:500,color:selectedCell.cushion>15?'var(--color-text-success)':selectedCell.cushion>0?'var(--color-text-warning)':'var(--color-text-danger)'}}>
+                {selectedCell.cushion>=0?'+':''}{selectedCell.cushion.toFixed(0)} bp
+              </div>
+              <div style={{fontSize:'11px',color:'var(--color-text-secondary)',marginBottom:'8px'}}>
+                Rates must rise {Math.abs(selectedCell.cushion).toFixed(0)}bp to eliminate excess return
+              </div>
+              <div style={{height:'16px',borderRadius:'4px',overflow:'hidden',border:'.5px solid var(--color-border-tertiary)',background:'var(--color-background-secondary)',position:'relative'}}>
+                <div style={{position:'absolute',left:'50%',top:0,bottom:0,width:'1px',background:'var(--color-border-secondary)'}}/>
+                {selectedCell.cushion > 0 && (
+                  <div style={{position:'absolute',left:'50%',top:0,height:'100%',width:Math.min(50, selectedCell.cushion/2)+'%',background:'var(--color-text-success)',opacity:.7}}/>
+                )}
+                {selectedCell.cushion < 0 && (
+                  <div style={{position:'absolute',right:'50%',top:0,height:'100%',width:Math.min(50, -selectedCell.cushion/2)+'%',background:'var(--color-text-danger)',opacity:.7}}/>
+                )}
+                {/* 75th pctile marker at ~15bp */}
+                <div style={{position:'absolute',left:(50+15/2)+'%',top:0,bottom:0,width:'2px',background:'var(--color-text-warning)',opacity:.6}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+                <span>{'\u2212'}100bp</span><span>0</span><span>75th pctile (~15bp)</span><span>+100bp</span>
+              </div>
+            </div>
+            {/* Comparison table */}
+            <table className="fwt" style={{marginTop:'8px'}}>
+              <thead><tr><th>Metric</th><th>Raw ride</th><th>Duration-neutral</th></tr></thead>
+              <tbody>
+                <tr><td>HPR (ann.)</td>
+                  <td style={{fontFamily:'var(--font-mono)'}}>{(selectedCell.hpr/selectedCell.h*100).toFixed(2)}%</td>
+                  <td style={{fontFamily:'var(--font-mono)'}}>{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}%</td>
+                </tr>
+                <tr><td>XHPR (ann.)</td>
+                  <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>{selectedCell.annXhpr>=0?'+':''}{(selectedCell.annXhpr*100).toFixed(2)}pp</td>
+                  <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>{selectedCell.dnXR>=0?'+':''}{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}pp</td>
+                </tr>
+                <tr><td>Cushion</td>
+                  <td style={{fontFamily:'var(--font-mono)'}} colSpan={2}>{selectedCell.cushion>=0?'+':''}{selectedCell.cushion.toFixed(0)} bp</td>
+                </tr>
+                <tr><td>Signal</td>
+                  <td colSpan={2} style={{color:signalColor[selectedCell.signal],fontWeight:600,textTransform:'uppercase'}}>{selectedCell.signal}</td>
+                </tr>
+              </tbody>
+            </table>
+            {/* Taylor signal note */}
+            <div style={{marginTop:'10px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',fontSize:'11px'}}>
+              {finance.taylorSignalVal === -1 && <span style={{color:'var(--color-text-info)'}}>{'\ud83d\udccf'} Taylor rule prescribes cut \u2192 riding favorable \u2713</span>}
+              {finance.taylorSignalVal === +1 && <span style={{color:'var(--color-text-danger)'}}>{'\ud83d\udccf'} Taylor rule prescribes hike \u2192 riding less favorable \u2717</span>}
+              {finance.taylorSignalVal === 0  && <span style={{color:'var(--color-text-secondary)'}}>{'\ud83d\udccf'} Taylor rule neutral</span>}
+            </div>
+          </div>
+
+          {/* Duration-neutral barbell panel */}
+          <div className="k-panel">
+            <div className="k-hdr"><span className="k-title">Duration-neutral barbell \u2014 \u03c9 weight</span></div>
+            {selectedCell && (
+              <div>
+                <div style={{fontSize:'12px',color:'var(--color-text-secondary)',marginBottom:'10px'}}>
+                  Targeting duration of <b>{HORIZONS[sel.hIdx]}</b> buy-and-hold = <b>{selectedCell.h.toFixed(3)} yr</b>
+                </div>
+                {/* Barbell visual */}
+                <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
+                  <div style={{flex:selectedCell.omega,background:'var(--c-cme)',opacity:.8,height:'24px',borderRadius:'4px',display:'flex',alignItems:'center',justifyContent:'center',minWidth:'40px'}}>
+                    <span style={{fontSize:'10px',color:'#fff',fontWeight:600}}>{(selectedCell.omega*100).toFixed(0)}%</span>
+                  </div>
+                  <div style={{flex:1-selectedCell.omega,background:'var(--color-background-secondary)',border:'.5px solid var(--color-border-secondary)',height:'24px',borderRadius:'4px',display:'flex',alignItems:'center',justifyContent:'center',minWidth:'40px'}}>
+                    <span style={{fontSize:'10px',color:'var(--color-text-secondary)',fontWeight:600}}>{((1-selectedCell.omega)*100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                <div style={{fontSize:'11px',color:'var(--color-text-tertiary)',marginBottom:'10px'}}>
+                  <b style={{color:'var(--c-cme)'}}>{(selectedCell.omega*100).toFixed(0)}%</b> in {MATS[sel.matIdx]} instrument &nbsp;+&nbsp;
+                  <b>{((1-selectedCell.omega)*100).toFixed(0)}%</b> overnight
+                  <br/>{'\u03c9'} = (D_H {'\u2212'} D_O) / (D_R {'\u2212'} D_O) = ({selectedCell.h.toFixed(2)} {'\u2212'} 0) / ({selectedCell.m.toFixed(1)} {'\u2212'} 0)
+                </div>
+                {/* Return decomposition */}
+                <table className="fwt">
+                  <thead><tr><th>Component</th><th>Return (ann.)</th></tr></thead>
+                  <tbody>
+                    <tr><td>{'\u03c9'} {'\u00d7'} riding HPR</td>
+                      <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>
+                        +{(selectedCell.omega * selectedCell.hpr/selectedCell.h * 100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                    <tr><td>(1{'\u2212'}{'\u03c9'}) {'\u00d7'} overnight</td>
+                      <td style={{fontFamily:'var(--font-mono)'}}>{((1-selectedCell.omega)*(syncedYcD[0].rate)/100/selectedCell.h*selectedCell.h*100).toFixed(2)}pp</td>
+                    </tr>
+                    <tr><td>{'\u2212'} Buy-and-hold</td>
+                      <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-danger)'}}>
+                        {'\u2212'}{(Math.abs(rideHPR(nsYield(selectedCell.h,nsFitParams),nsYield(selectedCell.h,nsFitParams),selectedCell.h,selectedCell.h))/selectedCell.h*100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                    <tr style={{borderTop:'.5px solid var(--color-border-secondary)'}}>
+                      <td style={{fontWeight:600}}>Duration-neutral XR</td>
+                      <td style={{fontFamily:'var(--font-mono)',fontWeight:600,color:selectedCell.dnXR>=0?'var(--color-text-success)':'var(--color-text-danger)'}}>
+                        {selectedCell.dnXR>=0?'+':''}{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="k-note" style={{marginTop:'8px'}}>Duration-neutral riding removes the outright rate bet while preserving the curve-slope trade. {'\u03c9'} = fraction in riding instrument. Based on Bieri-Chincarini (2005) Eqs. 29{'\u2013'}30.</div>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ============================================================================
 // REACT APP
 // ============================================================================
@@ -1404,6 +2900,8 @@ function App() {
     {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
     {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
+    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
+    {id:'riding',     label:'\ud83d\udcca Riding'},
   ];
 
   return (
@@ -1430,7 +2928,7 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 7 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 9 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
@@ -1450,7 +2948,16 @@ function App() {
       {state.fwActive==='kalshi' && <KalshiTab state={state} dispatch={dispatch} finance={finance}
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
-      {!['inputs','chain','tree','kalshi'].includes(state.fwActive) &&
+      {state.fwActive==='sofr' && <SofrTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {state.fwActive==='dashboard' && <DashboardTab state={state} finance={finance}/>}
+      {state.fwActive==='taylor' && <TaylorRuleTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='yieldcurve' && <YieldCurveTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
