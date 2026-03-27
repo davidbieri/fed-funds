@@ -1525,6 +1525,83 @@ function panel8bSvg(emergencyCut,polyHike){
   return svg;
 }
 
+function pciBreakdownSvg(pciComponents, pciResult, weights) {
+  if (!pciComponents) return '<svg viewBox="0 0 320 110"></svg>';
+  var items = [
+    {label:'Signal Strength', val:pciComponents.signalStrength, color:'var(--c-cme)',     w:weights.signalStrength},
+    {label:'Transmission',    val:pciComponents.transmission,   color:'var(--c-sofr)',    w:weights.transmission},
+    {label:'Conviction',      val:pciComponents.conviction,     color:'var(--c-overlay)', w:weights.conviction},
+    {label:'Sent. Alignment', val:pciComponents.sentimentAlignment, color:'var(--c-poly)',w:weights.sentimentAlignment}
+  ];
+  var rowH=24, pad=10, labelW=108, barMaxW=130, totalW=320;
+  var h = items.length*rowH + pad*2 + 18;
+  var rows = '';
+  items.forEach(function(item,i) {
+    var y = pad + i*rowH;
+    var bw = (item.val||0)*barMaxW;
+    rows += '<text x="'+pad+'" y="'+(y+14)+'" fill="var(--color-text-secondary)" font-size="10">'+item.label+'</text>'+
+      '<rect x="'+(pad+labelW)+'" y="'+(y+6)+'" width="'+barMaxW+'" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+      '<rect x="'+(pad+labelW)+'" y="'+(y+6)+'" width="'+bw.toFixed(1)+'" height="10" fill="'+item.color+'" opacity="0.8" rx="2"/>'+
+      '<text x="'+(pad+labelW+barMaxW+5)+'" y="'+(y+14)+'" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+
+      ((item.val||0)*100).toFixed(0)+'%</text>'+
+      '<text x="'+(pad+labelW+barMaxW+32)+'" y="'+(y+14)+'" fill="var(--color-text-tertiary)" font-size="9">'+
+      (item.w*100).toFixed(0)+'%</text>';
+  });
+  var scoreCol = pciResult ? (pciResult.regime==='convicted'?'var(--c-sofr)':
+    pciResult.regime==='forming'?'var(--c-cme)':pciResult.regime==='divergent'?'var(--c-overlay)':'var(--c-kal)') : 'var(--color-text-tertiary)';
+  return '<svg viewBox="0 0 '+totalW+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+rows+
+    '<text x="'+pad+'" y="'+(h-4)+'" fill="'+scoreCol+'" font-size="10" font-weight="500">'+
+    (pciResult ? 'PCI: '+pciResult.score+' \u2014 '+pciResult.label : '--')+'</text></svg>';
+}
+
+function platformDivSvg(sentimentResult, meetings) {
+  if (!sentimentResult||!meetings) return '<svg viewBox="0 0 400 100"></svg>';
+  var w=400, h=100, midY=45, barW=28;
+  var divs = sentimentResult.platformDiv;
+  var spacing = w/Math.max(divs.length,1);
+  var bars = '';
+  divs.forEach(function(div,i) {
+    if (div===null) return;
+    var x = i*spacing+spacing/2-barW/2;
+    var barH = Math.min(35,Math.abs(div*120));
+    var y = div>0 ? midY-barH : midY;
+    var col = div>0 ? 'var(--c-poly)' : 'var(--c-kal)';
+    bars += '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+barH.toFixed(1)+
+      '" fill="'+col+'" opacity="0.75" rx="2"/>'+
+      '<text x="'+(x+barW/2).toFixed(1)+'" y="'+(div>0?y-3:y+barH+10).toFixed(1)+
+      '" fill="'+col+'" font-size="8" text-anchor="middle">'+
+      (div>=0?'+':'')+(div*100).toFixed(1)+'pp</text>'+
+      '<text x="'+(x+barW/2).toFixed(1)+'" y="'+(h-2)+
+      '" fill="var(--color-text-tertiary)" font-size="8" text-anchor="middle">'+
+      (meetings[i]?meetings[i].label:'')+'</text>';
+  });
+  var leader = sentimentResult.crowdLeader||'aligned';
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<line x1="0" y1="'+midY+'" x2="'+w+'" y2="'+midY+
+    '" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+bars+
+    '<text x="4" y="12" fill="var(--color-text-secondary)" font-size="9">'+
+    (leader==='polymarket'?'Polymarket leading':leader==='kalshi'?'Kalshi leading':'Aligned')+'</text></svg>';
+}
+
+function convictionSpreadSvg(pciComponents) {
+  var optConv = pciComponents ? (pciComponents.conviction*100).toFixed(0) : '50';
+  var crowdCons = pciComponents ? (pciComponents.sentimentAlignment*100).toFixed(0) : '50';
+  var spread = parseFloat(optConv) - parseFloat(crowdCons);
+  var spreadCol = Math.abs(spread)<10 ? 'var(--c-sofr)' : spread>0 ? 'var(--c-cme)' : 'var(--c-overlay)';
+  var spreadLabel = Math.abs(spread)<10 ? 'Broadly aligned' :
+    spread>0 ? 'Options more convicted \u2014 signal likely real' : 'Crowd more convicted \u2014 contrarian watch';
+  return '<svg viewBox="0 0 320 90" xmlns="http://www.w3.org/2000/svg">'+
+    '<text x="8" y="16" fill="var(--color-text-secondary)" font-size="10">Options conviction</text>'+
+    '<rect x="8" y="22" width="140" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+    '<rect x="8" y="22" width="'+(parseFloat(optConv)*1.4).toFixed(1)+'" height="10" fill="var(--c-cme)" opacity="0.8" rx="2"/>'+
+    '<text x="156" y="31" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+optConv+'</text>'+
+    '<text x="8" y="52" fill="var(--color-text-secondary)" font-size="10">Crowd consensus</text>'+
+    '<rect x="8" y="58" width="140" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+    '<rect x="8" y="58" width="'+(parseFloat(crowdCons)*1.4).toFixed(1)+'" height="10" fill="var(--c-poly)" opacity="0.8" rx="2"/>'+
+    '<text x="156" y="67" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+crowdCons+'</text>'+
+    '<text x="8" y="84" fill="'+spreadCol+'" font-size="9">'+spreadLabel+'</text></svg>';
+}
+
 function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
   const W=680,H=140,mt=24,mb=28,ml=36,mr=12;
   const n=srD.length;
@@ -2175,6 +2252,29 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+='<span class="k-contract">polymarket fed-emergency-rate-cut-before-2027</span></div>';
   html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
   html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
+
+  // Panel 10: Signal/Noise Decomposition
+  var fin = finance;
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2469 Signal/Noise Decomposition</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">PCI component breakdown \u00b7 Platform divergence (Polymarket vs Kalshi) \u00b7 Options vs. crowd conviction</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">PCI Breakdown</div>';
+  html+=pciBreakdownSvg(fin.pciComponents, fin.pciResult, state.pciD.pci.weights);
+  html+='</div>';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Platform Divergence</div>';
+  html+=platformDivSvg(fin.sentimentResult, fin.meetings);
+  html+='<div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Positive = Polymarket more dovish \u00b7 Negative = Kalshi more dovish</div>';
+  html+='</div>';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Conviction Spread</div>';
+  html+=convictionSpreadSvg(fin.pciComponents);
+  html+='</div>';
+  html+='</div>';
+  html+='<div class="k-note">Signal/noise decomposition of the Policy Confidence Index. PCI breakdown shows the four component scores with their portfolio weights. Platform divergence isolates Polymarket\u2212Kalshi disagreement per meeting. Conviction spread compares options-implied conviction (MPT IQR) against crowd consensus alignment \u2014 when options lead, the signal is more likely to be real.</div>';
+  html+='</div></div>';
 
   // Wire fetch buttons via window globals (inline onclick in generated HTML)
   useEffect(()=>{
