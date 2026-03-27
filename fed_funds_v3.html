@@ -659,6 +659,121 @@ function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSig
   });});
 }
 
+// --- PCI Component 1: Signal Strength from ZQ strip slope ---
+// slope -100bp/12mo = 1.0; flat = 0.5; slope +50bp = 0.0
+function computeSignalStrength(chain, fwLb) {
+  if (!chain || chain.length === 0) return 0.5;
+  const last = chain[chain.length - 1];
+  if (last.end === null) return 0.5;
+  const slopeBp = (last.end - fwLb) * 100;
+  return Math.max(0, Math.min(1, 0.5 - slopeBp / 200));
+}
+
+// --- PCI Component 2: Transmission Quality from SOFR-EFFR basis ---
+// basis 5-10bp = 1.0; basis >25bp = 0.0
+function computeTransmission(zqAvgs, srD) {
+  if (!srD || srD.length === 0) return 0.5;
+  const basisBp = ((100 - srD[0].price) - ((zqAvgs && zqAvgs[0]) || 0)) * 100;
+  return Math.max(0, Math.min(1, 1 - Math.max(0, basisBp - 5) / 30));
+}
+
+// --- PCI Component 3: Options Conviction from Atlanta Fed MPT IQR ---
+// IQR 0bp = 1.0; IQR 100bp = 0.0
+function computeConviction(pciD) {
+  const entries = Object.values(pciD.mpt.meetingData);
+  if (entries.length === 0) return 0.5;
+  const avgIqr = entries.reduce((s, e) => s + (e.iqr || 75), 0) / entries.length;
+  return Math.max(0, Math.min(1, 1 - avgIqr / 100));
+}
+
+// --- PCI Component 4: Sentiment Alignment -- crowd vs ZQ agreement ---
+// avg |gap| 0pp = 1.0; avg |gap| 25pp = 0.0
+function computeSentimentAlignment(meetings, kalshiD, polyD) {
+  let totalGap = 0, count = 0;
+  meetings.forEach(m => {
+    const kd = kalshiD.meetings && kalshiD.meetings[m.lb];
+    const pd = polyD.meetings && polyD.meetings[m.lb];
+    const kCut = kd ? (kd.cut25 || 0) + (kd.cut50 || 0) : null;
+    const pCut = pd ? (pd.cut25 || 0) + (pd.cut50 || 0) : null;
+    const cmeCut = (m.b0 < 0 ? m.p0 : 0) + (m.b1 < 0 && m.p1 > 0.001 ? m.p1 : 0);
+    if (kCut !== null && pCut !== null) {
+      totalGap += Math.abs(((kCut + pCut) / 2) - cmeCut);
+      count++;
+    }
+  });
+  if (count === 0) return 0.5;
+  return Math.max(0, Math.min(1, 1 - (totalGap / count) / 0.25));
+}
+
+// --- PCI Composite ---
+function computePCI(components, weights) {
+  const score = Math.round(100 * (
+    weights.signalStrength     * components.signalStrength +
+    weights.transmission       * components.transmission +
+    weights.conviction         * components.conviction +
+    weights.sentimentAlignment * components.sentimentAlignment
+  ));
+  const regime = score < 25 ? 'uncertain' : score < 50 ? 'divergent' :
+                 score < 75 ? 'forming' : 'convicted';
+  const labels = { uncertain:'Uncertain', divergent:'Divergent',
+                   forming:'Forming', convicted:'Convicted' };
+  return { score, regime, label: labels[regime] };
+}
+
+// --- Sentiment decomposition ---
+function computeSentiment(meetings, kalshiD, polyD) {
+  const sentimentGap = [], platformDiv = [];
+  let entropy = 0, count = 0;
+  meetings.forEach(m => {
+    const kd = kalshiD.meetings && kalshiD.meetings[m.lb];
+    const pd = polyD.meetings && polyD.meetings[m.lb];
+    const kCut = kd ? (kd.cut25 || 0) + (kd.cut50 || 0) : null;
+    const pCut = pd ? (pd.cut25 || 0) + (pd.cut50 || 0) : null;
+    const cmeCut = (m.b0 < 0 ? m.p0 : 0) + (m.b1 < 0 && m.p1 > 0.001 ? m.p1 : 0);
+    if (kCut !== null && pCut !== null) {
+      const pCrowd = (kCut + pCut) / 2;
+      sentimentGap.push(pCrowd - cmeCut);
+      platformDiv.push(pCut - kCut);
+      const p = Math.max(0.001, Math.min(0.999, pCrowd));
+      entropy += -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));
+      count++;
+    } else {
+      sentimentGap.push(null);
+      platformDiv.push(null);
+    }
+  });
+  const validDiv = platformDiv.filter(v => v !== null);
+  const avgDiv = validDiv.length
+    ? validDiv.reduce((s, v) => s + v, 0) / validDiv.length : 0;
+  return { sentimentGap, platformDiv,
+           crowdLeader: Math.abs(avgDiv) < 0.03 ? 'aligned'
+             : avgDiv > 0 ? 'polymarket' : 'kalshi',
+           avgCrowdEntropy: count ? entropy / count : null };
+}
+
+// --- Finance-neutral Taylor Rule (BIS/Borio framework) ---
+function computeFinanceNeutralRule(trD, pciD, fsD) {
+  const rStar = trD ? (trD.naturalRate || 0.5) : 0.5;
+  const nfci = pciD.fred.nfci || 0;
+  const leaningPremiumBp = fsD.nfciWeight * nfci * 100;
+  return { rStarFinance: rStar + leaningPremiumBp / 100,
+           leaningPremiumBp, nfci, nfciWeight: fsD.nfciWeight };
+}
+
+// --- Financial cycle phase clock ---
+function computeFinancialCyclePhase(pciD) {
+  const nfciPctile = pciD.fred.nfciPctile || 0.5;
+  const hySpreadPctile = pciD.fred.hySpreadPctile || 0.5;
+  const swapStress = Math.min(1, (pciD.fred.swapLines || 0) / 10);
+  const composite = nfciPctile * 0.4 + hySpreadPctile * 0.4 + swapStress * 0.2;
+  const phase = composite > 0.75 ? 'stress' : composite > 0.6 ? 'tightening' :
+                composite < 0.3 ? 'expansionary' : 'midcycle';
+  const labels = { stress:'Late cycle stress', tightening:'Tightening conditions',
+                   expansionary:'Expansionary', midcycle:'Mid-cycle' };
+  return { composite: Math.round(composite * 100), phase, phaseLabel: labels[phase],
+           nfciPctile, hySpreadPctile, swapStress };
+}
+
 // ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
@@ -674,6 +789,47 @@ const INITIAL_STATE = {
   srD: srD.map(r=>({...r})),
   ycD: ycD.map(r=>({...r})),
   rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  pciD: {
+    mpt: {
+      meetingData: {
+        'Jun-18': { p25:-50, p50:-25, p75:25,  iqr:75, skew:0.0,  leftTail:0.15, rightTail:0.08 },
+        'Sep-17': { p25:-75, p50:-50, p75:0,   iqr:75, skew:0.1,  leftTail:0.22, rightTail:0.05 },
+        'Dec-10': { p25:-100,p50:-75, p75:-25, iqr:75, skew:-0.1, leftTail:0.28, rightTail:0.04 },
+        'Mar-18': { p25:-125,p50:-100,p75:-50, iqr:75, skew:0.0,  leftTail:0.32, rightTail:0.03 }
+      },
+      fetchDate: null,
+      source: 'Atlanta Fed MPT --- options on SR3 futures'
+    },
+    fred: {
+      nfci: -0.56,
+      nfciHistory: [],
+      nfciPctile: 0.18,
+      swapLines: 0.0,
+      hySpread: 315,
+      hySpreadPctile: 0.35,
+      fetchDate: null
+    },
+    pci: {
+      score: null,
+      components: { signalStrength:null, transmission:null,
+                    conviction:null, sentimentAlignment:null },
+      weights: { signalStrength:0.35, transmission:0.25,
+                 conviction:0.25, sentimentAlignment:0.15 },
+      regime: null,
+      label: null
+    },
+    sentiment: {
+      sentimentGap: [], platformDiv: [], crowdLeader: null,
+      avgCrowdEntropy: null, convergenceRate: null
+    }
+  },
+  fsD: {
+    nfciWeight: 0.5,
+    termPremiumAlert: 100,
+    hySpreadAlert: 500,
+    nfciWindow: 52,
+    hyWindow: 52
+  },
   rideSelected: {matIdx:3, hIdx:1},
   taylor: {
     piStar: 2.0,       // inflation target (%)
@@ -799,6 +955,14 @@ function reducer(state, action){
       return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
     case 'SET_RIDE_SELECTED':
       return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
+    case 'APPLY_LIVE_MPT':
+      return {...state, pciD:{...state.pciD, mpt:{...state.pciD.mpt, ...action.payload, fetchDate:new Date().toISOString()}}};
+    case 'APPLY_LIVE_FRED':
+      return {...state, pciD:{...state.pciD, fred:{...state.pciD.fred, ...action.payload, fetchDate:new Date().toISOString()}}};
+    case 'UPDATE_PCI_WEIGHT':
+      return {...state, pciD:{...state.pciD, pci:{...state.pciD.pci, weights:{...state.pciD.pci.weights, [action.component]:action.value}}}};
+    case 'UPDATE_FS_PARAM':
+      return {...state, fsD:{...state.fsD, [action.key]:action.value}};
     default:
       return state;
   }
@@ -903,8 +1067,19 @@ function useFinance(state) {
     // Riding-the-yield-curve matrix
     const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
+    // PCI components and composite
+    const signalStrength     = computeSignalStrength(chain, state.fwLb);
+    const transmission       = computeTransmission(zqAvgs, state.srD);
+    const conviction         = computeConviction(state.pciD);
+    const sentimentAlignment = computeSentimentAlignment(meetings, state.kalshiD, state.polyD);
+    const pciComponents      = { signalStrength, transmission, conviction, sentimentAlignment };
+    const pciResult          = computePCI(pciComponents, state.pciD.pci.weights);
+    const sentimentResult    = computeSentiment(meetings, state.kalshiD, state.polyD);
+    const financeNeutralRule = computeFinanceNeutralRule(state.trD, state.pciD, state.fsD);
+    const financialCyclePhase = computeFinancialCyclePhase(state.pciD);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, pciComponents, pciResult, sentimentResult, financeNeutralRule, financialCyclePhase};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.pciD, state.fsD]);
 }
 
 // ============================================================================
@@ -1013,6 +1188,59 @@ async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus)
     setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' \u00b7 SOFR '+(p.sofr||'\u2014')+'%'}));
   }catch(e){setRefreshStatus(s=>({...s, sofr:'\u26a0 '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, sofr:false}));}
+}
+
+async function fetchMPT(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, mpt:true}));
+  setRefreshStatus(s=>({...s, mpt:'Searching Atlanta Fed MPT data\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Visit https://www.atlantafed.org/research-and-data/data/market-probability-tracker and find the most recent probability distribution data for SOFR futures options. For each of the four nearest quarterly SR3 contracts (e.g. Jun, Sep, Dec, Mar), extract: the 25th percentile rate, median rate, and 75th percentile rate of the implied SOFR distribution, plus the probability of rates being more than 50bp below current and more than 50bp above current EFFR. Current EFFR: ${state.fwLb}%. Return ONLY valid JSON, no markdown:\n{"contracts":[{"label":"Jun-18","p25":-50,"p50":-25,"p75":25,"iqr":75,"skew":0.0,"leftTail":0.15,"rightTail":0.08},{"label":"Sep-17","p25":-75,"p50":-50,"p75":0,"iqr":75,"skew":0.1,"leftTail":0.22,"rightTail":0.05},{"label":"Dec-10","p25":-100,"p50":-75,"p75":-25,"iqr":75,"skew":-0.1,"leftTail":0.28,"rightTail":0.04},{"label":"Mar-18","p25":-125,"p50":-100,"p75":-50,"iqr":75,"skew":0.0,"leftTail":0.32,"rightTail":0.03}]}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    if(!p.contracts||!Array.isArray(p.contracts))throw new Error('Missing contracts array');
+    const meetingData={};
+    p.contracts.forEach(c=>{meetingData[c.label]={p25:c.p25,p50:c.p50,p75:c.p75,iqr:c.iqr,skew:c.skew,leftTail:c.leftTail,rightTail:c.rightTail};});
+    dispatch({type:'APPLY_LIVE_MPT', payload:{meetingData}});
+    setRefreshStatus(s=>({...s, mpt:'MPT data updated'}));
+  }catch(e){setRefreshStatus(s=>({...s, mpt:'\u26a0 MPT fetch failed \u2014 using seed conviction data'}));}
+  finally{setFetching(f=>({...f, mpt:false}));}
+}
+
+async function fetchFRED(state, dispatch, apiKey, setFetching, setRefreshStatus){
+  setFetching(f=>({...f, fred:true}));
+  setRefreshStatus(s=>({...s, fred:'Fetching FRED financial conditions data\u2026'}));
+  const key=apiKey.trim();
+  const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
+  const prompt=`Today is ${today}. Fetch the latest values from FRED for these three series:\n1. NFCI - Chicago Fed National Financial Conditions Index (weekly). Get the latest value AND the last 52 weekly observations as an array.\n2. SWPT - Federal Reserve central bank liquidity swap outstandings (weekly). Get the latest value in billions of dollars.\n3. BAMLH0A0HYM2 - ICE BofA US High Yield Index OAS (daily). Get the latest value in basis points AND the last 52 weekly observations.\nReturn ONLY valid JSON, no markdown:\n{"nfci":-0.56,"nfciHistory":[{"date":"2025-03-14","value":-0.55}],"swapLines":0.0,"hySpread":315,"hySpreadHistory":[{"date":"2025-03-14","value":312}]}`;
+  const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:4000,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
+    if(!res.ok)throw new Error((await res.json().catch(()=>({}))).error?.message||('API '+res.status));
+    const data=await res.json();
+    const text=data.content.filter(b=>b.type==='text').map(b=>b.text).join('');
+    const m=text.replace(/```json|```/g,'').trim().match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON found in response');
+    const p=JSON.parse(m[0]);
+    function pctileRank(history,latest){const vals=history.map(h=>h.value).filter(v=>v!=null);return vals.length?vals.filter(v=>v<=latest).length/vals.length:0.5;}
+    const nfci=p.nfci;
+    const nfciHistory=Array.isArray(p.nfciHistory)?p.nfciHistory:[];
+    const nfciPctile=pctileRank(nfciHistory,nfci);
+    const swapLines=p.swapLines!=null?p.swapLines:0;
+    const hySpread=p.hySpread;
+    const hySpreadHistory=Array.isArray(p.hySpreadHistory)?p.hySpreadHistory:[];
+    const hySpreadPctile=pctileRank(hySpreadHistory,hySpread);
+    dispatch({type:'APPLY_LIVE_FRED', payload:{nfci,nfciHistory,nfciPctile,swapLines,hySpread,hySpreadPctile}});
+    setRefreshStatus(s=>({...s, fred:'FRED data updated'}));
+  }catch(e){setRefreshStatus(s=>({...s, fred:'\u26a0 FRED fetch failed \u2014 using seed data'}));}
+  finally{setFetching(f=>({...f, fred:false}));}
 }
 
 async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus){
@@ -1295,6 +1523,83 @@ function panel8bSvg(emergencyCut,polyHike){
   svg+='</svg>';
   svg+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-top:4px">Historical precedent: Jan 2001, Sep 2001, Oct 2008, Mar 2020</div>';
   return svg;
+}
+
+function pciBreakdownSvg(pciComponents, pciResult, weights) {
+  if (!pciComponents) return '<svg viewBox="0 0 320 110"></svg>';
+  var items = [
+    {label:'Signal Strength', val:pciComponents.signalStrength, color:'var(--c-cme)',     w:weights.signalStrength},
+    {label:'Transmission',    val:pciComponents.transmission,   color:'var(--c-sofr)',    w:weights.transmission},
+    {label:'Conviction',      val:pciComponents.conviction,     color:'var(--c-overlay)', w:weights.conviction},
+    {label:'Sent. Alignment', val:pciComponents.sentimentAlignment, color:'var(--c-poly)',w:weights.sentimentAlignment}
+  ];
+  var rowH=24, pad=10, labelW=108, barMaxW=130, totalW=320;
+  var h = items.length*rowH + pad*2 + 18;
+  var rows = '';
+  items.forEach(function(item,i) {
+    var y = pad + i*rowH;
+    var bw = (item.val||0)*barMaxW;
+    rows += '<text x="'+pad+'" y="'+(y+14)+'" fill="var(--color-text-secondary)" font-size="10">'+item.label+'</text>'+
+      '<rect x="'+(pad+labelW)+'" y="'+(y+6)+'" width="'+barMaxW+'" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+      '<rect x="'+(pad+labelW)+'" y="'+(y+6)+'" width="'+bw.toFixed(1)+'" height="10" fill="'+item.color+'" opacity="0.8" rx="2"/>'+
+      '<text x="'+(pad+labelW+barMaxW+5)+'" y="'+(y+14)+'" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+
+      ((item.val||0)*100).toFixed(0)+'%</text>'+
+      '<text x="'+(pad+labelW+barMaxW+32)+'" y="'+(y+14)+'" fill="var(--color-text-tertiary)" font-size="9">'+
+      (item.w*100).toFixed(0)+'%</text>';
+  });
+  var scoreCol = pciResult ? (pciResult.regime==='convicted'?'var(--c-sofr)':
+    pciResult.regime==='forming'?'var(--c-cme)':pciResult.regime==='divergent'?'var(--c-overlay)':'var(--c-kal)') : 'var(--color-text-tertiary)';
+  return '<svg viewBox="0 0 '+totalW+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+rows+
+    '<text x="'+pad+'" y="'+(h-4)+'" fill="'+scoreCol+'" font-size="10" font-weight="500">'+
+    (pciResult ? 'PCI: '+pciResult.score+' \u2014 '+pciResult.label : '--')+'</text></svg>';
+}
+
+function platformDivSvg(sentimentResult, meetings) {
+  if (!sentimentResult||!meetings) return '<svg viewBox="0 0 400 100"></svg>';
+  var w=400, h=100, midY=45, barW=28;
+  var divs = sentimentResult.platformDiv;
+  var spacing = w/Math.max(divs.length,1);
+  var bars = '';
+  divs.forEach(function(div,i) {
+    if (div===null) return;
+    var x = i*spacing+spacing/2-barW/2;
+    var barH = Math.min(35,Math.abs(div*120));
+    var y = div>0 ? midY-barH : midY;
+    var col = div>0 ? 'var(--c-poly)' : 'var(--c-kal)';
+    bars += '<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+barH.toFixed(1)+
+      '" fill="'+col+'" opacity="0.75" rx="2"/>'+
+      '<text x="'+(x+barW/2).toFixed(1)+'" y="'+(div>0?y-3:y+barH+10).toFixed(1)+
+      '" fill="'+col+'" font-size="8" text-anchor="middle">'+
+      (div>=0?'+':'')+(div*100).toFixed(1)+'pp</text>'+
+      '<text x="'+(x+barW/2).toFixed(1)+'" y="'+(h-2)+
+      '" fill="var(--color-text-tertiary)" font-size="8" text-anchor="middle">'+
+      (meetings[i]?meetings[i].label:'')+'</text>';
+  });
+  var leader = sentimentResult.crowdLeader||'aligned';
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<line x1="0" y1="'+midY+'" x2="'+w+'" y2="'+midY+
+    '" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+bars+
+    '<text x="4" y="12" fill="var(--color-text-secondary)" font-size="9">'+
+    (leader==='polymarket'?'Polymarket leading':leader==='kalshi'?'Kalshi leading':'Aligned')+'</text></svg>';
+}
+
+function convictionSpreadSvg(pciComponents) {
+  var optConv = pciComponents ? (pciComponents.conviction*100).toFixed(0) : '50';
+  var crowdCons = pciComponents ? (pciComponents.sentimentAlignment*100).toFixed(0) : '50';
+  var spread = parseFloat(optConv) - parseFloat(crowdCons);
+  var spreadCol = Math.abs(spread)<10 ? 'var(--c-sofr)' : spread>0 ? 'var(--c-cme)' : 'var(--c-overlay)';
+  var spreadLabel = Math.abs(spread)<10 ? 'Broadly aligned' :
+    spread>0 ? 'Options more convicted \u2014 signal likely real' : 'Crowd more convicted \u2014 contrarian watch';
+  return '<svg viewBox="0 0 320 90" xmlns="http://www.w3.org/2000/svg">'+
+    '<text x="8" y="16" fill="var(--color-text-secondary)" font-size="10">Options conviction</text>'+
+    '<rect x="8" y="22" width="140" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+    '<rect x="8" y="22" width="'+(parseFloat(optConv)*1.4).toFixed(1)+'" height="10" fill="var(--c-cme)" opacity="0.8" rx="2"/>'+
+    '<text x="156" y="31" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+optConv+'</text>'+
+    '<text x="8" y="52" fill="var(--color-text-secondary)" font-size="10">Crowd consensus</text>'+
+    '<rect x="8" y="58" width="140" height="10" fill="rgba(255,255,255,.06)" rx="2"/>'+
+    '<rect x="8" y="58" width="'+(parseFloat(crowdCons)*1.4).toFixed(1)+'" height="10" fill="var(--c-poly)" opacity="0.8" rx="2"/>'+
+    '<text x="156" y="67" fill="var(--color-text-primary)" font-size="10" font-family="var(--font-mono)">'+crowdCons+'</text>'+
+    '<text x="8" y="84" fill="'+spreadCol+'" font-size="9">'+spreadLabel+'</text></svg>';
 }
 
 function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
@@ -1948,6 +2253,29 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
   html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
 
+  // Panel 10: Signal/Noise Decomposition
+  var fin = finance;
+  html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
+  html+='<div class="k-hdr"><span class="k-title">\u2469 Signal/Noise Decomposition</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:10px">PCI component breakdown \u00b7 Platform divergence (Polymarket vs Kalshi) \u00b7 Options vs. crowd conviction</div>';
+  html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px">';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">PCI Breakdown</div>';
+  html+=pciBreakdownSvg(fin.pciComponents, fin.pciResult, state.pciD.pci.weights);
+  html+='</div>';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Platform Divergence</div>';
+  html+=platformDivSvg(fin.sentimentResult, fin.meetings);
+  html+='<div style="font-size:10px;color:var(--color-text-secondary);margin-top:4px">Positive = Polymarket more dovish \u00b7 Negative = Kalshi more dovish</div>';
+  html+='</div>';
+  html+='<div>';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Conviction Spread</div>';
+  html+=convictionSpreadSvg(fin.pciComponents);
+  html+='</div>';
+  html+='</div>';
+  html+='<div class="k-note">Signal/noise decomposition of the Policy Confidence Index. PCI breakdown shows the four component scores with their portfolio weights. Platform divergence isolates Polymarket\u2212Kalshi disagreement per meeting. Conviction spread compares options-implied conviction (MPT IQR) against crowd consensus alignment \u2014 when options lead, the signal is more likely to be real.</div>';
+  html+='</div></div>';
+
   // Wire fetch buttons via window globals (inline onclick in generated HTML)
   useEffect(()=>{
     window.__kalFetch=()=>fetchKalshi(state,dispatch,apiKey,setFetching,setRefreshStatus);
@@ -2054,8 +2382,71 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   return <SvgPanel html={html}/>;
 }
 
+function pciDialSvg(pciResult) {
+  const score = pciResult ? pciResult.score : 0;
+  const label = pciResult ? pciResult.label : '--';
+  const regime = pciResult ? pciResult.regime : 'uncertain';
+  const needleAngle = 180 - (score / 100) * 180;
+  const rad = needleAngle * Math.PI / 180;
+  const cx = 140, cy = 130, r = 90;
+  const nx = cx + r * Math.cos(Math.PI - rad);
+  const ny = cy - r * Math.sin(Math.PI - rad);
+  function arcPath(s, e, radius) {
+    const a1 = (180-s)*Math.PI/180, a2 = (180-e)*Math.PI/180;
+    return 'M '+(cx+radius*Math.cos(a1))+' '+(cy-radius*Math.sin(a1))+
+           ' A '+radius+' '+radius+' 0 0 1 '+
+           (cx+radius*Math.cos(a2))+' '+(cy-radius*Math.sin(a2));
+  }
+  const needleCol = regime==='convicted'?'var(--c-sofr)':regime==='forming'?'var(--c-cme)':
+    regime==='divergent'?'var(--c-overlay)':'var(--c-kal)';
+  return '<svg viewBox="0 0 280 160" xmlns="http://www.w3.org/2000/svg">'+
+    '<path d="'+arcPath(0,25,90)+'" fill="none" stroke="rgba(249,115,22,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(25,50,90)+'" fill="none" stroke="rgba(245,158,11,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(50,75,90)+'" fill="none" stroke="rgba(59,130,246,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(75,100,90)+'" fill="none" stroke="rgba(16,185,129,.3)" stroke-width="18"/>'+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+
+    '" stroke="'+needleCol+'" stroke-width="2.5" stroke-linecap="round"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+needleCol+'"/>'+
+    '<text x="42" y="148" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Uncertain</text>'+
+    '<text x="95" y="112" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Divergent</text>'+
+    '<text x="185" y="112" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Forming</text>'+
+    '<text x="238" y="148" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Convicted</text>'+
+    '<text x="'+cx+'" y="'+(cy-12)+'" fill="'+needleCol+'" font-size="28" font-weight="500"'+
+    ' text-anchor="middle" font-family="var(--font-mono)">'+score+'</text>'+
+    '<text x="'+cx+'" y="'+(cy+8)+'" fill="var(--color-text-secondary)" font-size="11" text-anchor="middle">'+
+    label+'</text></svg>';
+}
+
+function sentimentGapBarsSvg(sentimentResult, meetings) {
+  if (!sentimentResult || !meetings || !meetings.length)
+    return '<svg viewBox="0 0 600 80"></svg>';
+  const w=600, h=80, barW=36, midY=40;
+  const gaps = sentimentResult.sentimentGap;
+  const spacing = w / gaps.length;
+  var bars = '';
+  gaps.forEach(function(gap, i) {
+    if (gap === null) return;
+    const x = i*spacing + spacing/2 - barW/2;
+    const barH = Math.min(30, Math.abs(gap*100));
+    const y = gap>0 ? midY-barH : midY;
+    const col = gap>0 ? 'var(--c-poly)' : 'var(--c-kal)';
+    bars += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+barH+
+      '" fill="'+col+'" opacity="0.7" rx="2"/>'+
+      '<text x="'+(x+barW/2)+'" y="'+(gap>0?y-3:y+barH+10)+
+      '" fill="'+col+'" font-size="8" text-anchor="middle">'+
+      (gap>=0?'+':'')+(gap*100).toFixed(1)+'pp</text>'+
+      '<text x="'+(x+barW/2)+'" y="'+(h-2)+
+      '" fill="var(--color-text-tertiary)" font-size="8" text-anchor="middle">'+
+      (meetings[i]?meetings[i].label:'')+'</text>';
+  });
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<line x1="0" y1="'+midY+'" x2="'+w+'" y2="'+midY+
+    '" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+bars+'</svg>';
+}
+
 function DashboardTab({state, finance}) {
-  const {chain, meetings, states, final, zqAvgs, compareSeries} = finance;
+  const {chain, meetings, states, final, zqAvgs, compareSeries, pciComponents, pciResult, sentimentResult, financeNeutralRule, financialCyclePhase} = finance;
+  const fin = finance;
   const lb = state.fwLb;
   const fwD = state.fwD;
   const kD = state.kalshiD;
@@ -2099,6 +2490,26 @@ function DashboardTab({state, finance}) {
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">'+activeName+'</div>'+(cSeries?'<div class="fw-stat-s" style="color:var(--c-overlay)">vs '+cSeries.label+'</div>':'<div class="fw-stat-s">No compare</div>')+'</div>';
   html+=rideCardHtml;
+
+  // -- PCI synthesis row --
+  const pciRegimeCol = pciResult&&pciResult.regime==='convicted'?'var(--c-sofr)':pciResult&&pciResult.regime==='forming'?'var(--c-cme)':pciResult&&pciResult.regime==='divergent'?'var(--c-overlay)':'var(--c-kal)';
+  html+='<div style="grid-column:1/-1;border-top:1px solid var(--color-border-tertiary);padding-top:12px;margin-top:4px;font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">MSE Policy Confidence Index</div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Signal strength</div><div class="fw-stat-v" style="color:var(--c-cme)">'+(pciComponents?(pciComponents.signalStrength*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">ZQ strip slope</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Transmission</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+(pciComponents?(pciComponents.transmission*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">SOFR-EFFR basis</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">PCI Score</div><div class="fw-stat-v" style="color:'+pciRegimeCol+'">'+(pciResult?pciResult.score:'--')+'</div><div class="fw-stat-s">'+(pciResult?pciResult.label:'--')+'</div></div>';
+
+  // -- Financial Stability stat row --
+  var nfciVal = state.pciD.fred.nfci||0;
+  var nfciStatCol = nfciVal < -0.5 ? 'var(--c-sofr)' : nfciVal > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  var leanBp = financeNeutralRule ? financeNeutralRule.leaningPremiumBp : 0;
+  var leanCol = Math.abs(leanBp)<25 ? 'var(--c-sofr)' : leanBp>0 ? 'var(--c-kal)' : 'var(--c-overlay)';
+  var fcpLabel = financialCyclePhase ? financialCyclePhase.phaseLabel : '--';
+  var fcpPhase = financialCyclePhase ? financialCyclePhase.phase : 'midcycle';
+  var fcpCol = fcpPhase==='stress'?'var(--c-kal)':fcpPhase==='tightening'?'var(--c-overlay)':fcpPhase==='expansionary'?'var(--c-sofr)':'var(--c-cme)';
+  html+='<div style="grid-column:1/-1;border-top:1px solid var(--color-border-tertiary);padding-top:12px;margin-top:4px;font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">Financial Stability</div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">NFCI</div><div class="fw-stat-v" style="color:'+nfciStatCol+';font-size:15px">'+nfciVal.toFixed(2)+'</div><div class="fw-stat-s">'+(nfciVal<-0.5?'Loose':nfciVal>0.5?'Tight':'Neutral')+'</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Leaning premium</div><div class="fw-stat-v" style="color:'+leanCol+';font-size:15px">'+(leanBp>=0?'+':'')+leanBp.toFixed(0)+'bp</div><div class="fw-stat-s">BIS r* adj.</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Cycle phase</div><div class="fw-stat-v" style="color:'+fcpCol+';font-size:13px">'+fcpLabel+'</div><div class="fw-stat-s">Composite '+(financialCyclePhase?financialCyclePhase.composite:'--')+'/100</div></div>';
   html+='</div>';
 
   // -- 2. Unified rate path chart --
@@ -2113,6 +2524,19 @@ function DashboardTab({state, finance}) {
   html+='</span></div>';
   html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs,fwD,kD,srd);
   html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026\u2013Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' \u2192 '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
+  html+='</div>';
+
+  // -- PCI Dial + Sentiment Sparklines --
+  html+='<div style="display:flex;gap:16px;align-items:flex-start;margin:16px 0 8px;flex-wrap:wrap">';
+  html+='<div style="flex:0 0 280px">';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Policy Confidence Dial</div>';
+  html+=pciDialSvg(fin.pciResult);
+  html+='</div>';
+  html+='<div style="flex:1;min-width:280px">';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Sentiment Gap \u2014 crowd vs. ZQ per meeting</div>';
+  html+=sentimentGapBarsSvg(fin.sentimentResult, fin.meetings);
+  html+='<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px">Crowd leader: '+(fin.sentimentResult?fin.sentimentResult.crowdLeader:'--')+' \u00b7 Positive = crowd more dovish than ZQ</div>';
+  html+='</div>';
   html+='</div>';
 
   // -- 3. Cross-market divergence table --
@@ -2870,6 +3294,308 @@ function RidingTab({state, dispatch, finance}) {
 }
 
 // ============================================================================
+// FINANCIAL STABILITY TAB
+// ============================================================================
+
+function fsConditionsChartSvg(pciD, chain) {
+  var w=560, h=200, padL=50, padR=20, padT=20, padB=30;
+  var chartW=w-padL-padR, chartH=h-padT-padB;
+  var nfci = pciD.fred.nfci||0;
+  var nfciPctile = pciD.fred.nfciPctile||0.5;
+  var regime = nfci < -0.5 ? 'Loose' : nfci > 0.5 ? 'Tight' : 'Neutral';
+  var regimeCol = nfci < -0.5 ? 'var(--c-sofr)' : nfci > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  // EFFR path from chain (right axis 0-6%)
+  var chainPts = chain && chain.length ? chain.map(function(c,i) {
+    var x = padL + (i/(chain.length-1))*chartW;
+    var y = h-padB - (((c.end||0)/6)*chartH);
+    return x.toFixed(1)+','+y.toFixed(1);
+  }).join(' ') : '';
+  // NFCI loose/tight shading (left axis -2 to +2)
+  var looseY = h-padB - (((-(-0.5)+2)/4)*chartH);
+  var tightY = h-padB - (((-0.5+2)/4)*chartH);
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
+    '<rect x="'+padL+'" y="'+looseY.toFixed(1)+'" width="'+chartW+'" height="'+(h-padB-looseY).toFixed(1)+'" fill="rgba(16,185,129,.06)"/>'+
+    '<rect x="'+padL+'" y="'+padT+'" width="'+chartW+'" height="'+(tightY-padT).toFixed(1)+'" fill="rgba(249,115,22,.06)"/>'+
+    (chainPts?'<polyline points="'+chainPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2"/>':'')+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<text x="'+(w-padR-4)+'" y="26" fill="'+regimeCol+'" font-size="11" text-anchor="end">NFCI '+nfci.toFixed(2)+'</text>'+
+    '<text x="'+(w-padR-4)+'" y="40" fill="var(--color-text-tertiary)" font-size="9" text-anchor="end">'+
+    regime+' \u00b7 '+(nfciPctile*100).toFixed(0)+'th pctile</text>'+
+    '<text x="'+(padL+4)+'" y="'+(h-padB-4)+'" fill="var(--c-cme)" font-size="9">EFFR path (ZQ)</text>'+
+    '<text x="'+(padL+4)+'" y="'+(padT+12)+'" fill="var(--c-kal)" font-size="8" opacity=".5">Tight</text>'+
+    '<text x="'+(padL+4)+'" y="'+(h-padB-14)+'" fill="var(--c-sofr)" font-size="8" opacity=".5">Loose</text></svg>';
+}
+
+function financeNeutralRuleHtml(financeNeutralRule, trD) {
+  if (!financeNeutralRule) return '<p style="color:var(--color-text-secondary);font-size:12px">Taylor Rule data not loaded</p>';
+  var rStarFinance = financeNeutralRule.rStarFinance;
+  var leaningPremiumBp = financeNeutralRule.leaningPremiumBp;
+  var nfci = financeNeutralRule.nfci;
+  var nfciWeight = financeNeutralRule.nfciWeight;
+  var rStar = trD ? (trD.naturalRate||0.5) : 0.5;
+  var premCol = Math.abs(leaningPremiumBp)<25?'var(--c-sofr)':leaningPremiumBp>0?'var(--c-kal)':'var(--c-overlay)';
+  var premLabel = Math.abs(leaningPremiumBp)<25
+    ? 'Policy broadly neutral to financial conditions'
+    : leaningPremiumBp>0 ? 'Policy leaning WITH financial tightness \u2014 amplifying instability (BIS warning)'
+    : 'Policy easing despite financial looseness \u2014 boom risk';
+  return '<div style="font-family:var(--font-mono);font-size:11px">'+
+    '<table style="width:100%;border-collapse:collapse;margin-bottom:10px">'+
+    '<tr style="border-bottom:1px solid var(--color-border-tertiary)">'+
+    '<th style="text-align:left;color:var(--color-text-tertiary);font-weight:500;padding:4px 0;font-size:10px"></th>'+
+    '<th style="color:var(--c-cme);font-weight:500;padding:4px 6px;font-size:10px">Standard r*</th>'+
+    '<th style="color:var(--c-taylor);font-weight:500;padding:4px 6px;font-size:10px">Finance-Neutral r*</th>'+
+    '<th style="color:var(--c-overlay);font-weight:500;padding:4px 6px;font-size:10px">Leaning Premium</th></tr>'+
+    '<tr><td style="color:var(--color-text-secondary);padding:5px 0">r*</td>'+
+    '<td style="padding:5px 6px">'+rStar.toFixed(2)+'%</td>'+
+    '<td style="padding:5px 6px">'+rStarFinance.toFixed(2)+'%</td>'+
+    '<td style="color:var(--c-overlay);padding:5px 6px">'+(leaningPremiumBp>=0?'+':'')+leaningPremiumBp.toFixed(0)+'bp</td></tr>'+
+    '</table>'+
+    '<div style="padding:8px;border-radius:4px;background:var(--color-background-secondary);'+
+    'border-left:3px solid '+premCol+';color:'+premCol+';font-size:10px">'+premLabel+'</div>'+
+    '<div style="color:var(--color-text-tertiary);font-size:9px;margin-top:8px">'+
+    'r*_finance = r*_standard + lfc \u00d7 NFCI \u00d7 100bp  \u00b7  NFCI: '+nfci.toFixed(2)+' \u00b7 lfc: '+nfciWeight.toFixed(1)+'</div></div>';
+}
+
+function dollarStressGaugeSvg(swapLines, basisBp) {
+  var val = Math.min(100, swapLines||0);
+  var cx=120, cy=110, r=80;
+  var angle = 180 - (val/100)*180;
+  var rad = angle*Math.PI/180;
+  var nx = cx + r*Math.cos(Math.PI-rad);
+  var ny = cy - r*Math.sin(Math.PI-rad);
+  function arcSeg(a1,a2,col) {
+    var r1=(180-a1)*Math.PI/180, r2=(180-a2)*Math.PI/180;
+    return '<path d="M '+(cx+r*Math.cos(r1)).toFixed(1)+' '+(cy-r*Math.sin(r1)).toFixed(1)+
+      ' A '+r+' '+r+' 0 0 1 '+(cx+r*Math.cos(r2)).toFixed(1)+' '+(cy-r*Math.sin(r2)).toFixed(1)+
+      '" fill="none" stroke="'+col+'" stroke-width="14"/>';
+  }
+  var ndlCol = val>25?'var(--c-kal)':val>5?'var(--c-overlay)':'var(--c-sofr)';
+  var basisCol = basisBp>30?'var(--c-kal)':basisBp>15?'var(--c-overlay)':'var(--c-sofr)';
+  return '<svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" style="display:block">'+
+    arcSeg(0,5,'rgba(16,185,129,.35)')+arcSeg(5,25,'rgba(245,158,11,.35)')+arcSeg(25,100,'rgba(249,115,22,.35)')+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx.toFixed(1)+'" y2="'+ny.toFixed(1)+'" stroke="'+ndlCol+'" stroke-width="2.5" stroke-linecap="round"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+ndlCol+'"/>'+
+    '<text x="'+cx+'" y="'+(cy-10)+'" fill="'+ndlCol+'" font-size="18" font-weight="500" text-anchor="middle" font-family="var(--font-mono)">$'+val.toFixed(0)+'bn</text>'+
+    '<text x="'+cx+'" y="'+(cy+6)+'" fill="var(--color-text-secondary)" font-size="9" text-anchor="middle">swap lines outstanding</text>'+
+    '<text x="196" y="28" fill="'+basisCol+'" font-size="10" text-anchor="middle">Basis</text>'+
+    '<text x="196" y="42" fill="'+basisCol+'" font-size="11" font-family="var(--font-mono)" text-anchor="middle">'+
+    (basisBp>=0?'+':'')+basisBp+'bp</text>'+
+    '<text x="196" y="56" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">'+
+    (basisBp>30?'Stressed':basisBp>15?'Elevated':'Normal')+'</text></svg>';
+}
+
+function doomLoopScatterSvg(termPremiumBp, hySpread, fsD) {
+  var w=320, h=220, padL=50, padR=20, padT=20, padB=40;
+  var chartW=w-padL-padR, chartH=h-padT-padB;
+  var xMin=-100, xMax=300, yMin=200, yMax=800;
+  var tp = termPremiumBp!==null ? termPremiumBp : 80;
+  var hy = hySpread||315;
+  var tpAlert = fsD.termPremiumAlert||100;
+  var hyAlert = fsD.hySpreadAlert||500;
+  function toX(v){return padL + ((v-xMin)/(xMax-xMin))*chartW;}
+  function toY(v){return h-padB - ((v-yMin)/(yMax-yMin))*chartH;}
+  var dotX = toX(Math.max(xMin,Math.min(xMax,tp)));
+  var dotY = toY(Math.max(yMin,Math.min(yMax,hy)));
+  var inQ1 = tp>tpAlert && hy>hyAlert;
+  var dotCol = inQ1?'var(--c-kal)':tp>tpAlert?'var(--c-overlay)':hy>hyAlert?'var(--c-poly)':'var(--c-sofr)';
+  var stateLabel = inQ1?'Doom loop active':tp>tpAlert?'Duration risk':hy>hyAlert?'Credit stress':'Risk-on';
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block">'+
+    '<rect x="'+toX(tpAlert).toFixed(1)+'" y="'+padT+'" width="'+(w-padR-toX(tpAlert)).toFixed(1)+'" height="'+(toY(hyAlert)-padT).toFixed(1)+'" fill="rgba(249,115,22,.04)"/>'+
+    '<line x1="'+toX(tpAlert).toFixed(1)+'" y1="'+padT+'" x2="'+toX(tpAlert).toFixed(1)+'" y2="'+(h-padB)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>'+
+    '<line x1="'+padL+'" y1="'+toY(hyAlert).toFixed(1)+'" x2="'+(w-padR)+'" y2="'+toY(hyAlert).toFixed(1)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>'+
+    '<line x1="'+padL+'" y1="'+padT+'" x2="'+padL+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<line x1="'+padL+'" y1="'+(h-padB)+'" x2="'+(w-padR)+'" y2="'+(h-padB)+'" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+
+    '<text x="'+(padL-4)+'" y="'+(h-padB+12)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+yMin+'</text>'+
+    '<text x="'+(padL-4)+'" y="'+(padT+8)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+yMax+'</text>'+
+    '<text x="'+padL+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="8">'+xMin+'</text>'+
+    '<text x="'+(w-padR)+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="8" text-anchor="end">'+xMax+'</text>'+
+    '<text x="'+(padL+chartW/2)+'" y="'+(h-4)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Term premium (bp)</text>'+
+    '<text x="'+(padL-4)+'" y="'+(padT+chartH/2)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="end" transform="rotate(-90,'+(padL-30)+','+(padT+chartH/2)+')">HY OAS (bp)</text>'+
+    '<circle cx="'+dotX.toFixed(1)+'" cy="'+dotY.toFixed(1)+'" r="7" fill="'+dotCol+'" opacity="0.85"/>'+
+    '<text x="'+(dotX+10).toFixed(1)+'" y="'+(dotY-8).toFixed(1)+'" fill="'+dotCol+'" font-size="9">'+stateLabel+'</text>'+
+    '<text x="'+(toX(tpAlert)+3).toFixed(1)+'" y="'+(padT+8)+'" fill="var(--color-text-tertiary)" font-size="8">'+tpAlert+'bp</text>'+
+    '<text x="'+(padL+3)+'" y="'+(toY(hyAlert)-3).toFixed(1)+'" fill="var(--color-text-tertiary)" font-size="8">'+hyAlert+'bp</text></svg>';
+}
+
+function financialCyclePhaseSvg(financialCyclePhase) {
+  if (!financialCyclePhase) return '<svg viewBox="0 0 200 200"></svg>';
+  var nfciPctile = financialCyclePhase.nfciPctile||0.5;
+  var hySpreadPctile = financialCyclePhase.hySpreadPctile||0.5;
+  var swapStress = financialCyclePhase.swapStress||0;
+  var composite = financialCyclePhase.composite;
+  var phase = financialCyclePhase.phase;
+  var axes = [
+    {label:'NFCI',    val:nfciPctile},
+    {label:'HY Sprd', val:hySpreadPctile},
+    {label:'Swaps',   val:swapStress},
+    {label:'Basis',   val:0.3},
+    {label:'Term Prm',val:0.35}
+  ];
+  var n=axes.length, cx=100, cy=100, maxR=70;
+  var phaseCol = phase==='stress'?'var(--c-kal)':phase==='tightening'?'var(--c-overlay)':
+    phase==='expansionary'?'var(--c-sofr)':'var(--c-cme)';
+  function pt(i, radius) {
+    var a=(i/n)*2*Math.PI - Math.PI/2;
+    return {x: cx+radius*Math.cos(a), y: cy+radius*Math.sin(a)};
+  }
+  var rings = '';
+  [0.25,0.5,0.75,1].forEach(function(pct) {
+    var pts = axes.map(function(_,i) { var p=pt(i,maxR*pct); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+    rings += '<polygon points="'+pts+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width="0.5"/>';
+  });
+  var axLines = '';
+  axes.forEach(function(ax,i) {
+    var e=pt(i,maxR), l=pt(i,maxR+14);
+    axLines += '<line x1="'+cx+'" y1="'+cy+'" x2="'+e.x.toFixed(1)+'" y2="'+e.y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width="0.75"/>'+
+      '<text x="'+l.x.toFixed(1)+'" y="'+(l.y+4).toFixed(1)+'" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">'+ax.label+'</text>';
+  });
+  var dataPts = axes.map(function(ax,i) { var p=pt(i,maxR*ax.val); return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ');
+  return '<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="display:block">'+rings+axLines+
+    '<polygon points="'+dataPts+'" fill="'+phaseCol+'" fill-opacity="0.2" stroke="'+phaseCol+'" stroke-width="1.5"/>'+
+    '<text x="'+cx+'" y="'+(cy+4)+'" fill="'+phaseCol+'" font-size="11" font-weight="500" text-anchor="middle">'+composite+'</text></svg>';
+}
+
+function FinancialStabilityTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
+  var fin = finance;
+  var pciD = state.pciD;
+  var fsD = state.fsD;
+
+  var html = '';
+
+  // Header with fetch buttons
+  html+='<div class="k-fetch-bar" style="flex-wrap:wrap;gap:8px">';
+  html+='<div style="font-size:13px;color:var(--color-text-secondary)">BIS/Mehrling financial cycle framework \u2014 NFCI \u00b7 Swap lines \u00b7 HY spreads</div>';
+  html+='<span style="flex:1"></span>';
+  html+='<button class="refresh-btn" id="mpt-btn"'+(fetching.mpt?' disabled':'')+' onclick="window.__mptFetch()"><span'+(fetching.mpt?' class="spin"':'')+'>&#x27f3;</span> Fetch MPT</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.mpt||pciD.mpt.source)+'</span>';
+  html+='<button class="refresh-btn" id="fred-btn"'+(fetching.fred?' disabled':'')+' onclick="window.__fredFetch()"><span'+(fetching.fred?' class="spin"':'')+'>&#x27f3;</span> Fetch FRED</button>';
+  html+='<span class="k-seed-note">'+(refreshStatus.fred||(pciD.fred.fetchDate?'FRED \u00b7 '+pciD.fred.fetchDate:'Seed data'))+'</span>';
+  html+='</div>';
+
+  // Panel 1 -- Financial Conditions vs Policy Stance
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Financial Conditions vs. Policy Stance</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">NFCI (Chicago Fed, weekly) overlaid with ZQ-implied EFFR path. Green band = NFCI below \u22120.5 (loose) \u00b7 Red band = above +0.5 (tight).</div>';
+  html+=fsConditionsChartSvg(pciD, fin.chain);
+
+  // Stat cards
+  var nfci = pciD.fred.nfci||0;
+  var nfciPctile = pciD.fred.nfciPctile||0.5;
+  var swapLines = pciD.fred.swapLines||0;
+  var hySpread = pciD.fred.hySpread||315;
+  var hyPctile = pciD.fred.hySpreadPctile||0.35;
+  var nfciCol = nfci < -0.5 ? 'var(--c-sofr)' : nfci > 0.5 ? 'var(--c-kal)' : 'var(--color-text-secondary)';
+  var swapCol = swapLines > 5 ? 'var(--c-kal)' : 'var(--c-sofr)';
+  var hyCol = hyPctile > 0.75 ? 'var(--c-kal)' : hyPctile < 0.25 ? 'var(--c-sofr)' : 'var(--color-text-secondary)';
+
+  html+='<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:10px">';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">NFCI</div><div class="fw-stat-v" style="color:'+nfciCol+';font-size:15px">'+nfci.toFixed(2)+'</div><div class="fw-stat-s">'+(nfciPctile*100).toFixed(0)+'th pctile</div></div>';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">Swap Lines</div><div class="fw-stat-v" style="color:'+swapCol+';font-size:15px">$'+swapLines.toFixed(0)+'bn</div><div class="fw-stat-s">'+(swapLines>5?'Active':'Inactive')+'</div></div>';
+  html+='<div class="fw-stat" style="min-width:100px"><div class="fw-stat-l">HY OAS</div><div class="fw-stat-v" style="color:'+hyCol+';font-size:15px">'+hySpread+'bp</div><div class="fw-stat-s">'+(hyPctile*100).toFixed(0)+'th pctile</div></div>';
+  html+='</div>';
+  html+='<div class="k-note">NFCI: FRED NFCI \u00b7 Swap lines: FRED SWPT \u00b7 HY spread: FRED BAMLH0A0HYM2</div>';
+  html+='</div>';
+
+  // Panel 2 -- Finance-Neutral Taylor Rule
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Finance-Neutral Taylor Rule (BIS/Borio 2016)</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">r*_finance = r*_standard + lfc \u00d7 NFCI \u00d7 100bp. Leaning premium = additional tightening warranted by financial conditions.</div>';
+  html+=financeNeutralRuleHtml(fin.financeNeutralRule, state.trD);
+  html+='<div style="display:flex;align-items:center;gap:10px;margin-top:10px">';
+  html+='<span style="font-size:11px;color:var(--color-text-secondary);font-family:var(--font-mono)">lfc:</span>';
+  html+='<input type="range" min="0" max="1" step="0.1" value="'+fsD.nfciWeight+'" style="width:120px" data-fs-slider="nfciWeight"/>';
+  html+='<span style="font-size:11px;color:var(--c-cme);font-family:var(--font-mono)">'+fsD.nfciWeight.toFixed(1)+'</span>';
+  html+='</div>';
+  html+='<div class="k-note">Reference: BIS Annual Report 2016, p.79 \u2014 Borio &amp; Disyatat, "Low for long is not low enough"</div>';
+  html+='</div>';
+
+  // Panel 3 -- Global Dollar Stress
+  var basisBp = Math.round(((100-(state.srD[0]?state.srD[0].price:96.75))-(fin.zqAvgs&&fin.zqAvgs[0]?fin.zqAvgs[0]:0))*100);
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Global Dollar Stress \u2014 Swap Lines + Basis</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">Fed central bank liquidity swap outstandings (H.4.1) + SOFR\u2013EFFR basis. Non-zero swap lines signal offshore dollar scarcity. Sep 2008 peak: ~$580bn.</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:10px">';
+  html+=dollarStressGaugeSvg(pciD.fred.swapLines||0, basisBp);
+  html+='<div style="flex:1;font-size:11px;color:var(--color-text-secondary);line-height:1.7">';
+  html+='Basis 5\u201315bp: Normal secured/unsecured spread<br>';
+  html+='Basis 15\u201330bp: Elevated \u2014 monitor for repo stress<br>';
+  html+='Basis over 30bp: Stressed \u2014 Sep 2019 analog<br>';
+  html+='Basis below 0bp: Distorted \u2014 possible collateral shortage';
+  html+='</div></div>';
+  html+='<div class="k-note">Source: FRED SWPT (weekly) \u00b7 Basis from MSE SOFR Strip tab</div>';
+  html+='</div>';
+
+  // Panel 4 -- Doom Loop Scatter
+  var termPremBp = fin.nsFitParams ? Math.round((fin.nsFitParams.beta0 - state.fwLb)*100) : null;
+  html+='<div class="k-panel" style="margin-bottom:12px">';
+  html+='<div class="k-hdr"><span class="k-title">Doom Loop Monitor \u2014 Term Premium vs. HY Spreads</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">BIS Ch.V: feedback loop between sovereign funding costs and credit spreads. Top-right quadrant (both elevated) = doom loop active.</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:10px">';
+  html+=doomLoopScatterSvg(termPremBp, pciD.fred.hySpread||315, fsD);
+  html+='<div style="flex:1">';
+  html+='<div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center;font-size:10px;color:var(--color-text-secondary)">';
+  html+='Term premium alert (bp): <input type="number" min="0" max="300" step="25" value="'+fsD.termPremiumAlert+'" data-fs-input="termPremiumAlert" class="fw-in" style="width:70px"/>';
+  html+='</div>';
+  html+='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-size:10px;color:var(--color-text-secondary)">';
+  html+='HY spread alert (bp): <input type="number" min="200" max="1000" step="50" value="'+fsD.hySpreadAlert+'" data-fs-input="hySpreadAlert" class="fw-in" style="width:70px"/>';
+  html+='</div>';
+  if(termPremBp===null){
+    html+='<div style="font-size:10px;color:var(--c-overlay);margin-top:8px">Run NS fit in Yield Curve tab to populate term premium axis</div>';
+  }
+  html+='</div></div>';
+  html+='<div class="k-note">Term premium: \u03b20 \u2212 EFFR (NS fit) \u00b7 HY spread: FRED BAMLH0A0HYM2 \u00b7 Ref: BIS 2016 Ch.V</div>';
+  html+='</div>';
+
+  // Panel 5 -- Financial Cycle Phase Clock
+  var fcp = fin.financialCyclePhase;
+  var phaseDesc = '';
+  if(fcp){
+    if(fcp.phase==='expansionary') phaseDesc='Financial conditions supportive. BIS leaning-with-wind risk low.';
+    else if(fcp.phase==='midcycle') phaseDesc='Conditions broadly neutral. Monitor NFCI for directional shift.';
+    else if(fcp.phase==='tightening') phaseDesc='Finance-neutral r* above standard r*. Rate cuts have additional transmission value.';
+    else if(fcp.phase==='stress') phaseDesc='Late-cycle stress elevated. BIS doom loop risk rising. Term premium and HY spread warrant joint monitoring.';
+  }
+  html+='<div class="k-panel">';
+  html+='<div class="k-hdr"><span class="k-title">Financial Cycle Phase Clock</span></div>';
+  html+='<div style="font-size:11px;color:var(--color-text-secondary);margin-bottom:8px">5-axis composite stress index. Phase: <b>'+(fcp?fcp.phaseLabel:'--')+'</b> \u00b7 Score: <b>'+(fcp?fcp.composite:'--')+'</b>/100</div>';
+  html+='<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;margin-top:10px">';
+  html+=financialCyclePhaseSvg(fcp);
+  html+='<div style="flex:1;font-size:11px;color:var(--color-text-secondary);line-height:1.8">'+phaseDesc+'</div>';
+  html+='</div>';
+  html+='<div class="k-note">NFCI (FRED NFCI) \u00b7 HY spread (FRED BAMLH0A0HYM2) \u00b7 Swap lines (FRED SWPT) \u00b7 Ref: Borio et al. (2016), Mehrling (2016)</div>';
+  html+='</div>';
+
+  // Wire the lfc slider and alert inputs
+  useEffect(function(){
+    var cleanups = [];
+    var slider = document.querySelector('[data-fs-slider="nfciWeight"]');
+    if(slider){
+      var sliderH = function(e){dispatch({type:'UPDATE_FS_PARAM',key:'nfciWeight',value:parseFloat(e.target.value)});};
+      slider.addEventListener('input', sliderH);
+      cleanups.push(function(){slider.removeEventListener('input', sliderH);});
+    }
+    var inputs = document.querySelectorAll('[data-fs-input]');
+    inputs.forEach(function(inp){
+      var key = inp.getAttribute('data-fs-input');
+      var h = function(e){dispatch({type:'UPDATE_FS_PARAM',key:key,value:parseInt(e.target.value)||0});};
+      inp.addEventListener('change', h);
+      cleanups.push(function(){inp.removeEventListener('change', h);});
+    });
+    return function(){cleanups.forEach(function(fn){fn();});};
+  });
+
+  // Wire fetch buttons
+  useEffect(function(){
+    window.__mptFetch=function(){fetchMPT(state,dispatch,apiKey,setFetching,setRefreshStatus);};
+    window.__fredFetch=function(){fetchFRED(state,dispatch,apiKey,setFetching,setRefreshStatus);};
+    return function(){delete window.__mptFetch;delete window.__fredFetch;};
+  });
+
+  return React.createElement(SvgPanel, {html: html});
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -2877,8 +3603,8 @@ function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const finance = useFinance(state);
   const [apiKey, setApiKey] = useState('');
-  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:''});
-  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false});
+  const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:'', mpt:'', fred:''});
+  const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false, mpt:false, fred:false});
 
   useEffect(() => {
     try {
@@ -2902,6 +3628,7 @@ function App() {
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
     {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
     {id:'riding',     label:'\ud83d\udcca Riding'},
+    {id:'stability',  label:'\ud83c\udf10 Stability'},
   ];
 
   return (
@@ -2928,7 +3655,7 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 9 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (30-day ZQ futures) with Kalshi + Polymarket prediction market overlay and SOFR strip. 12 months forward, 10 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
@@ -2957,7 +3684,10 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
+      {state.fwActive==='stability' && <FinancialStabilityTab state={state} dispatch={dispatch} finance={finance}
+        fetching={fetching} setFetching={setFetching}
+        refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','stability'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );

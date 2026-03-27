@@ -4,6 +4,38 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
+## [4.0] — March 2026
+
+### Added — Policy Confidence Index (PCI)
+
+- Four-component synthetic index (0-100): signal strength (ZQ strip slope),
+  transmission quality (SOFR-EFFR basis), options conviction (Atlanta Fed MPT IQR),
+  sentiment alignment (crowd vs ZQ gap)
+- Regime labels: Uncertain / Divergent / Forming / Convicted
+- Dashboard PCI stat row (3 cards) + Policy Confidence Dial SVG
+- Dashboard sentiment gap sparklines (per-meeting crowd vs ZQ)
+- Prediction Markets panel 10: PCI breakdown bars, platform divergence tracker,
+  conviction spread gauge
+- fetchMPT(): Atlanta Fed MPT distribution data via Anthropic API + web_search
+- fetchFRED(): NFCI, SWPT, BAMLH0A0HYM2 with 52-week history for percentile ranks
+
+### Added — Financial Stability tab (tab 10)
+
+- Panel 1: NFCI vs ZQ EFFR path dual-axis chart with loose/tight shading
+- Panel 2: Finance-neutral Taylor Rule (BIS/Borio), lfc slider, leaning premium badge
+- Panel 3: Global dollar stress gauge (Fed swap lines + SOFR-EFFR basis)
+- Panel 4: Doom loop scatter (NS term premium vs HY OAS), editable alert thresholds
+- Panel 5: Financial cycle phase clock, 5-axis radar, composite stress index
+
+### Academic references
+
+- BIS Annual Report 2016 (Borio et al.) — finance-neutral r*, doom loop
+- Mehrling (2016) "BIS looks through the financial cycle"
+- Atlanta Fed MPT simplex regression methodology
+- Wolfers & Zitzewitz (2004) — prediction markets as information aggregators
+
+---
+
 ## [3.0] — March 2026
 
 ### Added — React migration & new analytical tabs
