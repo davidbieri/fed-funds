@@ -709,34 +709,11 @@ const INITIAL_STATE = {
     }
   },
   fsD: {
-    basisHistory: [],
-    basisStats: {
-      mean: null, median: null, stdev: null,
-      zScore: null, halfLife: null, regime: null
-    },
-    kalshiBasis: {
-      meetings: {},
-      avgBasis: null,
-      maxAbsBasis: null,
-      basisDirection: null
-    },
-    polyBasis: {
-      meetings: {},
-      avgBasis: null,
-      maxAbsBasis: null,
-      basisDirection: null
-    },
-    crossBasis: {
-      kalshiVsPoly: {},
-      avgDivergence: null,
-      agreementPct: null
-    },
-    regimeSignals: {
-      basisRegime: null,
-      trendDirection: null,
-      volatilityState: null,
-      lastUpdate: null
-    }
+    nfciWeight: 0.5,
+    termPremiumAlert: 100,
+    hySpreadAlert: 500,
+    nfciWindow: 52,
+    hyWindow: 52
   },
   rideSelected: {matIdx:3, hIdx:1},
   taylor: {
@@ -863,26 +840,14 @@ function reducer(state, action){
       return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
     case 'SET_RIDE_SELECTED':
       return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
-    case 'UPDATE_PCI_MPT':
-      return {...state, pciD:{...state.pciD, mpt:{...state.pciD.mpt, ...action.data}}};
-    case 'UPDATE_PCI_FRED':
-      return {...state, pciD:{...state.pciD, fred:{...state.pciD.fred, ...action.data}}};
-    case 'UPDATE_PCI_SCORE':
-      return {...state, pciD:{...state.pciD, pci:{...state.pciD.pci, ...action.data}}};
-    case 'UPDATE_PCI_SENTIMENT':
-      return {...state, pciD:{...state.pciD, sentiment:{...state.pciD.sentiment, ...action.data}}};
-    case 'UPDATE_FS_BASIS_HISTORY':
-      return {...state, fsD:{...state.fsD, basisHistory:action.data}};
-    case 'UPDATE_FS_BASIS_STATS':
-      return {...state, fsD:{...state.fsD, basisStats:{...state.fsD.basisStats, ...action.data}}};
-    case 'UPDATE_FS_KALSHI_BASIS':
-      return {...state, fsD:{...state.fsD, kalshiBasis:{...state.fsD.kalshiBasis, ...action.data}}};
-    case 'UPDATE_FS_POLY_BASIS':
-      return {...state, fsD:{...state.fsD, polyBasis:{...state.fsD.polyBasis, ...action.data}}};
-    case 'UPDATE_FS_CROSS_BASIS':
-      return {...state, fsD:{...state.fsD, crossBasis:{...state.fsD.crossBasis, ...action.data}}};
-    case 'UPDATE_FS_REGIME':
-      return {...state, fsD:{...state.fsD, regimeSignals:{...state.fsD.regimeSignals, ...action.data}}};
+    case 'APPLY_LIVE_MPT':
+      return {...state, pciD:{...state.pciD, mpt:{...state.pciD.mpt, ...action.payload, fetchDate:new Date().toISOString()}}};
+    case 'APPLY_LIVE_FRED':
+      return {...state, pciD:{...state.pciD, fred:{...state.pciD.fred, ...action.payload, fetchDate:new Date().toISOString()}}};
+    case 'UPDATE_PCI_WEIGHT':
+      return {...state, pciD:{...state.pciD, pci:{...state.pciD.pci, weights:{...state.pciD.pci.weights, [action.component]:action.value}}}};
+    case 'UPDATE_FS_PARAM':
+      return {...state, fsD:{...state.fsD, [action.key]:action.value}};
     default:
       return state;
   }
