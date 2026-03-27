@@ -659,6 +659,121 @@ function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSig
   });});
 }
 
+// --- PCI Component 1: Signal Strength from ZQ strip slope ---
+// slope -100bp/12mo = 1.0; flat = 0.5; slope +50bp = 0.0
+function computeSignalStrength(chain, fwLb) {
+  if (!chain || chain.length === 0) return 0.5;
+  const last = chain[chain.length - 1];
+  if (last.end === null) return 0.5;
+  const slopeBp = (last.end - fwLb) * 100;
+  return Math.max(0, Math.min(1, 0.5 - slopeBp / 200));
+}
+
+// --- PCI Component 2: Transmission Quality from SOFR-EFFR basis ---
+// basis 5-10bp = 1.0; basis >25bp = 0.0
+function computeTransmission(zqAvgs, srD) {
+  if (!srD || srD.length === 0) return 0.5;
+  const basisBp = ((100 - srD[0].price) - ((zqAvgs && zqAvgs[0]) || 0)) * 100;
+  return Math.max(0, Math.min(1, 1 - Math.max(0, basisBp - 5) / 30));
+}
+
+// --- PCI Component 3: Options Conviction from Atlanta Fed MPT IQR ---
+// IQR 0bp = 1.0; IQR 100bp = 0.0
+function computeConviction(pciD) {
+  const entries = Object.values(pciD.mpt.meetingData);
+  if (entries.length === 0) return 0.5;
+  const avgIqr = entries.reduce((s, e) => s + (e.iqr || 75), 0) / entries.length;
+  return Math.max(0, Math.min(1, 1 - avgIqr / 100));
+}
+
+// --- PCI Component 4: Sentiment Alignment -- crowd vs ZQ agreement ---
+// avg |gap| 0pp = 1.0; avg |gap| 25pp = 0.0
+function computeSentimentAlignment(meetings, kalshiD, polyD) {
+  let totalGap = 0, count = 0;
+  meetings.forEach(m => {
+    const kd = kalshiD.meetings && kalshiD.meetings[m.lb];
+    const pd = polyD.meetings && polyD.meetings[m.lb];
+    const kCut = kd ? (kd.cut25 || 0) + (kd.cut50 || 0) : null;
+    const pCut = pd ? (pd.cut25 || 0) + (pd.cut50 || 0) : null;
+    const cmeCut = (m.b0 < 0 ? m.p0 : 0) + (m.b1 < 0 && m.p1 > 0.001 ? m.p1 : 0);
+    if (kCut !== null && pCut !== null) {
+      totalGap += Math.abs(((kCut + pCut) / 2) - cmeCut);
+      count++;
+    }
+  });
+  if (count === 0) return 0.5;
+  return Math.max(0, Math.min(1, 1 - (totalGap / count) / 0.25));
+}
+
+// --- PCI Composite ---
+function computePCI(components, weights) {
+  const score = Math.round(100 * (
+    weights.signalStrength     * components.signalStrength +
+    weights.transmission       * components.transmission +
+    weights.conviction         * components.conviction +
+    weights.sentimentAlignment * components.sentimentAlignment
+  ));
+  const regime = score < 25 ? 'uncertain' : score < 50 ? 'divergent' :
+                 score < 75 ? 'forming' : 'convicted';
+  const labels = { uncertain:'Uncertain', divergent:'Divergent',
+                   forming:'Forming', convicted:'Convicted' };
+  return { score, regime, label: labels[regime] };
+}
+
+// --- Sentiment decomposition ---
+function computeSentiment(meetings, kalshiD, polyD) {
+  const sentimentGap = [], platformDiv = [];
+  let entropy = 0, count = 0;
+  meetings.forEach(m => {
+    const kd = kalshiD.meetings && kalshiD.meetings[m.lb];
+    const pd = polyD.meetings && polyD.meetings[m.lb];
+    const kCut = kd ? (kd.cut25 || 0) + (kd.cut50 || 0) : null;
+    const pCut = pd ? (pd.cut25 || 0) + (pd.cut50 || 0) : null;
+    const cmeCut = (m.b0 < 0 ? m.p0 : 0) + (m.b1 < 0 && m.p1 > 0.001 ? m.p1 : 0);
+    if (kCut !== null && pCut !== null) {
+      const pCrowd = (kCut + pCut) / 2;
+      sentimentGap.push(pCrowd - cmeCut);
+      platformDiv.push(pCut - kCut);
+      const p = Math.max(0.001, Math.min(0.999, pCrowd));
+      entropy += -(p * Math.log2(p) + (1 - p) * Math.log2(1 - p));
+      count++;
+    } else {
+      sentimentGap.push(null);
+      platformDiv.push(null);
+    }
+  });
+  const validDiv = platformDiv.filter(v => v !== null);
+  const avgDiv = validDiv.length
+    ? validDiv.reduce((s, v) => s + v, 0) / validDiv.length : 0;
+  return { sentimentGap, platformDiv,
+           crowdLeader: Math.abs(avgDiv) < 0.03 ? 'aligned'
+             : avgDiv > 0 ? 'polymarket' : 'kalshi',
+           avgCrowdEntropy: count ? entropy / count : null };
+}
+
+// --- Finance-neutral Taylor Rule (BIS/Borio framework) ---
+function computeFinanceNeutralRule(trD, pciD, fsD) {
+  const rStar = trD ? (trD.naturalRate || 0.5) : 0.5;
+  const nfci = pciD.fred.nfci || 0;
+  const leaningPremiumBp = fsD.nfciWeight * nfci * 100;
+  return { rStarFinance: rStar + leaningPremiumBp / 100,
+           leaningPremiumBp, nfci, nfciWeight: fsD.nfciWeight };
+}
+
+// --- Financial cycle phase clock ---
+function computeFinancialCyclePhase(pciD) {
+  const nfciPctile = pciD.fred.nfciPctile || 0.5;
+  const hySpreadPctile = pciD.fred.hySpreadPctile || 0.5;
+  const swapStress = Math.min(1, (pciD.fred.swapLines || 0) / 10);
+  const composite = nfciPctile * 0.4 + hySpreadPctile * 0.4 + swapStress * 0.2;
+  const phase = composite > 0.75 ? 'stress' : composite > 0.6 ? 'tightening' :
+                composite < 0.3 ? 'expansionary' : 'midcycle';
+  const labels = { stress:'Late cycle stress', tightening:'Tightening conditions',
+                   expansionary:'Expansionary', midcycle:'Mid-cycle' };
+  return { composite: Math.round(composite * 100), phase, phaseLabel: labels[phase],
+           nfciPctile, hySpreadPctile, swapStress };
+}
+
 // ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
@@ -952,8 +1067,19 @@ function useFinance(state) {
     // Riding-the-yield-curve matrix
     const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
+    // PCI components and composite
+    const signalStrength     = computeSignalStrength(chain, state.fwLb);
+    const transmission       = computeTransmission(zqAvgs, state.srD);
+    const conviction         = computeConviction(state.pciD);
+    const sentimentAlignment = computeSentimentAlignment(meetings, state.kalshiD, state.polyD);
+    const pciComponents      = { signalStrength, transmission, conviction, sentimentAlignment };
+    const pciResult          = computePCI(pciComponents, state.pciD.pci.weights);
+    const sentimentResult    = computeSentiment(meetings, state.kalshiD, state.polyD);
+    const financeNeutralRule = computeFinanceNeutralRule(state.trD, state.pciD, state.fsD);
+    const financialCyclePhase = computeFinancialCyclePhase(state.pciD);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, pciComponents, pciResult, sentimentResult, financeNeutralRule, financialCyclePhase};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.pciD, state.fsD]);
 }
 
 // ============================================================================
