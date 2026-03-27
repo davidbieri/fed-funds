@@ -2282,8 +2282,71 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   return <SvgPanel html={html}/>;
 }
 
+function pciDialSvg(pciResult) {
+  const score = pciResult ? pciResult.score : 0;
+  const label = pciResult ? pciResult.label : '--';
+  const regime = pciResult ? pciResult.regime : 'uncertain';
+  const needleAngle = 180 - (score / 100) * 180;
+  const rad = needleAngle * Math.PI / 180;
+  const cx = 140, cy = 130, r = 90;
+  const nx = cx + r * Math.cos(Math.PI - rad);
+  const ny = cy - r * Math.sin(Math.PI - rad);
+  function arcPath(s, e, radius) {
+    const a1 = (180-s)*Math.PI/180, a2 = (180-e)*Math.PI/180;
+    return 'M '+(cx+radius*Math.cos(a1))+' '+(cy-radius*Math.sin(a1))+
+           ' A '+radius+' '+radius+' 0 0 1 '+
+           (cx+radius*Math.cos(a2))+' '+(cy-radius*Math.sin(a2));
+  }
+  const needleCol = regime==='convicted'?'var(--c-sofr)':regime==='forming'?'var(--c-cme)':
+    regime==='divergent'?'var(--c-overlay)':'var(--c-kal)';
+  return '<svg viewBox="0 0 280 160" xmlns="http://www.w3.org/2000/svg">'+
+    '<path d="'+arcPath(0,25,90)+'" fill="none" stroke="rgba(249,115,22,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(25,50,90)+'" fill="none" stroke="rgba(245,158,11,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(50,75,90)+'" fill="none" stroke="rgba(59,130,246,.3)" stroke-width="18"/>'+
+    '<path d="'+arcPath(75,100,90)+'" fill="none" stroke="rgba(16,185,129,.3)" stroke-width="18"/>'+
+    '<line x1="'+cx+'" y1="'+cy+'" x2="'+nx+'" y2="'+ny+
+    '" stroke="'+needleCol+'" stroke-width="2.5" stroke-linecap="round"/>'+
+    '<circle cx="'+cx+'" cy="'+cy+'" r="4" fill="'+needleCol+'"/>'+
+    '<text x="42" y="148" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Uncertain</text>'+
+    '<text x="95" y="112" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Divergent</text>'+
+    '<text x="185" y="112" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Forming</text>'+
+    '<text x="238" y="148" fill="var(--color-text-tertiary)" font-size="9" text-anchor="middle">Convicted</text>'+
+    '<text x="'+cx+'" y="'+(cy-12)+'" fill="'+needleCol+'" font-size="28" font-weight="500"'+
+    ' text-anchor="middle" font-family="var(--font-mono)">'+score+'</text>'+
+    '<text x="'+cx+'" y="'+(cy+8)+'" fill="var(--color-text-secondary)" font-size="11" text-anchor="middle">'+
+    label+'</text></svg>';
+}
+
+function sentimentGapBarsSvg(sentimentResult, meetings) {
+  if (!sentimentResult || !meetings || !meetings.length)
+    return '<svg viewBox="0 0 600 80"></svg>';
+  const w=600, h=80, barW=36, midY=40;
+  const gaps = sentimentResult.sentimentGap;
+  const spacing = w / gaps.length;
+  var bars = '';
+  gaps.forEach(function(gap, i) {
+    if (gap === null) return;
+    const x = i*spacing + spacing/2 - barW/2;
+    const barH = Math.min(30, Math.abs(gap*100));
+    const y = gap>0 ? midY-barH : midY;
+    const col = gap>0 ? 'var(--c-poly)' : 'var(--c-kal)';
+    bars += '<rect x="'+x+'" y="'+y+'" width="'+barW+'" height="'+barH+
+      '" fill="'+col+'" opacity="0.7" rx="2"/>'+
+      '<text x="'+(x+barW/2)+'" y="'+(gap>0?y-3:y+barH+10)+
+      '" fill="'+col+'" font-size="8" text-anchor="middle">'+
+      (gap>=0?'+':'')+(gap*100).toFixed(1)+'pp</text>'+
+      '<text x="'+(x+barW/2)+'" y="'+(h-2)+
+      '" fill="var(--color-text-tertiary)" font-size="8" text-anchor="middle">'+
+      (meetings[i]?meetings[i].label:'')+'</text>';
+  });
+  return '<svg viewBox="0 0 '+w+' '+h+'" xmlns="http://www.w3.org/2000/svg">'+
+    '<line x1="0" y1="'+midY+'" x2="'+w+'" y2="'+midY+
+    '" stroke="var(--color-border-tertiary)" stroke-width="1"/>'+bars+'</svg>';
+}
+
 function DashboardTab({state, finance}) {
-  const {chain, meetings, states, final, zqAvgs, compareSeries} = finance;
+  const {chain, meetings, states, final, zqAvgs, compareSeries, pciComponents, pciResult, sentimentResult} = finance;
+  const fin = finance;
   const lb = state.fwLb;
   const fwD = state.fwD;
   const kD = state.kalshiD;
@@ -2327,6 +2390,13 @@ function DashboardTab({state, finance}) {
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">'+activeName+'</div>'+(cSeries?'<div class="fw-stat-s" style="color:var(--c-overlay)">vs '+cSeries.label+'</div>':'<div class="fw-stat-s">No compare</div>')+'</div>';
   html+=rideCardHtml;
+
+  // -- PCI synthesis row --
+  const pciRegimeCol = pciResult&&pciResult.regime==='convicted'?'var(--c-sofr)':pciResult&&pciResult.regime==='forming'?'var(--c-cme)':pciResult&&pciResult.regime==='divergent'?'var(--c-overlay)':'var(--c-kal)';
+  html+='<div style="grid-column:1/-1;border-top:1px solid var(--color-border-tertiary);padding-top:12px;margin-top:4px;font-size:10px;color:var(--color-text-tertiary);font-family:var(--font-mono);letter-spacing:.08em;text-transform:uppercase;margin-bottom:6px">MSE Policy Confidence Index</div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Signal strength</div><div class="fw-stat-v" style="color:var(--c-cme)">'+(pciComponents?(pciComponents.signalStrength*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">ZQ strip slope</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Transmission</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+(pciComponents?(pciComponents.transmission*100).toFixed(0):'--')+'%</div><div class="fw-stat-s">SOFR-EFFR basis</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">PCI Score</div><div class="fw-stat-v" style="color:'+pciRegimeCol+'">'+(pciResult?pciResult.score:'--')+'</div><div class="fw-stat-s">'+(pciResult?pciResult.label:'--')+'</div></div>';
   html+='</div>';
 
   // -- 2. Unified rate path chart --
@@ -2341,6 +2411,19 @@ function DashboardTab({state, finance}) {
   html+='</span></div>';
   html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs,fwD,kD,srd);
   html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026\u2013Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' \u2192 '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
+  html+='</div>';
+
+  // -- PCI Dial + Sentiment Sparklines --
+  html+='<div style="display:flex;gap:16px;align-items:flex-start;margin:16px 0 8px;flex-wrap:wrap">';
+  html+='<div style="flex:0 0 280px">';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Policy Confidence Dial</div>';
+  html+=pciDialSvg(fin.pciResult);
+  html+='</div>';
+  html+='<div style="flex:1;min-width:280px">';
+  html+='<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:6px;font-family:var(--font-mono);text-transform:uppercase;letter-spacing:.08em">Sentiment Gap \u2014 crowd vs. ZQ per meeting</div>';
+  html+=sentimentGapBarsSvg(fin.sentimentResult, fin.meetings);
+  html+='<div style="font-size:10px;color:var(--color-text-secondary);margin-top:6px">Crowd leader: '+(fin.sentimentResult?fin.sentimentResult.crowdLeader:'--')+' \u00b7 Positive = crowd more dovish than ZQ</div>';
+  html+='</div>';
   html+='</div>';
 
   // -- 3. Cross-market divergence table --
