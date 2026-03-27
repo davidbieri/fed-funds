@@ -6,7 +6,45 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [3.0] — March 2026
 
-### Added
+### Added — React migration & new analytical tabs
+
+- **React architecture**: full rewrite from vanilla JS to React 18 (CDN, Babel JSX transform). `useReducer` for 17-action state machine, `useFinance` hook for derived computation (pure memoized pipeline). 9 tabs, all rendering from shared state — no globals.
+- **Taylor Rule tab** (8th tab): five Taylor Rule variants with editable macro inputs and rule coefficients:
+  - Taylor 1993 (α=1.5, β=0.5, GDP output gap)
+  - Balanced approach / Yellen 2012 (α=1.0, β=1.0)
+  - Yellen Alt1 (unemployment gap via Okun's Law, FOMC SEP r*)
+  - Clarida-Gali-Gertler inertial (ρ=0.85 smoothing)
+  - **Judd-Rudebusch ECM** (Bieri-Chincarini 2005 Eqs. 23–25): dynamic partial-adjustment specification with λ₁/λ₂/λ₃/γ parameters — designated **signal source** (highest R² for FFTR prediction, Exhibit 7)
+  - SVG chart: prescribed rate paths (all 5 variants) vs CME market-implied path
+  - Taylor−CME gap chart, meeting-by-meeting decomposition table, rule comparison matrix
+  - GDP output gap / unemployment gap toggle with Okun's Law conversion
+- **Yield Curve tab** (7th tab): Nelson-Siegel term structure modeling:
+  - 7-tenor CMT input grid (3mo–30yr), short end synced from ZQ chain, long end editable or fetched from H.15
+  - **Nelson-Siegel fitting**: Nelder-Mead optimizer over {β₀, β₁, β₂, τ} with 2000-iteration budget; RMSE badge in bp
+  - NS factor cards: level, slope, curvature, decay, term premium
+  - Curve chart (log-scale x-axis): raw CMT points, NS spot fit (amber), instantaneous forward (amber dashed), per-meeting scenario curves (amber dotted fan)
+  - **Scenario shock propagation**: Bieri-Chincarini empirical factor loadings (2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100bp FFTR change) applied cumulatively at each FOMC meeting
+  - Shock impact table with maturity deltas, 10–2yr slope change, and riding signal per meeting
+  - Fetch CMT rates button (Anthropic API + web search for Federal Reserve H.15)
+- **Riding Calculator tab** (9th tab): Bieri-Chincarini (2005) riding-the-yield-curve implementation:
+  - 7×5 HPR matrix: instruments (6mo–30yr) × horizons (1mo–18mo), each cell showing annualized XHPR (pp) and cushion (bp) with ride/marginal/hold coloring
+  - **5 configurable filter rules**: positive slope, positive cushion, 75th percentile cushion, Taylor rule signal, CME expectations signal
+  - Clickable cells with cushion detail panel: gauge bar with 75th percentile marker
+  - Duration-neutral barbell panel: ω-weighted riding HPR vs overnight vs buy-and-hold decomposition (Eqs. 29–30)
+  - Money-market HPR (Eq. 8) for m ≤ 1yr, zero-coupon bond HPR (Eq. 12) for m > 1yr
+  - Break-even cushion: mmCushion (Eq. 15) and bondCushion (Eq. 16)
+- **Dashboard tab** (6th tab): unified cross-market summary:
+  - 9 stat cards: EFFR start, P(≥1 cut), expected terminal, expected cuts (CME·Kal·Poly), SOFR near-term/terminal, SOFR–EFFR basis, active scenario, **riding signal**
+  - Unified rate path chart: CME EFFR chain + Kalshi implied + SR3 SOFR strip + Fed SEP + compare scenario on single canvas
+  - Cross-market divergence table: all sources per meeting (CME rate, Kalshi rate, Kal−CME basis, P(cut) from all three, SOFR quarterly, basis bp)
+  - Policy regime summary box with hike tail, emergency cut, Fed Chair regime-change risk
+  - Scenario delta panel: compare vs active terminal rate and P(≥1 cut) spread
+- **SOFR Strip tab** (5th tab): ported from v2 as React component (`SofrTab`) with editable SR3 prices dispatching through reducer
+- **Cross-tab signal chain**: ZQ futures → EFFR chain → Taylor Rule (JR ECM signal) → Nelson-Siegel (scenario shocks) → Riding Calculator (filter cascade) → Dashboard (unified view). Changing any upstream input propagates through the entire chain via `useFinance` memoization.
+- **Persistence**: `localStorage` saves lb, active scenario, and compare scenario across hard refreshes
+
+### Added — Prediction markets (from earlier v3.0)
+
 - **Prediction markets tab** (renamed from "Kalshi compare") — now integrates both Kalshi and Polymarket
 - **Polymarket integration** with seed data and independent live-fetch button:
   - Per-meeting decision markets (monthly fed-decision events)
