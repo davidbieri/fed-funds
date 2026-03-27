@@ -292,7 +292,7 @@ footer{
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-bar">
-      <span class="modal-title">SPIA · VT | MSE · v3.0</span>
+      <span class="modal-title">SPIA · VT | MSE · v4.0</span>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <iframe src="fed_funds_v3.html" title="MSE: A Multi-Market Framework for Federal Reserve Policy Analytics"></iframe>
@@ -304,7 +304,7 @@ footer{
   <nav>
     <span class="nav-logo">SPIA · VT | davidbieri / fed-funds</span>
     <div class="nav-links">
-      <span class="nav-badge">v3.0 · Mar 2026</span>
+      <span class="nav-badge">v4.0 · Mar 2026</span>
       <a class="nav-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
     </div>
   </nav>
@@ -314,7 +314,7 @@ footer{
     <h1 class="hero-title">MSE:<br><em>A Multi-Market Framework<br>for Federal Reserve Policy Analytics</em></h1>
     <p class="hero-sub">A browser-native implementation of the CME FedWatch methodology extended into a full monetary policy analytics suite: unconditional probability lattice from 30-day ZQ futures, three-way prediction market comparison, SOFR term structure, Nelson-Siegel yield curve fitting, Taylor Rule suite with Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. No build step. No server. No dependencies.</p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-n">9</span><span class="stat-l">analytical tabs</span></div>
+      <div class="stat"><span class="stat-n">10</span><span class="stat-l">analytical tabs</span></div>
       <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
       <div class="stat"><span class="stat-n">10</span><span class="stat-l">historical scenarios</span></div>
       <div class="stat"><span class="stat-n">5</span><span class="stat-l">Taylor variants</span></div>
@@ -330,7 +330,7 @@ footer{
 
   <!-- TABS SECTION -->
   <div class="section">
-    <div class="section-label">Nine analytical tabs</div>
+    <div class="section-label">Ten analytical tabs</div>
 
     <div class="tab-group-head">Markets &amp; Futures</div>
     <div class="tabs-grid">
@@ -351,8 +351,8 @@ footer{
       </div>
       <div class="tab-card markets">
         <div class="tab-num">04 — PREDICTION MARKETS</div>
-        <div class="tab-name">9-Panel Comparison</div>
-        <div class="tab-desc">CME vs Kalshi vs Polymarket across 9 panels: meeting divergence, cut count, combo paths, dot plots, hike risk, timing curves, terminal rates, Fed Chair regime risk, emergency cuts.</div>
+        <div class="tab-name">10-Panel Comparison</div>
+        <div class="tab-desc">CME vs Kalshi vs Polymarket across 9 panels plus panel ⑩ Signal/Noise Decomposition: PCI component breakdown, platform divergence tracker, conviction spread (Atlanta Fed MPT IQR vs crowd SentimentGap).</div>
       </div>
       <div class="tab-card sofr">
         <div class="tab-num">05 — SOFR STRIP</div>
@@ -362,7 +362,7 @@ footer{
       <div class="tab-card">
         <div class="tab-num">06 — DASHBOARD</div>
         <div class="tab-name">Unified Cross-Market View</div>
-        <div class="tab-desc">9 stat cards across CME, Kalshi, Polymarket, and SOFR. Unified rate path chart overlaying all four sources plus the Fed SEP and compare scenario. Cross-market divergence table and policy regime summary.</div>
+        <div class="tab-desc">Stat cards including PCI score + regime dial + sentiment gap sparklines. Unified rate path chart, cross-market divergence table, policy regime summary with financial stability row (NFCI, leaning premium, cycle phase).</div>
       </div>
     </div>
 
@@ -382,6 +382,11 @@ footer{
         <div class="tab-num">09 — RIDING</div>
         <div class="tab-name">Riding the Yield Curve</div>
         <div class="tab-desc">7 × 5 instrument–horizon HPR matrix (6mo–30yr × 1mo–18mo) of annualized excess HPR and break-even cushion using Bieri-Chincarini (2005) Eqs. 8–16, 29–30. Five-filter suite: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal, CME expectations signal. Duration-neutral barbell decomposition.</div>
+      </div>
+      <div class="tab-card" style="border-left:3px solid var(--sofr)">
+        <div class="tab-num">10 — FINANCIAL STABILITY</div>
+        <div class="tab-name">BIS/Mehrling Framework</div>
+        <div class="tab-desc">NFCI vs EFFR path chart with loose/tight regime shading; finance-neutral Taylor Rule (λ_fc slider, Borio/BIS); global dollar stress gauge (Fed swap lines + xccy basis); doom loop scatter (term premium vs HY OAS); five-axis financial cycle phase clock. FRED live fetch: NFCI, SWPT, BAMLH0A0HYM2.</div>
       </div>
     </div>
   </div>
@@ -414,6 +419,16 @@ footer{
         <span class="mkt-name">Fed H.15 / FRED</span>
         <span class="mkt-desc">Treasury Constant Maturity rates (3mo–30yr) for Nelson-Siegel fitting. Live-fetchable via FRED CSV endpoint.</span>
         <span class="mkt-tag">H.15 CMT · DGS2 → DGS30</span>
+      </div>
+      <div class="mkt" style="border-color:var(--taylor)">
+        <span class="mkt-name" style="color:var(--taylor)">Atlanta Fed MPT</span>
+        <span class="mkt-desc">Options-implied SOFR distribution (p25/p50/p75/IQR) for 4 quarterly SR3 contracts. Powers the PCI options conviction component.</span>
+        <span class="mkt-tag">Market Probability Tracker · SR3M6–SR3Z7</span>
+      </div>
+      <div class="mkt" style="border-color:var(--muted)">
+        <span class="mkt-name" style="color:var(--muted)">FRED</span>
+        <span class="mkt-desc">NFCI (Chicago Fed weekly), CB liquidity swap outstandings (SWPT), ICE BofA HY OAS. Powers Tab 10 Financial Stability panels.</span>
+        <span class="mkt-tag">NFCI · SWPT · BAMLH0A0HYM2</span>
       </div>
     </div>
   </div>
@@ -486,7 +501,7 @@ footer{
 
     <!-- OVERVIEW -->
     <div class="ug-page on" id="pg-overview">
-      <p class="ug-body">Nine tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, and Dashboard.</p>
+      <p class="ug-body">Ten tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, Dashboard, and Financial Stability indicators.</p>
       <div class="ug-nd" style="flex-wrap:wrap;row-gap:6px">
         <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
         <div class="ug-nd-arrow">→</div>
@@ -808,6 +823,8 @@ footer{
         <div class="ug-pcard"><div class="ug-ptitle">Fetch Polymarket</div><div class="ug-pdesc">Per-meeting probs, terminal rate distribution, Fed Chair odds, cut count, emergency cut probability.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">7 markets · $230M+ vol</span></div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Fetch SR3</div><div class="ug-pdesc">CME 3-month SOFR futures for all 7 SR3 contracts plus current SOFR fixing rate.</div><div class="ug-pills"><span class="ug-pill ug-pill-g">SR3M6 → SR3Z7</span></div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Fetch CMT (H.15)</div><div class="ug-pdesc">Treasury Constant Maturity rates for the Nelson-Siegel yield curve fitting (3mo–30yr, 7 tenors).</div><div class="ug-pills"><span class="ug-pill ug-pill-a">Fed H.15 · DGS2 → DGS30</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Fetch MPT</div><div class="ug-pdesc">Atlanta Fed Market Probability Tracker — options-implied SOFR distribution (p25/p50/p75/IQR) for SR3 contracts. Powers the PCI conviction component.</div><div class="ug-pills"><span class="ug-pill ug-pill-r">Atlanta Fed MPT · SR3 options</span></div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">Fetch FRED</div><div class="ug-pdesc">NFCI (Chicago Fed, weekly), CB liquidity swap outstandings, ICE BofA HY OAS. Powers Tab 10 Financial Stability panels.</div><div class="ug-pills"><span class="ug-pill" style="background:rgba(74,94,122,.2);color:var(--muted)">NFCI · SWPT · BAMLH0A0HYM2</span></div></div>
       </div>
       <div class="ug-head">Regime bar — live after every refresh</div>
       <div class="ug-regime">
@@ -867,14 +884,14 @@ footer{
     <div class="cite-box">
       <button class="cite-copy" onclick="copyCite()">Copy</button>
       <div class="cite-content act" id="cite-apa">
-        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v3.0) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
+        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v4.0) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
       </div>
       <div class="cite-content" id="cite-bib">
         <pre class="cite-text">@software{bieri2026mse,
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {3.0},
+  version     = {4.0},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds},
@@ -885,7 +902,7 @@ footer{
 }</pre>
       </div>
       <div class="cite-content" id="cite-chi">
-        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v3.0. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
+        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.0. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
       </div>
     </div>
   </div>
@@ -894,12 +911,12 @@ footer{
     <div class="footer-left">
       David Bieri · SPIA · Virginia Tech<br>
       MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v3.0 · MIT License<br>
+      v4.0 · MIT License<br>
       For educational and research purposes only. Not financial advice.
     </div>
     <div class="footer-right">
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
-      <a class="foot-link" href="fed_funds_probability_tree.html">Tool</a>
+      <a class="foot-link" href="fed_funds_v3.html">Tool</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
     </div>
