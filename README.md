@@ -209,7 +209,7 @@ Developed as part of a broader research program connecting financial market micr
 ## Citation
 
 **APA**
-> Bieri, D. (2026). *MSE — FOMC Monitor: A multi-market framework for Federal Reserve policy analytics* (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds
+> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds
 
 **BibTeX**
 ```bibtex
