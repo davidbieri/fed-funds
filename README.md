@@ -1,4 +1,4 @@
-# MSE 
+# MSE: A Multi-Market Framework for Federal Reserve Policy Analytics
 
 **A multi-market framework for Federal Reserve policy analytics.**
 
@@ -209,22 +209,23 @@ Developed as part of a broader research program connecting financial market micr
 ## Citation
 
 **APA**
-> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v3.0) [Interactive tool]. GitHub. https://github.com/davidbieri/fed-funds
+> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v3.0) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
 
 **BibTeX**
 ```bibtex
 @software{bieri2026mse,
-  author    = {Bieri, David},
-  title     = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
-  year      = {2026},
-  version   = {3.0},
-  publisher = {GitHub},
-  url       = {https://github.com/davidbieri/fed-funds}
+  author      = {Bieri, David},
+  title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
+  year        = {2026},
+  version     = {3.0},
+  institution = {Virginia Tech School of Public and International Affairs},
+  publisher   = {GitHub},
+  url         = {https://github.com/davidbieri/fed-funds}
 }
 ```
 
 **Chicago**
-> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v3.0. Interactive tool. GitHub. https://github.com/davidbieri/fed-funds.
+> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v3.0. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
 
 ---
 
@@ -241,7 +242,7 @@ Developed as part of a broader research program connecting financial market micr
 
 ## License
 
-MIT © David Bieri, Virginia Tech, School of Public and International Affairs
+MIT © David Bieri, Virginia Tech School of Public and International Affairs
 
 ---
 
