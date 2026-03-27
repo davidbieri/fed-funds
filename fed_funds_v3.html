@@ -1679,6 +1679,20 @@ function FuturesInputsTab({state, dispatch, finance}) {
           onBlur={e=>dispatch({type:'SET_LB',lb:parseFloat(e.target.value)||3.50})}/>
         <span style={{fontSize:'12px',color:'var(--color-text-secondary)'}}>%</span>
       </div>
+      {finance.rideData && (function(){
+        var cell = finance.rideData[3] && finance.rideData[3][1] ? finance.rideData[3][1] : null;
+        if(!cell) return null;
+        return (
+          <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.75rem',fontSize:'11px'}}>
+            <span style={{color:'var(--color-text-secondary)'}}>Riding signal (2yr/3mo):</span>
+            <span style={{fontWeight:600,color:cell.signal==='ride'?'var(--color-text-success)':cell.signal==='hold'?'var(--color-text-danger)':'var(--color-text-warning)'}}>
+              {cell.signal==='ride'?'RIDE \u2713':cell.signal==='hold'?'HOLD \u2717':'Marginal'}
+            </span>
+            <span style={{color:'var(--color-text-tertiary)'}}>Cushion: {cell.cushion>=0?'+':''}{cell.cushion.toFixed(0)}bp</span>
+            <span style={{color:'var(--c-taylor)'}}>Taylor: {finance.taylorSignalVal===-1?'\u2193 cut':finance.taylorSignalVal===1?'\u2191 hike':'neutral'}</span>
+          </div>
+        );
+      })()}
       <div style={{overflowX:'auto'}}>
         <table className="fwt">
           <thead><tr><th>Month</th><th>ZQ price</th><th>Impl. avg EFFR</th><th>FOMC mtg</th><th>Label</th><th>N (to mtg)</th><th>M (after)</th></tr></thead>
@@ -2555,6 +2569,59 @@ function RidingTab({state, dispatch, finance}) {
               {finance.taylorSignalVal === 0  && <span style={{color:'var(--color-text-secondary)'}}>{'\ud83d\udccf'} Taylor rule neutral</span>}
             </div>
           </div>
+
+          {/* Duration-neutral barbell panel */}
+          <div className="k-panel">
+            <div className="k-hdr"><span className="k-title">Duration-neutral barbell \u2014 \u03c9 weight</span></div>
+            {selectedCell && (
+              <div>
+                <div style={{fontSize:'12px',color:'var(--color-text-secondary)',marginBottom:'10px'}}>
+                  Targeting duration of <b>{HORIZONS[sel.hIdx]}</b> buy-and-hold = <b>{selectedCell.h.toFixed(3)} yr</b>
+                </div>
+                {/* Barbell visual */}
+                <div style={{display:'flex',gap:'6px',alignItems:'center',marginBottom:'12px'}}>
+                  <div style={{flex:selectedCell.omega,background:'var(--c-cme)',opacity:.8,height:'24px',borderRadius:'4px',display:'flex',alignItems:'center',justifyContent:'center',minWidth:'40px'}}>
+                    <span style={{fontSize:'10px',color:'#fff',fontWeight:600}}>{(selectedCell.omega*100).toFixed(0)}%</span>
+                  </div>
+                  <div style={{flex:1-selectedCell.omega,background:'var(--color-background-secondary)',border:'.5px solid var(--color-border-secondary)',height:'24px',borderRadius:'4px',display:'flex',alignItems:'center',justifyContent:'center',minWidth:'40px'}}>
+                    <span style={{fontSize:'10px',color:'var(--color-text-secondary)',fontWeight:600}}>{((1-selectedCell.omega)*100).toFixed(0)}%</span>
+                  </div>
+                </div>
+                <div style={{fontSize:'11px',color:'var(--color-text-tertiary)',marginBottom:'10px'}}>
+                  <b style={{color:'var(--c-cme)'}}>{(selectedCell.omega*100).toFixed(0)}%</b> in {MATS[sel.matIdx]} instrument &nbsp;+&nbsp;
+                  <b>{((1-selectedCell.omega)*100).toFixed(0)}%</b> overnight
+                  <br/>{'\u03c9'} = (D_H {'\u2212'} D_O) / (D_R {'\u2212'} D_O) = ({selectedCell.h.toFixed(2)} {'\u2212'} 0) / ({selectedCell.m.toFixed(1)} {'\u2212'} 0)
+                </div>
+                {/* Return decomposition */}
+                <table className="fwt">
+                  <thead><tr><th>Component</th><th>Return (ann.)</th></tr></thead>
+                  <tbody>
+                    <tr><td>{'\u03c9'} {'\u00d7'} riding HPR</td>
+                      <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>
+                        +{(selectedCell.omega * selectedCell.hpr/selectedCell.h * 100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                    <tr><td>(1{'\u2212'}{'\u03c9'}) {'\u00d7'} overnight</td>
+                      <td style={{fontFamily:'var(--font-mono)'}}>{((1-selectedCell.omega)*(syncedYcD[0].rate)/100/selectedCell.h*selectedCell.h*100).toFixed(2)}pp</td>
+                    </tr>
+                    <tr><td>{'\u2212'} Buy-and-hold</td>
+                      <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-danger)'}}>
+                        {'\u2212'}{(Math.abs(rideHPR(nsYield(selectedCell.h,nsFitParams),nsYield(selectedCell.h,nsFitParams),selectedCell.h,selectedCell.h))/selectedCell.h*100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                    <tr style={{borderTop:'.5px solid var(--color-border-secondary)'}}>
+                      <td style={{fontWeight:600}}>Duration-neutral XR</td>
+                      <td style={{fontFamily:'var(--font-mono)',fontWeight:600,color:selectedCell.dnXR>=0?'var(--color-text-success)':'var(--color-text-danger)'}}>
+                        {selectedCell.dnXR>=0?'+':''}{(selectedCell.dnXR/selectedCell.h*100).toFixed(2)}pp
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <div className="k-note" style={{marginTop:'8px'}}>Duration-neutral riding removes the outright rate bet while preserving the curve-slope trade. {'\u03c9'} = fraction in riding instrument. Based on Bieri-Chincarini (2005) Eqs. 29{'\u2013'}30.</div>
+          </div>
+
         </div>
       )}
     </div>
