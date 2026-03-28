@@ -12,10 +12,7 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
 :root{
-  --navy:#0d1929;
-  --surface:#1a2538;
-  --surface2:#22304a;
-  --border:#2a3d57;
+  /* Identity accent colors — same in both themes */
   --cme:#3b82f6;
   --kal:#f97316;
   --poly:#06b6d4;
@@ -23,14 +20,43 @@
   --taylor:#e11d48;
   --amber:#f59e0b;
   --riding:#8b5cf6;
+  --bs:#0ea5e9;
+  --fin:#0d9488;
+  --faint-accent:#6b7280;
+
+  /* Light theme (default) */
+  --bg:#f8f7f4;
+  --surface:#ffffff;
+  --surface2:#f1efe9;
+  --border:#ddd9d0;
+  --text:#1a1814;
+  --muted:#5c5650;
+  --faint:#9b958c;
+  --grid-line:rgba(0,0,0,0.04);
+  --modal-bg:#f8f7f4;
+  --modal-backdrop:rgba(240,238,233,0.92);
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  --nav-blur:rgba(248,247,244,0.92);
+}
+
+[data-theme="dark"]{
+  --bg:#0d1929;
+  --surface:#1a2538;
+  --surface2:#22304a;
+  --border:#2a3d57;
   --text:#e8edf5;
   --muted:#8899b4;
   --faint:#4a5e7a;
+  --grid-line:rgba(59,130,246,0.04);
+  --modal-bg:#0d1929;
+  --modal-backdrop:rgba(9,18,31,0.92);
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.4);
+  --nav-blur:rgba(13,25,41,0.92);
 }
 
 body{
   font-family:'DM Sans',sans-serif;
-  background:var(--navy);
+  background:var(--bg);
   color:var(--text);
   min-height:100vh;
   overflow-x:hidden;
@@ -41,8 +67,8 @@ body::before{
   position:fixed;
   inset:0;
   background-image:
-    linear-gradient(rgba(59,130,246,0.04) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(59,130,246,0.04) 1px, transparent 1px);
+    linear-gradient(var(--grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
   background-size:40px 40px;
   pointer-events:none;
   z-index:0;
@@ -223,14 +249,14 @@ footer{
 /* MODAL */
 .modal-backdrop{
   display:none;position:fixed;inset:0;
-  background:rgba(9,18,31,0.92);z-index:100;
+  background:var(--modal-backdrop);z-index:100;
   align-items:center;justify-content:center;
   backdrop-filter:blur(4px);
 }
 .modal-backdrop.open{display:flex}
 .modal{
   width:min(96vw,1100px);height:min(94vh,840px);
-  background:var(--navy);border:1px solid var(--border);
+  background:var(--bg);border:1px solid var(--border);
   border-radius:8px;overflow:hidden;
   display:flex;flex-direction:column;
   box-shadow:0 40px 100px rgba(0,0,0,.7);
