@@ -1087,6 +1087,68 @@ async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshS
   finally{setFetching(f=>({...f, yc:false}));}
 }
 
+// fetchBalanceSheet() -- Batch-fetches 8 FRED series from Fed H.4.1 weekly release
+// FRED CSV pattern: https://fred.stlouisfed.org/graph/fredgraph.csv?id=SERIES
+// Series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3
+async function fetchBalanceSheet(dispatch){
+  const SERIES=[
+    ['WALCL',     'totalAssets', 1],
+    ['WTREGEN',   'treasuries',  1],
+    ['WMBSEC',    'mbs',         1],
+    ['RRPONTSYD', 'rrpUsage',    1000],
+    ['WRESBAL',   'reserves',    1],
+    ['DFEDTARL',  'iorb',        1],
+    ['DFF',       'effr',        1],
+    ['DTB3',      'tbill3m',     1],
+  ];
+  const BASE='https://fred.stlouisfed.org/graph/fredgraph.csv?id=';
+  try{
+    const results=await Promise.all(
+      SERIES.map(([id])=>
+        fetch(BASE+id).then(r=>r.text()).then(txt=>{
+          const lines=txt.trim().split('\n').filter(Boolean);
+          const last=lines[lines.length-1].split(',');
+          return {date:last[0], value:parseFloat(last[1])};
+        })
+      )
+    );
+    const data={asOf:results[0].date, source:'FRED H.4.1 (live)'};
+    SERIES.forEach(([,key,divisor],i)=>{data[key]=results[i].value/divisor;});
+    dispatch({type:'APPLY_BALANCE_SHEET', data});
+    return data;
+  }catch(err){console.error('fetchBalanceSheet error:',err);return null;}
+}
+
+// fetchFinancialStability() -- Batch-fetches 3 FRED financial stability series
+// Series: NFCI (Chicago Fed), SWPT (swap lines), BAMLH0A0HYM2 (HY OAS)
+async function fetchFinancialStability(dispatch){
+  const SERIES=[
+    ['NFCI',         'nfci',      1],
+    ['SWPT',         'swapLines', 1000],
+    ['BAMLH0A0HYM2', 'hyOAS',    1],
+  ];
+  const BASE='https://fred.stlouisfed.org/graph/fredgraph.csv?id=';
+  try{
+    const results=await Promise.all(
+      SERIES.map(([id])=>
+        fetch(BASE+id).then(r=>r.text()).then(txt=>{
+          const lines=txt.trim().split('\n').filter(Boolean);
+          const last=lines[lines.length-1].split(',');
+          return {date:last[0], value:parseFloat(last[1])};
+        })
+      )
+    );
+    const data={asOf:results[0].date, source:'FRED (live)'};
+    SERIES.forEach(([,key,divisor],i)=>{
+      let v=results[i].value;
+      if(key==='hyOAS'&&v<20) v=v*100;
+      data[key]=v/(key==='hyOAS'?1:divisor);
+    });
+    dispatch({type:'APPLY_FIN_STAB', data});
+    return data;
+  }catch(err){console.error('fetchFinancialStability error:',err);return null;}
+}
+
 // ============================================================================
 // SVG HELPER FUNCTIONS (return HTML/SVG strings, no globals)
 // ============================================================================

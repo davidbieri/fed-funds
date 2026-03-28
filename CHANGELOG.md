@@ -8,6 +8,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 - Session 6-A0: Phase 6 CSS tokens (9 new custom properties for balance sheet and financial stability), dark-mode variants, `.tab-group-divider` style, tab nav restructured with divider between Dashboard and Yield Curve groups, `bs` and `fs` tab entries added to TABS array
 - Session 6-A1: bsD (14 fields) + fsD (19 fields) added to INITIAL_STATE; APPLY_BALANCE_SHEET, APPLY_FIN_STAB, SET_BSD, SET_FSD reducer cases added; 'bs' and 'fs' registered in tab routing array
+- Session 6-A2: fetchBalanceSheet() (8 FRED H.4.1 series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3) and fetchFinancialStability() (3 FRED series: NFCI, SWPT, BAMLH0A0HYM2) batch-fetch functions added
 
 ---
 
