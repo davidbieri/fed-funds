@@ -712,6 +712,7 @@ const INITIAL_STATE = {
     jrLambda3: 0.3,            // JR lagged gap weight
     jrGamma: 0.85,             // JR partial adjustment speed
     ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
+    sepLongRunDot: 2.875,    // FOMC SEP median longer-run FFR (Dec 2024 projection)
   },
   bsD: {
     totalAssets:    8500,   // $bn, FRED: WALCL
@@ -908,6 +909,70 @@ function dssRiskChannel(bsD){
   };
 }
 
+// nsSafetyPremium(bsD) -> bp
+// KVJ (2012, JPE 120:2): Treasury supply affects safety premium paid for near-zero-default assets.
+// Each 1% of GDP change in T supply (private hands) => ~7bp change in safety premium.
+function nsSafetyPremium(bsD){
+  const fedTshare = (bsD.treasuries || 4400) / (bsD.gdpNominal || 28500) * 100;
+  const baseShare = 15.4;
+  const kSafety   = 7.0;
+  return (fedTshare - baseShare) * kSafety;
+}
+
+// finNeutralOutputGap(trD, fsD) -> % of potential GDP
+// Borio, Disyatat & Juselius (2013, BIS WP404; 2017, Oxford Econ Papers 69:3).
+// y_gap_fn = y_gap_hp - alpha_c * (credit/GDP gap); alpha_c ~ 0.5.
+function finNeutralOutputGap(trD, fsD){
+  const hpGap   = trD.outputGap    ?? -0.5;
+  const creditG = fsD.creditGDPGap ?? 0.0;
+  return hpGap - 0.5 * creditG;
+}
+
+// finCycleAdjustedRstar(trD, fsD) -> %
+// Borio (2016, Cato Journal 36:2, Pillar II): LW r* biased down by financial-boom
+// productivity drag. Corrects upward by accumulated drag over cycle horizon.
+function finCycleAdjustedRstar(trD, fsD){
+  const lwRstar = trD.naturalRate      ?? 0.5;
+  const drag    = fsD.productivityDrag ?? -0.25;
+  const horizon = fsD.cycleHorizonYrs  ?? 5;
+  return lwRstar - (drag * horizon) / 100;
+}
+
+// finNeutralRate(trD, fsD, prevFFR, prevGap) -> %
+// Borio (2012, 2014, 2016): JR ECM augmented with NFCI financial conditions term.
+// FFR*_fn = JR_prescribed + lambda_fc * NFCI
+function finNeutralRate(trD, fsD, prevFFR, prevGap){
+  const jrBase = taylorRateJR(trD, prevFFR, prevGap);
+  return jrBase + (fsD.lambdaFC ?? 0.5) * (fsD.nfci ?? -0.12);
+}
+
+// leaningPremium(trD, fsD, marketImplied, prevFFR, prevGap) -> bp
+// Gap between finance-neutral prescription and market-implied terminal rate.
+// Positive = market prices BELOW finance-neutral (leaning with the wind = risky).
+function leaningPremium(trD, fsD, marketImplied, prevFFR, prevGap){
+  return (finNeutralRate(trD, fsD, prevFFR, prevGap) - marketImplied) * 100;
+}
+
+// gradualismGap(terminalZQ, sepLongRunDot) -> bp
+// Stein & Sunderam (2018, JoF 73:3): SEP long-run dot minus ZQ-implied terminal.
+// Positive = market prices less tightening than Fed's long-run target.
+function gradualismGap(terminalZQ, sepLongRunDot){
+  return ((sepLongRunDot ?? 2.875) - terminalZQ) * 100;
+}
+
+// ssTermPremiumPutSignal(nsParams, effrStart, termPremP75) -> +1 | 0 | -1
+// Stein & Sunderam (2018): elevated term premium => Fed put activation => likely cuts.
+// +1 = bullish (term prem > p75), -1 = compressed (< p25), 0 = normal.
+function ssTermPremiumPutSignal(nsParams, effrStart, termPremP75){
+  if(!nsParams || !nsParams.beta0) return 0;
+  const termPremBp = (nsParams.beta0 - effrStart) * 100;
+  const p75 = termPremP75 ?? 60;
+  const p25 = p75 * 0.25;
+  if(termPremBp > p75)  return +1;
+  if(termPremBp < p25)  return -1;
+  return 0;
+}
+
 // ============================================================================
 // DERIVED COMPUTATION HOOK
 // ============================================================================
@@ -1013,8 +1078,18 @@ function useFinance(state) {
     const dss            = dssRiskChannel(state.bsD);
     const combinedStance = effrStart + qtChannels.total / 100;
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD]);
+    // Phase 6: Financial Stability analytics
+    const terminalRate   = meetings.length > 0 ? (chain[state.fwD.findIndex(d=>d.lb===meetings[meetings.length-1].lb)]?.end ?? effrStart) : effrStart;
+    const safetyPremBp   = nsSafetyPremium(state.bsD);
+    const fnGap          = finNeutralOutputGap(state.trD, state.fsD);
+    const rstarAdj       = finCycleAdjustedRstar(state.trD, state.fsD);
+    const fnRate         = finNeutralRate(state.trD, state.fsD, effrStart, fnGap);
+    const leanPrem       = leaningPremium(state.trD, state.fsD, terminalRate, effrStart, fnGap);
+    const gradGap        = gradualismGap(terminalRate, state.trD.sepLongRunDot);
+    const ssPutSignal    = ssTermPremiumPutSignal(nsFitParams, effrStart, (state.fsD.nfciP75 ?? 0.50) * 120);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance, terminalRate, safetyPremBp, finNeutralGap:fnGap, rstarAdj, finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD, state.fsD]);
 }
 
 // ============================================================================

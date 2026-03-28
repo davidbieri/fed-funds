@@ -10,6 +10,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-A1: bsD (14 fields) + fsD (19 fields) added to INITIAL_STATE; APPLY_BALANCE_SHEET, APPLY_FIN_STAB, SET_BSD, SET_FSD reducer cases added; 'bs' and 'fs' registered in tab routing array
 - Session 6-A2: fetchBalanceSheet() (8 FRED H.4.1 series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3) and fetchFinancialStability() (3 FRED series: NFCI, SWPT, BAMLH0A0HYM2) batch-fetch functions added
 - Session 6-A2b: Math Batch 1 -- qtShadowAdjChannels (KVJ 2011 4-channel decomposition), steinSVR (Stein 2012 shadow value of reserves), dssRiskChannel (DSS 2018 liquidity premium); all wired into useFinance with combinedStance
+- Session 6-A2c: Math Batch 2 -- nsSafetyPremium (KVJ 2012), finNeutralOutputGap (BDJ 2013), finCycleAdjustedRstar (Borio 2016 Pillar II), finNeutralRate (Borio NFCI-augmented JR), leaningPremium, gradualismGap (SS 2018), ssTermPremiumPutSignal; sepLongRunDot added to trD; all wired into useFinance
 
 ---
 
