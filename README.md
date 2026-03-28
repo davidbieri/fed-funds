@@ -2,7 +2,7 @@
 
 **A multi-market framework for Federal Reserve policy analytics.**
 
-[![Version](https://img.shields.io/badge/version-4.0-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-4.1-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Pages](https://img.shields.io/badge/deployed-GitHub%20Pages-brightgreen)](https://davidbieri.github.io/fed-funds/)
 
@@ -17,15 +17,15 @@
 
 ## Overview
 
-MSE implements the CME FedWatch methodology from first principles — deriving per-meeting cut/hold/hike probabilities from 30-day Fed Funds (ZQ) futures prices — and extends it with five layers of analytical context: prediction market comparison (Kalshi and Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure modeling, Taylor Rule prescriptive analysis, a complete Bieri-Chincarini (2005) riding-the-yield-curve calculator, and — in v4.0 — a Policy Confidence Index synthesizing ZQ signal strength, SR3 transmission quality, Atlanta Fed MPT options conviction, and crowd sentiment alignment, plus a Financial Stability tab grounded in the BIS/Mehrling financial cycle framework.
+MSE implements the CME FedWatch methodology from first principles — deriving per-meeting cut/hold/hike probabilities from 30-day Fed Funds (ZQ) futures prices — and extends it with six layers of analytical context: prediction market comparison (Kalshi and Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure modeling, Taylor Rule prescriptive analysis, a complete Bieri-Chincarini (2005) riding-the-yield-curve calculator, a Policy Confidence Index synthesizing ZQ signal strength, SR3 transmission quality, Atlanta Fed MPT options conviction, and crowd sentiment alignment, and — in v4.1 — a two-tab balance sheet and financial stability framework grounded in Stein (2012), Krishnamurthy-Vissing-Jorgensen (2011/2012), Drechsler-Savov-Schnabl (2018), Stein-Sunderam (2018), and the BIS/Borio/Mehrling financial cycle literature.
 
-All ten tabs share a single state machine. Changing any upstream input — a ZQ price, a macro variable, a scenario preset — propagates instantly through the entire `useFinance` memoization pipeline to every downstream tab.
+All eleven tabs share a single state machine. Changing any upstream input — a ZQ price, a macro variable, a scenario preset — propagates instantly through the entire `useFinance` memoization pipeline to every downstream tab.
 
 No build step. No npm. Open directly in a browser or deploy as a static file.
 
 ---
 
-## Ten tabs
+## Eleven tabs
 
 | # | Tab | Description |
 |---|-----|-------------|
@@ -37,8 +37,9 @@ No build step. No npm. Open directly in a browser or deploy as a static file.
 | 06 | **Dashboard** | Unified cross-market view: stat cards including PCI score + regime dial + sentiment gap sparklines, combined rate path chart, divergence table, financial stability row (NFCI, leaning premium, cycle phase). |
 | 07 | **Yield Curve** | Nelson-Siegel fitting over 7 Treasury CMT maturities (3mo–30yr) via 2,000-iteration Nelder-Mead. Log-scale spot and instantaneous forward curves. Scenario-shocked paths per FOMC meeting using Bieri-Chincarini empirical factor loadings. |
 | 08 | **Taylor Rule** | Five rule variants: Taylor 1993, Balanced/Yellen 2012, Yellen Alt1 (Okun's Law), Clarida-Gali-Gertler inertial (ρ=0.85), Judd-Rudebusch ECM (Bieri-Chincarini 2005, Eqs. 23–25). Prescribed vs CME path chart, Taylor−CME gap, per-meeting rule matrix. |
-| 09 | **Riding** | Bieri-Chincarini (2005) riding-the-yield-curve calculator: 7×5 HPR matrix (6mo–30yr instruments × 1mo–18mo horizons), excess HPR and break-even cushion in bp, five-filter cascade, duration-neutral barbell decomposition. |
-| 10 | **Financial Stability** | BIS/Mehrling financial cycle framework: NFCI vs EFFR path chart, finance-neutral Taylor Rule (λ_fc slider), global dollar stress gauge (swap lines + basis), doom loop scatter (term premium vs HY OAS), five-axis financial cycle phase clock. |
+| 09 | **Riding** | Bieri-Chincarini (2005) riding-the-yield-curve calculator: 7×5 HPR matrix (6mo–30yr instruments × 1mo–18mo horizons), excess HPR and break-even cushion in bp, six-filter cascade (incl. SS term-premium put), duration-neutral barbell decomposition. |
+| 10 | **Balance Sheet** | Fed H.4.1 live fetch (8 FRED series). Panel 1: composition stacked bars + KVJ (2011) 4-channel shadow rate (duration, safety, signaling, MBS). Panel 2: monthly runoff pace vs cap. Panel 3: Stein (2012) SVR corridor + DSS (2018) liquidity premium. Panel 4: two-instrument policy space scatter with 9 historical episodes. |
+| 11 | **Financial Stability** | BIS/Mehrling financial cycle framework. Panel 1: NFCI gauge. Panel 2: finance-neutral Taylor Rule gap (Borio 2016). Panel 2b: r* endogeneity decomposition. Panel 3: McCauley (2019) dollar safe asset gauge. Panel 4: doom loop scatter (term premium vs HY OAS). Panel 4b: policy feedback circuit (6-node directed graph). Panel 5: 6-axis financial cycle phase clock. |
 
 ---
 
@@ -125,12 +126,6 @@ The PCI's four components map onto a well-defined heterogeneous-markets literatu
 
 **The novel synthesis** — No existing public tool reads all four layers simultaneously and produces a conviction-adjusted policy signal. The PCI is constructed on the premise that the joint distribution of (futures slope, basis quality, options IQR, sentiment gap) contains more information about the true state of policy expectations than any single source alone — a direct application of the information aggregation principle. The weights are calibrated heuristically and made user-editable precisely because the relative informativeness of each layer varies across the business cycle: in crisis episodes, options conviction and swap line stress dominate; in normal regimes, the ZQ signal and sentiment alignment carry more weight.
 
-### Finance-neutral natural rate (tab 10)
-
-$$r^*_{\text{finance}} = r^*_{\text{standard}} + \lambda_{fc} \times \text{NFCI} \times 100\text{bp}$$
-
-The leaning premium (λ_fc × NFCI × 100bp) measures how much additional tightening financial stability considerations warrant beyond the standard inflation-neutral rule. Positive NFCI = tight conditions = higher finance-neutral r\*. Based on Borio, Disyatat & Juselius (2016) finance-neutral natural rate framework.
-
 ### Riding the yield curve (tab 09)
 
 Zero-coupon excess holding-period return (Bieri-Chincarini 2005, Eq. 12):
@@ -141,7 +136,43 @@ Break-even cushion (Eqs. 15–16):
 
 $$\text{Cushion}(m,h) = \frac{y(m) - y(h)}{D(m,h)} \times 100 \text{ bp}$$
 
-Duration-neutral barbell weight ω (Eq. 29) and riding HPR decomposition (Eq. 30) are computed in the barbell panel. The aggregate riding signal feeds the Dashboard stat card. Five configurable filters gate the signal cascade: positive slope, positive cushion, 75th-percentile cushion, Taylor (JR ECM) signal, and CME expectations signal.
+Duration-neutral barbell weight ω (Eq. 29) and riding HPR decomposition (Eq. 30) are computed in the barbell panel. The aggregate riding signal feeds the Dashboard stat card. Six configurable filters gate the signal cascade: positive slope, positive cushion, 75th-percentile cushion, Taylor (JR ECM) signal, CME expectations signal, and SS term-premium put signal (Stein-Sunderam 2018).
+
+### Balance sheet shadow rate channels (tab 10)
+
+$$\text{Shadow rate} = \underbrace{k_{\text{dur}} \cdot \Delta\text{BS}_{T+M}}_{\text{duration}} + \underbrace{k_{\text{safe}} \cdot \Delta\text{BS}_{T}}_{\text{safety}} + \underbrace{k_{\text{sig}} \cdot \Delta\text{BS}_{T}}_{\text{signaling}} + \underbrace{k_{\text{mbs}} \cdot \Delta\text{BS}_{M}}_{\text{MBS}}$$
+
+Four-channel decomposition from Krishnamurthy & Vissing-Jorgensen (2011, BPEA). QT reduces the Fed balance sheet, with each channel affecting different asset classes: the duration channel (all fixed income), the safety channel (Treasuries only, KVJ 2012 JPE), the signaling channel (Treasuries, forward guidance), and the MBS prepayment channel (MBS only).
+
+**Stein (2012) shadow value of reserves:**
+
+$$\text{SVR} = \text{EFFR} - \text{IORB}$$
+
+When reserves are ample, SVR ≈ 0. As QT drains reserves toward the scarcity threshold, SVR rises — the financial stability instrument tightens independently of the policy rate.
+
+**DSS (2018) liquidity premium:**
+
+$$\text{LP} = \text{T-bill}_{3M} - \text{IORB}$$
+
+The near-money convenience yield (Nagel 2016, QJE). Lower LP = cheaper leverage = higher bank risk-taking and lower risk premia (Drechsler, Savov & Schnabl 2018, JoF).
+
+### Finance-neutral natural rate (tab 11)
+
+$$r^*_{\text{finance}} = r^*_{\text{standard}} + \lambda_{fc} \times \text{NFCI} \times 100\text{bp}$$
+
+The leaning premium (λ_fc × NFCI × 100bp) measures additional tightening financial stability considerations warrant above the standard inflation-neutral rule. Based on Borio, Disyatat & Juselius (2013, BIS WP404; 2017 Oxford Economic Papers) finance-neutral natural rate framework.
+
+**Finance-neutral output gap (Borio-Disyatat-Juselius 2013):**
+
+$$y^{fn}_{gap} = y^{hp}_{gap} - \alpha_c \times \text{CreditGDPgap}$$
+
+where α_c ≈ 0.5. Standard HP-filter output gaps overstate potential output during financial booms; the BDJ correction embeds the credit cycle into the output gap estimate.
+
+**Stein-Sunderam (2018) gradualism gap:**
+
+$$\text{Gradualism gap} = \text{SEP long-run dot} - \text{ZQ terminal rate}$$
+
+Positive gap = market prices less tightening than the Fed's long-run projection. SS (2018, JoF) show this reflects rational discounting of inertial adjustment, not a fundamental policy disagreement.
 
 ---
 
@@ -155,7 +186,8 @@ Duration-neutral barbell weight ω (Eq. 29) and riding HPR decomposition (Eq. 30
 | **Polymarket** | Per-meeting probs, cut count (13 outcomes), terminal rate, Fed Chair nomination ($230M vol), emergency cut, first-cut timing | Fetch Polymarket button |
 | **Federal Reserve** | EFFR (NY Fed daily), SOFR fixing, Dec 2025 SEP dot plot, H.15 CMT rates (7 tenors) | H.15 fetch via Yield Curve tab |
 | **Atlanta Fed MPT** | Options-implied SOFR distribution (p25/p50/p75/IQR) for 4 quarterly SR3 contracts | Fetch MPT button |
-| **FRED** | NFCI (Chicago Fed, weekly), CB liquidity swap outstandings (SWPT), ICE BofA HY OAS (BAMLH0A0HYM2) | Fetch FRED button |
+| **FRED — Financial Stability** | NFCI (Chicago Fed, weekly), CB liquidity swap outstandings (SWPT), ICE BofA HY OAS (BAMLH0A0HYM2) | Fetch FRED button (Tab 11) |
+| **FRED — Balance Sheet** | WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3 (Fed H.4.1 weekly) | Fetch H.4.1 button (Tab 10) |
 
 Live refresh uses the Anthropic API with web search (`claude-sonnet-4-6`). Inside claude.ai the API key is injected automatically. For standalone use, paste an `sk-ant-...` key into the field in the top-right corner of the tool.
 
@@ -293,6 +325,9 @@ To enable Pages on a fork: **Settings → Pages → Source: Deploy from branch �
 - Taylor Rule prescriptions are sensitive to the assumed r* and output/unemployment gap inputs; treat prescribed paths as directional signals, not point forecasts.
 - PCI conviction component requires the Atlanta Fed MPT live fetch; seed IQR values of 75bp are used until refreshed — treat seed-based PCI scores as approximate.
 - Financial Stability panels require the FRED live fetch for current NFCI, swap line, and HY spread readings; seed values reflect approximate conditions at time of release.
+- Balance Sheet tab requires the FRED H.4.1 live fetch for current composition data; seed values reflect conditions at time of release.
+- KVJ shadow rate channel decomposition uses fixed loadings from Krishnamurthy & Vissing-Jorgensen (2011); actual loadings vary with balance sheet composition and market conditions.
+- xccy basis (cross-currency swap spread) is manually entered in the Financial Stability tab; it is not auto-fetched.
 - This tool is for **research and educational purposes only** and does not constitute investment advice.
 
 ---
@@ -305,14 +340,14 @@ Developed as part of a broader research program connecting financial market micr
 
 MSE's core probability methodology (tabs 01–03) is the open-source equivalent of Bloomberg's WIRP function in Futures Mode (*World Interest Rate Probability*, `WIRP <GO>`). WIRP Futures Mode derives the percentage of a 25bp hike or cut priced in at each FOMC meeting from the same ZQ Fed Funds futures contracts using the same N/M day-weighting procedure. MSE independently replicates this methodology from CME's published documentation; its ZQ-derived probabilities are verified to be consistent with WIRP Futures Mode output, providing an external methodological benchmark.
 
-Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure fitting, Taylor Rule prescriptive comparison, Bieri-Chincarini riding analytics, and — in v4.0 — a Policy Confidence Index synthesizing options-implied conviction (Atlanta Fed MPT), sentiment alignment, and financial conditions. WIRP provides none of these layers. MSE's pedagogical and research value lies in making the Bloomberg-equivalent core methodology fully transparent and open, then extending it into territory that no single commercial terminal covers.
+Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket), SOFR strip basis analysis, Nelson-Siegel term structure fitting, Taylor Rule prescriptive comparison, Bieri-Chincarini riding analytics, and — from v4.0 — a Policy Confidence Index synthesizing options-implied conviction (Atlanta Fed MPT), sentiment alignment, and financial conditions. WIRP provides none of these layers. MSE's pedagogical and research value lies in making the Bloomberg-equivalent core methodology fully transparent and open, then extending it into territory that no single commercial terminal covers.
 
 ---
 
 ## Citation
 
 **APA**
-> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v4.0) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
+> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v4.1) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
 
 **BibTeX**
 ```bibtex
@@ -320,7 +355,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {4.0},
+  version     = {4.1},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds}
@@ -328,7 +363,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ```
 
 **Chicago**
-> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.0. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
+> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.1. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
 
 ---
 
@@ -348,6 +383,15 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 - Wolfers, J., & Zitzewitz, E. (2004). Prediction markets. *Journal of Economic Perspectives*, 18(2), 107–126.
 - CME Group. (2024). *CME FedWatch methodology*. https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html
 - Federal Reserve Bank of Atlanta. (2026). *Market Probability Tracker*. https://www.atlantafed.org/research-and-data/data/market-probability-tracker
+- Borio, C., Disyatat, P., & Juselius, M. (2013). Rethinking potential output: Embedding information about the financial cycle (BIS Working Paper No. 404). Bank for International Settlements.
+- D'Amico, S., & King, T. B. (2013). Flow and stock effects of large-scale Treasury purchases: Evidence on the importance of local supply. *Journal of Financial Economics*, 108(2), 425–448.
+- Drechsler, I., Savov, A., & Schnabl, P. (2018). A model of monetary policy and risk premia. *Journal of Finance*, 73(1), 317–373.
+- Krishnamurthy, A., & Vissing-Jorgensen, A. (2011). The effects of quantitative easing on interest rates. *Brookings Papers on Economic Activity*, Fall, 215–265.
+- Krishnamurthy, A., & Vissing-Jorgensen, A. (2012). The aggregate demand for Treasury debt. *Journal of Political Economy*, 120(2), 233–267.
+- McCauley, R. N. (2019). Safe assets: Made, not just born (BIS Working Paper No. 769). Bank for International Settlements.
+- Nagel, S. (2016). The liquidity premium of near-money assets. *Quarterly Journal of Economics*, 131(4), 1927–1971.
+- Stein, J. C. (2012). Monetary policy as financial stability regulation. *Quarterly Journal of Economics*, 127(1), 57–95.
+- Stein, J. C., & Sunderam, A. (2018). The Fed, the bond market, and gradualism in monetary policy. *Journal of Finance*, 73(3), 1015–1060.
 
 ---
 
