@@ -11,6 +11,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-A2: fetchBalanceSheet() (8 FRED H.4.1 series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3) and fetchFinancialStability() (3 FRED series: NFCI, SWPT, BAMLH0A0HYM2) batch-fetch functions added
 - Session 6-A2b: Math Batch 1 -- qtShadowAdjChannels (KVJ 2011 4-channel decomposition), steinSVR (Stein 2012 shadow value of reserves), dssRiskChannel (DSS 2018 liquidity premium); all wired into useFinance with combinedStance
 - Session 6-A2c: Math Batch 2 -- nsSafetyPremium (KVJ 2012), finNeutralOutputGap (BDJ 2013), finCycleAdjustedRstar (Borio 2016 Pillar II), finNeutralRate (Borio NFCI-augmented JR), leaningPremium, gradualismGap (SS 2018), ssTermPremiumPutSignal; sepLongRunDot added to trD; all wired into useFinance
+- Session 6-A3: Tab 10 (Balance Sheet) Panels 1+2 -- BalanceSheetTab component with composition stacked bar chart (current vs neutral floor), KVJ 4-channel breakdown, editable neutral floor/runoff inputs, runoff pace vs cap bar chart with MBS undershoot; Fetch H.4.1 button; tab routing wired
 
 ---
 

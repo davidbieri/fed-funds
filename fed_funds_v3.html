@@ -3117,6 +3117,139 @@ function RidingTab({state, dispatch, finance}) {
 }
 
 // ============================================================================
+// TAB 10 --- Balance Sheet & QT Monitor
+// ============================================================================
+
+function BalanceSheetTab({state, dispatch, finance}) {
+  const {bsD} = state;
+  const {qtChannels, steinSVR:svr, combinedStance, effrStart} = finance;
+
+  function setBsd(key, val){ dispatch({type:'SET_BSD', key, value:parseFloat(val)||0}); }
+
+  // --- Panel 1: Composition bar chart ---
+  const W1=680, H1=220;
+  const PD={t:20,r:20,b:40,l:60};
+  const cw=W1-PD.l-PD.r, ch=H1-PD.t-PD.b;
+  const current=bsD.totalAssets||8500, neutral=bsD.neutralFloor||6200;
+  const maxVal=current*1.1;
+  const yS=v=>PD.t+ch*(1-v/maxVal);
+  const barW=cw*0.22;
+  const treasury=bsD.treasuries||4400, mbs=bsD.mbs||2300, other=Math.max(0,current-treasury-mbs);
+  const tR=treasury/current, mR=mbs/current;
+  const nT=neutral*tR, nM=neutral*mR, nO=Math.max(0,neutral-nT-nM);
+  const runway=bsD.monthlyRunoff>0?Math.round((current-neutral)/bsD.monthlyRunoff):999;
+  const shadowBp=qtChannels?qtChannels.total.toFixed(1):'\u2014';
+
+  function stackBar(x, vals, colors){
+    let svg='';
+    let cumul=0;
+    vals.forEach((v,i)=>{
+      const h=(v/maxVal)*ch;
+      const y=yS(cumul+v);
+      svg+='<rect x="'+x+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+Math.max(0,h).toFixed(1)+'" fill="'+colors[i]+'" opacity=".85" rx="1.5"/>';
+      cumul+=v;
+    });
+    return svg;
+  }
+
+  const x1=PD.l+cw*0.18, x2=PD.l+cw*0.58;
+  const cols=['var(--c-bs)','var(--c-bs-mbs)','var(--color-border-secondary)'];
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  [0,2000,4000,6000,8000].forEach(v=>{
+    const y=yS(v);
+    svg1+='<line x1="'+PD.l+'" y1="'+y.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    if(v>0) svg1+='<text x="'+(PD.l-6)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">$'+(v/1000)+'T</text>';
+  });
+  svg1+=stackBar(x1,[treasury,mbs,other],cols);
+  svg1+=stackBar(x2,[nT,nM,nO],cols);
+  // neutral floor dashed line
+  const nY=yS(neutral);
+  svg1+='<line x1="'+PD.l+'" y1="'+nY.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+nY.toFixed(1)+'" stroke="var(--c-neutral-floor)" stroke-width="1.5" stroke-dasharray="6,4"/>';
+  svg1+='<text x="'+(PD.l+cw-4)+'" y="'+(nY-5).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">Floor ~$'+(neutral/1000).toFixed(1)+'T</text>';
+  // labels
+  svg1+='<text x="'+(x1+barW/2).toFixed(1)+'" y="'+(H1-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Current</text>';
+  svg1+='<text x="'+(x2+barW/2).toFixed(1)+'" y="'+(H1-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Neutral Floor</text>';
+  // runway annotation
+  svg1+='<text x="'+(W1/2)+'" y="'+(H1-22)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">QT runway at $'+bsD.monthlyRunoff+'bn/mo: ~'+runway+' months to floor</text>';
+  svg1+='</svg>';
+
+  // --- Panel 2: Runoff pace vs cap ---
+  const capT=25, capMBS=35;
+  const actualTotal=bsD.monthlyRunoff||60;
+  const actT=actualTotal*0.55, actM=actualTotal*0.45;
+  const undershoot=capMBS-actM;
+  const cumUndershoot=Math.round(undershoot*20);
+  const W2=420, H2=150, xMax=40;
+  const xSc=v=>(v/xMax)*300;
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  // Treasury row
+  svg2+='<text x="88" y="32" text-anchor="end" font-size="10" fill="var(--color-text-primary)">Treasury</text>';
+  svg2+='<rect x="95" y="18" width="'+xSc(capT).toFixed(1)+'" height="26" fill="var(--c-neutral-floor)" opacity=".25" rx="2"/>';
+  svg2+='<rect x="95" y="18" width="'+xSc(actT).toFixed(1)+'" height="26" fill="var(--c-bs)" opacity=".85" rx="2"/>';
+  svg2+='<text x="'+(99+xSc(actT)).toFixed(1)+'" y="36" font-size="9" fill="var(--c-bs)" font-family="var(--font-mono)">$'+actT.toFixed(0)+'bn</text>';
+  svg2+='<text x="'+(99+xSc(capT)).toFixed(1)+'" y="36" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">cap $'+capT+'bn</text>';
+  // MBS row
+  svg2+='<text x="88" y="82" text-anchor="end" font-size="10" fill="var(--color-text-primary)">MBS</text>';
+  svg2+='<rect x="95" y="68" width="'+xSc(capMBS).toFixed(1)+'" height="26" fill="var(--c-neutral-floor)" opacity=".25" rx="2"/>';
+  svg2+='<rect x="95" y="68" width="'+xSc(actM).toFixed(1)+'" height="26" fill="var(--c-bs-mbs)" opacity=".85" rx="2"/>';
+  svg2+='<text x="'+(99+xSc(actM)).toFixed(1)+'" y="86" font-size="9" fill="var(--c-bs-mbs)" font-family="var(--font-mono)">$'+actM.toFixed(0)+'bn</text>';
+  svg2+='<text x="'+(99+xSc(capMBS)).toFixed(1)+'" y="86" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">cap $'+capMBS+'bn</text>';
+  // undershoot note
+  svg2+='<text x="10" y="120" font-size="9" fill="var(--color-text-tertiary)">MBS undershoot (est. cumulative since QT start): ~$'+cumUndershoot+'bn</text>';
+  svg2+='<text x="10" y="138" font-size="9" fill="var(--color-text-tertiary)">Actual QT pace slower than cap due to low mortgage prepayments.</text>';
+  svg2+='</svg>';
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
+        <div>
+          <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Balance Sheet &amp; QT Monitor</h3>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+            <span className="data-badge">{bsD.fetched?'live':'seed'}</span>
+            {' '}{bsD.source}{bsD.asOf?' \u00b7 '+bsD.asOf:''}
+          </div>
+        </div>
+        <button className="refresh-btn" onClick={()=>fetchBalanceSheet(dispatch)}>&#x27f3; Fetch H.4.1</button>
+      </div>
+
+      <div className="k-grid">
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2460 Balance Sheet Composition</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>
+              KVJ (2011) shadow rate: <b style={{color:parseFloat(shadowBp)>0?'var(--c-stress-hi)':'var(--c-stress-lo)'}}>{shadowBp} bp</b>
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg1}}/>
+          <div style={{display:'flex',gap:'14px',flexWrap:'wrap',fontSize:'10px',margin:'8px 0',color:'var(--color-text-secondary)'}}>
+            <span style={{color:'var(--c-bs)'}}>Duration: {qtChannels?qtChannels.components.duration.toFixed(1):'\u2014'} bp</span>
+            <span>Safety: {qtChannels?qtChannels.components.safety.toFixed(1):'\u2014'} bp</span>
+            <span>Signaling: {qtChannels?qtChannels.components.signaling.toFixed(1):'\u2014'} bp</span>
+            <span style={{color:'var(--c-bs-mbs)'}}>MBS: {qtChannels?qtChannels.components.mbs.toFixed(1):'\u2014'} bp</span>
+          </div>
+          <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
+            <label style={{color:'var(--color-text-secondary)'}}>Neutral floor ($bn):
+              <input className="fw-in" type="number" value={bsD.neutralFloor} style={{width:'80px',marginLeft:'4px'}}
+                onChange={e=>setBsd('neutralFloor',e.target.value)} step="100"/>
+            </label>
+            <label style={{color:'var(--color-text-secondary)'}}>Monthly runoff ($bn):
+              <input className="fw-in" type="number" value={bsD.monthlyRunoff} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setBsd('monthlyRunoff',e.target.value)} step="5"/>
+            </label>
+          </div>
+          <div className="k-note">Sources: Fed H.4.1 (FRED: WALCL, WTREGEN, WMBSEC). Shadow rate via Krishnamurthy &amp; Vissing-Jorgensen (2011) channel decomposition. Neutral floor: Afonso-Giannone-LaRocca-Packer (2022) reserve demand model.</div>
+        </div>
+
+        <div className="k-panel k-full">
+          <div className="k-hdr"><span className="k-title">\u2461 Monthly Runoff: Pace vs. Cap</span></div>
+          <div dangerouslySetInnerHTML={{__html:svg2}}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -3209,6 +3342,7 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='bs' && <BalanceSheetTab state={state} dispatch={dispatch} finance={finance}/>}
       {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','bs','fs'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
