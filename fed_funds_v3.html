@@ -713,6 +713,7 @@ const INITIAL_STATE = {
     jrGamma: 0.85,             // JR partial adjustment speed
     ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
     sepLongRunDot: 2.875,    // FOMC SEP median longer-run FFR (Dec 2024 projection)
+    useFinCycleRstar: false, // Borio (2016) finance-cycle adjusted r* toggle
   },
   bsD: {
     totalAssets:    8500,   // $bn, FRED: WALCL
@@ -992,18 +993,21 @@ function useFinance(state) {
     }
     // Taylor rule prescriptions (all 4 variants)
     const t = state.trD ?? {};
-    const prevGap = t.outputGap ?? -0.5;
-    const gap = t.gapMeasure === 'unemployment'
-      ? -2 * ((t.unemploymentRate ?? 4.1) - (t.unemploymentNatural ?? 4.1))
-      : (t.outputGap ?? -0.5);
+    // Borio r* toggle: conditionally swap LW r* for finance-cycle adjusted r*
+    const earlyRstarAdj = finCycleAdjustedRstar(t, state.fsD);
+    const effectiveT = t.useFinCycleRstar ? {...t, naturalRate: earlyRstarAdj} : t;
+    const prevGap = effectiveT.outputGap ?? -0.5;
+    const gap = effectiveT.gapMeasure === 'unemployment'
+      ? -2 * ((effectiveT.unemploymentRate ?? 4.1) - (effectiveT.unemploymentNatural ?? 4.1))
+      : (effectiveT.outputGap ?? -0.5);
     const trRates = {
-      taylor93:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 0.5*gap,
-      balanced:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 1.0*gap,
-      yellen:        taylorRateYellen(t),
-      juddRudebusch: taylorRateJR(t, state.fwLb, prevGap),
+      taylor93:      (effectiveT.naturalRate??0.5) + (effectiveT.inflationTarget??2.0) + 1.5*((effectiveT.inflationRate??2.8)-(effectiveT.inflationTarget??2.0)) + 0.5*gap,
+      balanced:      (effectiveT.naturalRate??0.5) + (effectiveT.inflationTarget??2.0) + 1.5*((effectiveT.inflationRate??2.8)-(effectiveT.inflationTarget??2.0)) + 1.0*gap,
+      yellen:        taylorRateYellen(effectiveT),
+      juddRudebusch: taylorRateJR(effectiveT, state.fwLb, prevGap),
     };
     // CGG inertial (backward-compatible with existing chart)
-    trRates.cgg = state.fwLb + (1 - (t.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
+    trRates.cgg = state.fwLb + (1 - (effectiveT.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
     trRates.finNeutral = trRates.juddRudebusch + (state.fsD?.lambdaFC ?? 0.5) * (state.fsD?.nfci ?? -0.12);
 
     // Taylor signal: JR is the primary signal (Bieri-Chincarini Exhibit 7)
@@ -1015,9 +1019,9 @@ function useFinance(state) {
     // JR implied path: apply taylorRateJR meeting-by-meeting, carrying forward prevFFR
     const jrImpliedPath = (() => {
       let prev = state.fwLb;
-      const pg = t.outputGap ?? -0.5;
+      const pg = effectiveT.outputGap ?? -0.5;
       return meetings.map(row => {
-        const rate = taylorRateJR(t, prev, pg);
+        const rate = taylorRateJR(effectiveT, prev, pg);
         prev = rate;
         return rate;
       });
@@ -2592,6 +2596,18 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += paramField('End-horizon GDP forecast', 'yEnd', -5, 10, 0.1, '%');
   html += paramField('Neutral real rate (r*)', 'rStar', -2, 5, 0.1, '%');
   html += '</tbody></table>';
+  // Borio r* toggle
+  html += '<div style="margin-top:8px;padding:6px 8px;border-radius:var(--border-radius-md);background:'+(tr.useFinCycleRstar?'rgba(13,148,136,.08)':'transparent')+';border:.5px solid '+(tr.useFinCycleRstar?'var(--c-fin-neutral)':'var(--color-border-tertiary)')+'">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;color:var(--color-text-secondary)">';
+  html += '<input type="checkbox" data-borio-rstar '+(tr.useFinCycleRstar?'checked':'')+'/>';
+  html += 'Use finance-cycle adjusted r* (Borio 2016, Pillar II)</label>';
+  if(tr.useFinCycleRstar){
+    const adjR=finance.rstarAdj||0.5;
+    const lwR=tr.naturalRate||0.5;
+    const corrBp=((adjR-lwR)*100).toFixed(0);
+    html += '<div style="font-size:10px;color:var(--c-fin-neutral);margin-top:4px">Adjusted r*: <b>'+adjR.toFixed(3)+'%</b> (LW: '+lwR.toFixed(2)+'% + '+corrBp+'bp correction)</div>';
+  }
+  html += '</div>';
   // Gap measure toggle
   html += '<div style="margin-top:8px;display:flex;gap:4px;align-items:center">';
   html += '<span style="font-size:10px;color:var(--color-text-tertiary);margin-right:4px">Gap measure:</span>';
@@ -2707,15 +2723,20 @@ function TaylorRuleTab({state, dispatch, finance}) {
       const v = e.currentTarget.dataset.gapMeasure;
       if (v) dispatch({type: 'UPDATE_TR', key: 'gapMeasure', value: v});
     };
+    const borioHandler = (e) => {
+      dispatch({type:'UPDATE_TR', key:'useFinCycleRstar', value:e.target.checked});
+    };
     document.querySelectorAll('[data-taylor-key]').forEach(el => el.addEventListener('change', taylorHandler));
     document.querySelectorAll('[data-tr-key]').forEach(el => el.addEventListener('change', trHandler));
     document.querySelectorAll('[data-rule-variant]').forEach(el => el.addEventListener('click', variantHandler));
     document.querySelectorAll('[data-gap-measure]').forEach(el => el.addEventListener('click', gapHandler));
+    document.querySelectorAll('[data-borio-rstar]').forEach(el => el.addEventListener('change', borioHandler));
     return () => {
       document.querySelectorAll('[data-taylor-key]').forEach(el => el.removeEventListener('change', taylorHandler));
       document.querySelectorAll('[data-tr-key]').forEach(el => el.removeEventListener('change', trHandler));
       document.querySelectorAll('[data-rule-variant]').forEach(el => el.removeEventListener('click', variantHandler));
       document.querySelectorAll('[data-gap-measure]').forEach(el => el.removeEventListener('click', gapHandler));
+      document.querySelectorAll('[data-borio-rstar]').forEach(el => el.removeEventListener('change', borioHandler));
     };
   });
 
