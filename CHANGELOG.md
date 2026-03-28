@@ -16,6 +16,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-E)
+- Session INDEX-E: hero stats updated (11 tabs, 7 sources, 10 scenarios,
+  25 actions); signal chain extended to 11 nodes (Balance Sheet + Fin.
+  Stability with correct color tokens); overview stats bar updated;
+  tab 04 count corrected; tabs 10+11 mini-cards added to overview grid
+
 ### Changed — Landing Page (Session INDEX-D)
 - Session INDEX-D: nav logo rebranded to personal academic brand (david bieri /
   Spectral italic + MSE / JetBrains Mono); Eccles epigraph added to hero;

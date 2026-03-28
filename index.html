@@ -468,9 +468,9 @@ footer{
     <p class="hero-sub">A browser-native implementation of the CME FedWatch methodology extended into a full monetary policy analytics suite: unconditional probability lattice from 30-day ZQ futures, three-way prediction market comparison, SOFR term structure, Nelson-Siegel yield curve fitting, Taylor Rule suite with Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. No build step. No server. No dependencies.</p>
     <div class="hero-stats">
       <div class="stat"><span class="stat-n">11</span><span class="stat-l">analytical tabs</span></div>
-      <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
+      <div class="stat"><span class="stat-n">7</span><span class="stat-l">live data sources</span></div>
       <div class="stat"><span class="stat-n">10</span><span class="stat-l">historical scenarios</span></div>
-      <div class="stat"><span class="stat-n">5</span><span class="stat-l">Taylor variants</span></div>
+      <div class="stat"><span class="stat-n">25</span><span class="stat-l">reducer actions</span></div>
     </div>
     <div class="hero-actions">
       <button class="btn-launch" onclick="openModal()">⟶ Launch Tool</button>
@@ -661,7 +661,7 @@ footer{
 
     <!-- OVERVIEW -->
     <div class="ug-page on" id="pg-overview">
-      <p class="ug-body">Ten tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, Dashboard, and Financial Stability indicators.</p>
+      <p class="ug-body">Eleven tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, Dashboard, Balance Sheet QT monitor, and Financial Stability indicators.</p>
       <div class="ug-nd" style="flex-wrap:wrap;row-gap:6px">
         <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
         <div class="ug-nd-arrow">→</div>
@@ -669,34 +669,41 @@ footer{
         <div class="ug-nd-arrow">→</div>
         <div class="ug-nd-node">Prob. tree<br><span style="font-size:9px;opacity:.7">lattice</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">overlay</span></div>
+        <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">PCI synthesis</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">independent</span></div>
+        <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">transmission</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node dim">Dashboard<br><span style="font-size:9px;opacity:.7">unified</span></div>
+        <div class="ug-nd-node dim">Dashboard<br><span style="font-size:9px;opacity:.7">unified + PCI</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node amb">Yield curve<br><span style="font-size:9px;opacity:.7">NS + shocks</span></div>
+        <div class="ug-nd-node amb">Yield curve<br><span style="font-size:9px;opacity:.7">NS + QT shock</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node red">Taylor Rule<br><span style="font-size:9px;opacity:.7">JR ECM signal</span></div>
+        <div class="ug-nd-node red">Taylor Rule<br><span style="font-size:9px;opacity:.7">JR ECM + fin-neutral</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node vio">Riding<br><span style="font-size:9px;opacity:.7">HPR + filters</span></div>
+        <div class="ug-nd-node vio">Riding<br><span style="font-size:9px;opacity:.7">HPR + 6 filters</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(14,165,233,.12);color:#0369a1;border-color:rgba(14,165,233,.25)">Balance sheet<br><span style="font-size:9px;opacity:.7">KVJ + Stein SVR</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(13,148,136,.12);color:#0f766e;border-color:rgba(13,148,136,.25)">Fin. stability<br><span style="font-size:9px;opacity:.7">Borio + phase clock</span></div>
       </div>
       <div class="ug-stat-row">
-        <div class="ug-stat"><div class="ug-stat-l">Source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">ZQ source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
         <div class="ug-stat"><div class="ug-stat-l">Horizon</div><div class="ug-stat-v" style="font-size:14px">12 months</div><div class="ug-stat-s">Apr 2026 – Mar 2027</div></div>
         <div class="ug-stat"><div class="ug-stat-l">FOMC meetings</div><div class="ug-stat-v" style="font-size:14px">8 meetings</div><div class="ug-stat-s">4 anchor months</div></div>
-        <div class="ug-stat"><div class="ug-stat-l">Live refreshes</div><div class="ug-stat-v" style="font-size:14px">5 buttons</div><div class="ug-stat-s">ZQ · Kalshi · Poly · SR3 · H.15</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Live data sources</div><div class="ug-stat-v" style="font-size:14px">7 sources</div><div class="ug-stat-s">ZQ · SR3 · Kal · Poly · H.15 · MPT · FRED</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Refresh buttons</div><div class="ug-stat-v" style="font-size:14px">7 buttons</div><div class="ug-stat-s">Independent per source</div></div>
       </div>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">10-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels plus PCI Signal/Noise decomposition. Kal−CME and Poly−Kal basis pills on each panel.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0ea5e9"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:#0369a1">Balance Sheet / QT Monitor</div><div class="ug-pdesc">KVJ (2011) 4-channel shadow rate, Stein (2012) SVR corridor, DSS (2018) liquidity premium, two-instrument policy space. Fed H.4.1 live fetch.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0d9488"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:#0f766e">Financial Stability</div><div class="ug-pdesc">BIS/Mehrling framework: finance-neutral r* (Borio 2016), McCauley dollar gauge, doom loop scatter, 6-axis phase clock. FRED live fetch.</div></div>
       </div>
     </div>
 
