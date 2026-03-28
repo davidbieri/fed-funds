@@ -661,7 +661,8 @@ footer{
 
     <!-- OVERVIEW -->
     <div class="ug-page on" id="pg-overview">
-      <p class="ug-body">Eleven tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, Dashboard, Balance Sheet QT monitor, and Financial Stability indicators.</p>
+      <p class="ug-body"><strong>MSE is a signal chain, not a dashboard.</strong> Each of the eleven tabs adds one analytical layer to a single shared state, so every upstream change — a ZQ price adjustment, a macro input, a scenario activation — propagates instantly through the entire suite. The chain runs from raw futures prices to financial stability, answering a single question at each stage: <em>what does this source tell us about the true distribution of future Fed policy that no other source alone can reveal?</em></p>
+      <p class="ug-body" style="margin-top:8px">The key insight is that futures, prediction markets, the yield curve, policy rules, and financial conditions are not redundant — they represent genuinely different agent types, time horizons, and loss functions pricing the same underlying uncertainty. MSE reads all of them simultaneously and makes their agreement and disagreement explicit.</p>
       <div class="ug-nd" style="flex-wrap:wrap;row-gap:6px">
         <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
         <div class="ug-nd-arrow">→</div>
@@ -709,7 +710,9 @@ footer{
 
     <!-- EFFR CHAIN -->
     <div class="ug-page" id="pg-chain">
-      <p class="ug-body">The EFFR chain converts each month's ZQ futures price into start-of-month and end-of-month rates, isolating the exact point where the Fed changes rates. Non-meeting months serve as anchors that propagate the rate between meeting months.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Convert raw ZQ futures prices into a per-meeting EFFR path — the overnight rate the Fed will hold after each decision.</p>
+      <p class="ug-body" style="margin-top:6px">The CME FedWatch methodology uses N/M day-weighting to isolate the pre- and post-meeting EFFR levels within a contract month. Non-meeting months are anchors that propagate the rate between decisions. A fractional move count near 0.5 means maximum uncertainty between two adjacent outcomes; near 0 or 1 means near-certainty of a specific move size.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Per-meeting base/additional move probabilities → Probability Tree.</p>
       <div class="ug-head">Anchor rule — non-meeting months</div>
       <div class="ug-formula">
         \[\text{EFFR}(\text{End})_{T-1} \;=\; \text{EFFR}(\text{Avg})_{T} \;=\; \text{EFFR}(\text{Start})_{T+1}\]
@@ -741,7 +744,10 @@ footer{
 
     <!-- PROBABILITY TREE -->
     <div class="ug-page" id="pg-tree">
-      <p class="ug-body">The probability tree compounds the per-meeting binary splits into unconditional cumulative probabilities. Each node shows the probability of being at that rate level at that point in time, accounting for all paths to get there.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Compound per-meeting binary splits into an unconditional lattice showing the full joint distribution of possible rate paths over 12 months.</p>
+      <p class="ug-body" style="margin-top:6px">At each FOMC meeting, prior probability mass splits into hold/cut/hike branches. Nodes accumulate probability multiplicatively. The result is the market's complete probability distribution over where rates end up in 12 months — not just the central scenario.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Bright nodes = most likely paths. Horizontal spread at each meeting = policy uncertainty. A single dominant column means high conviction. The amber compare overlay renders a second scenario's distribution in parallel. The final distribution (rightmost) is the key output.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Terminal rate distribution, P(≥1 cut), expected cuts → anchors all prediction market comparison.</p>
       <div class="ug-formula">
         \[P(\text{node at meeting } M,\; \text{rate } R) = \sum_{R'} P(\text{prior node at } R') \;\times\; P(R' \to R \mid M)\]
         <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
@@ -763,7 +769,10 @@ footer{
 
     <!-- PREDICTION MARKETS -->
     <div class="ug-page" id="pg-prediction">
-      <p class="ug-body">Nine panels compare CME-derived probabilities against Kalshi and Polymarket. The key signal is the <em>basis</em> — the spread between markets — not the absolute level. Kal−CME captures the regulated vs futures spread; Poly−Kal captures the information gap between institutional/domestic and global/retail sentiment.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Benchmark the CME-derived probability distribution against two prediction market platforms to surface where different market types agree, diverge, and carry unique information.</p>
+      <p class="ug-body" style="margin-top:6px">The Kal−CME basis measures the regulated prediction market vs futures spread. The Poly−Kal basis captures the structural disagreement between Kalshi's institutionally-weighted domestic participants and Polymarket's global, retail, crypto-native base. Persistent divergence is analytically informative — it reflects genuine model disagreement across agent types (Kurz 1994), not noise.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Persistent Kal−CME divergence signals narrative momentum overriding fundamentals. Poly−Kal divergence above 5pp typically signals a tail risk narrative that institutional markets have not yet priced. Panel ⑩ synthesizes all four signal layers into the Policy Confidence Index regime label.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> PCI score + regime label → Dashboard. Platform divergence → Riding filter #5.</p>
       <div class="ug-src-leg">
         <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--cme)"></div>CME (institutional, futures-anchored)</div>
         <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--kal)"></div>Kalshi (regulated, domestic/institutional)</div>
@@ -784,7 +793,10 @@ footer{
 
     <!-- SOFR STRIP -->
     <div class="ug-page" id="pg-sofr">
-      <p class="ug-body">The SOFR strip tab is independent of the ZQ chain. It uses CME 3-month SOFR futures (SR3) across 7 quarterly contracts from Jun 2026 to Dec 2027.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Map the transmission of overnight rate expectations into the 3-month term structure, revealing how markets price the Fed's path through the quarterly SOFR forward curve.</p>
+      <p class="ug-body" style="margin-top:6px">The SR3 SOFR strip is independent of the ZQ chain — it prices the secured overnight lending market, not the Fed Funds target. The SOFR–EFFR basis (SR3 minus ZQ quarterly average) measures transmission quality. A basis near zero means clean transmission; widening signals reserve scarcity or credit/liquidity risk premia entering the term structure. The instantaneous 3M forward strips out the quarterly-averaging effect to expose the marginal rate for each quarter.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The forward trough marks peak easing intensity — distinct from the terminal rate level. A rising basis as the curve eases is an early warning of transmission breakdown. Basis above 15bp warrants cross-checking against the NFCI and swap line readings in Tab 11.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> SOFR–EFFR basis → PCI transmission quality component (weight: 0.25).</p>
       <div class="ug-stat-row">
         <div class="ug-stat"><div class="ug-stat-l">SR3 contracts</div><div class="ug-stat-v" style="font-size:14px">SR3M6–SR3Z7</div><div class="ug-stat-s">7 quarterly</div></div>
         <div class="ug-stat"><div class="ug-stat-l">Typical basis</div><div class="ug-stat-v" style="font-size:14px">5–15 bp</div><div class="ug-stat-s">SOFR above EFFR</div></div>
@@ -804,7 +816,10 @@ footer{
 
     <!-- YIELD CURVE -->
     <div class="ug-page" id="pg-yieldcurve">
-      <p class="ug-body">The yield curve tab fits a Nelson-Siegel parametric model to 7 Treasury CMT maturities using 2,000-iteration Nelder-Mead optimization. It then propagates FOMC meeting rate shocks into yield curve scenarios using Bieri-Chincarini (2005) empirical factor loadings.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Fit the full Treasury term structure to a four-parameter Nelson-Siegel model and propagate FOMC rate shocks into curve scenarios across all maturities.</p>
+      <p class="ug-body" style="margin-top:6px">NS fitting over 7 CMT maturities via 2,000-iteration Nelder-Mead gives four factors: β₀ (level, long-run rate), β₁ (slope, short-end loading), β₂ (curvature, medium-maturity hump), and τ (decay). The term premium — β₀ minus EFFR — is the compensation for duration risk. Negative term premium means the curve has inverted beyond what rate expectations alone justify. Scenario shocks use Bieri-Chincarini (2005) empirical factor loadings applied cumulatively at each FOMC meeting.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> RMSE above 10bp signals the current curve regime may be poorly captured by the NS form — common at extreme inversions. The scenario fan shows how each meeting's expected move shifts the entire curve. The β₀ decomposition (KVJ safety premium + leverage channel) appears in Tab 10.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> NS factors + scenario shocks → Riding HPR matrix. β₀ decomposition → Balance Sheet Tab 10.</p>
       <div class="ug-head">Nelson-Siegel spot rate</div>
       <div class="ug-formula">
         \[y(m) = \beta_0 + \beta_1 \cdot \frac{1-e^{-m/\tau}}{m/\tau} + \beta_2 \cdot \left[\frac{1-e^{-m/\tau}}{m/\tau} - e^{-m/\tau}\right]\]
@@ -826,7 +841,10 @@ footer{
 
     <!-- TAYLOR RULE -->
     <div class="ug-page" id="pg-taylor">
-      <p class="ug-body">The Taylor Rule tab implements five distinct policy rule specifications and compares their prescriptions against the CME market-implied path. The Judd-Rudebusch ECM is designated the primary signal source for downstream filter cascades.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Benchmark the market-implied rate path against what five systematic policy rules prescribe — revealing whether the market is pricing above or below the rule-consistent rate.</p>
+      <p class="ug-body" style="margin-top:6px">The Taylor−CME gap (prescriptive minus market) is the core signal: positive = market prices looser than the rule warrants; negative = market prices tighter. Five variants cover the range from the original Taylor (1993) specification through the Judd-Rudebusch ECM — the designated signal source for downstream tabs by virtue of its highest R² for FFTR prediction (Bieri-Chincarini 2005, Exhibit 7). A sixth finance-neutral variant (Borio 2016) embeds NFCI into the natural rate estimate.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Convergence across rule variants = robust prescription. Divergence = model-sensitive results, treat with caution. The JR ECM gap is the primary downstream signal. A positive JR gap (market below rule) is the necessary condition for the riding signal filter to activate.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> JR ECM signal → Riding filter #4. Finance-neutral gap → Dashboard leaning premium row.</p>
       <div class="ug-head">Atlanta Fed generalized form (base)</div>
       <div class="ug-formula">
         \[\hat{i}_t = \rho \cdot i_{t-1} + (1-\rho)\left[r^* + \pi^* + 1.5(\pi_t - \pi^*) + \beta \cdot \text{gap}_t\right]\]
@@ -850,7 +868,10 @@ footer{
 
     <!-- RIDING -->
     <div class="ug-page" id="pg-riding">
-      <p class="ug-body">The Riding Calculator implements the Bieri-Chincarini (2005) riding-the-yield-curve framework across a 7×5 instrument-horizon matrix. Each cell shows annualized excess HPR and break-even cushion in basis points, with a 5-filter cascade determining the signal quality.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Apply the Bieri-Chincarini (2005) riding-the-yield-curve framework to identify whether the current curve shape generates positive excess returns for extending duration beyond the money-market horizon.</p>
+      <p class="ug-body" style="margin-top:6px">The 7×5 HPR matrix computes annualized excess holding-period returns and break-even cushions for every combination of instrument maturity (6mo–30yr) and holding horizon (1mo–18mo). Six filters gate the composite riding signal: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal (JR ECM), CME expectations signal, and SS term-premium put signal (Stein-Sunderam 2018). All six filters passing simultaneously is the strongest possible riding signal.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Green HPR cells = favorable riding. The cushion gauge shows how much the curve can flatten before the ride loses money. The barbell panel shows whether optimal duration extension concentrates at a specific maturity or spreads across the curve.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Composite riding signal → Dashboard stat card.</p>
       <div class="ug-head">Zero-coupon bond HPR (Bieri-Chincarini 2005, Eq. 12)</div>
       <div class="ug-formula">
         \[\text{HPR}_{m,h} = \frac{r_m \cdot m - r_{m-h} \cdot (m-h)}{h} - r_h\]
@@ -873,7 +894,10 @@ footer{
 
     <!-- SCENARIOS -->
     <div class="ug-page" id="pg-scenarios">
-      <p class="ug-body">Ten named ZQ price configurations grouped by historical era. Activating a scenario reprices the entire chain — probability tree, prediction market overlays, yield curve shocks, Taylor prescriptions, riding HPR matrix, and Dashboard — in one click. A second click restores the previous prices. An amber compare overlay applies a second scenario alongside the active one.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Stress-test the entire signal chain against ten historically-calibrated rate path analogs — from the Greenspan soft landing of 1995 to the 2022 re-normalization cycle — enabling rapid exploration of how every downstream tab responds under different Fed policy regimes.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>How scenarios work:</strong> Activating a scenario reprices all 8 FOMC meeting ZQ contracts simultaneously using the CME N/M weighting formula. The entire chain recalculates instantly — probability lattice, prediction market overlays, NS yield curve scenario fan, Taylor prescriptions, and the riding HPR matrix. A second click restores your previous manual prices exactly. The amber compare overlay holds a second scenario alongside the active one for parallel analysis across all tabs simultaneously.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>How to read scenarios:</strong> The probability tree under a scenario shows how probability mass concentrates or disperses under that rate path. The Taylor−CME gap shows whether the historical path was rule-consistent or systematically off-prescription. The riding matrix shows which maturities generated positive excess returns in that regime. The compare overlay is most powerful when the active scenario probes a tail risk path while the compare holds the current market consensus.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Scenario calibration:</strong> Each scenario is calibrated to a specific historical episode. Easing scenarios range from the single-cut Soft Landing ('95) through the dot-com triple-50bp sequence ('01). Crisis scenarios use GFC ('08) and Volcker disinflation ('82) easing velocities. Tightening scenarios replay the Burns/Miller stagflation re-tightening ('70s) and the 2022 hiking cycle. The historical N/M day-weighting at each meeting is preserved so ZQ prices are internally consistent with the FOMC schedule.</p>
       <div class="ug-head">How activate / deactivate works</div>
       <ol class="ug-steps">
         <li>Before applying, current manual prices are saved automatically in state</li>
@@ -983,7 +1007,9 @@ footer{
 
     <!-- LIVE DATA -->
     <div class="ug-page" id="pg-refresh">
-      <p class="ug-body">Five independent refresh buttons fetch live market data. Each targets a different source — a Kalshi outage won't affect your ZQ prices, and vice versa. All fetches run through the Anthropic API with web search; the API key is injected automatically inside claude.ai.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Keep the tool current across seven independent live data channels — each refreshable without affecting any other source so a Kalshi outage cannot corrupt your ZQ prices or H.15 rates.</p>
+      <p class="ug-body" style="margin-top:6px">All fetches use the Anthropic API with web search. Inside claude.ai the key is injected automatically; paste an <code>sk-ant-...</code> key in the top-right field for standalone use. After every refresh the regime bar updates with the current market consensus label. ZQ and SR3 should be refreshed together for a consistent futures snapshot; CMT and MPT are slower (H.15 is published once per business day; MPT updates at market close).</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The regime bar after each ZQ refresh summarizes current market conviction in one line. Simultaneous changes to ZQ and SR3 that widen the SOFR−EFFR basis are an early warning of transmission risk visible in Tab 5. FRED data (NFCI, swap lines, HY OAS) changes slowly — weekly for NFCI, real-time for the others.</p>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-ptitle">Refresh ZQ</div><div class="ug-pdesc">CME 30-day Fed Funds futures settlement prices + FOMC meeting schedule (dates, N/M splits).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">ZQ · FOMC schedule</span></div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Fetch Kalshi</div><div class="ug-pdesc">Per-meeting decision probabilities, cut count, hike risk, jumbo-cut probability, implied rate levels.</div><div class="ug-pills"><span class="ug-pill ug-pill-o">kxfeddecision · kxfedhike</span></div></div>

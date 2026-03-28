@@ -16,6 +16,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-F)
+- Session INDEX-F: How it works — standardized design language across all 10
+  tabs (PURPOSE / MECHANICS / WHAT TO LOOK FOR / KEY OUTPUT template);
+  Overview intro rewritten to frame signal chain as integrated system;
+  Scenarios tab fully rewritten to explain purpose, mechanics, calibration,
+  compare overlay usage; all tab intros updated for consistency and cumulative
+  analytical logic
+
 ### Changed — Landing Page (Session INDEX-E)
 - Session INDEX-E: hero stats updated (11 tabs, 7 sources, 10 scenarios,
   25 actions); signal chain extended to 11 nodes (Balance Sheet + Fin.
