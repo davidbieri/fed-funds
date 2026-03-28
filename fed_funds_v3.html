@@ -713,6 +713,43 @@ const INITIAL_STATE = {
     jrGamma: 0.85,             // JR partial adjustment speed
     ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
   },
+  bsD: {
+    totalAssets:    8500,   // $bn, FRED: WALCL
+    treasuries:     4400,   // $bn, FRED: WTREGEN
+    mbs:            2300,   // $bn, FRED: WMBSEC
+    rrpUsage:        400,   // $bn, FRED: RRPONTSYD
+    reserves:       3200,   // $bn, FRED: WRESBAL
+    iorb:           4.40,   // %, FRED: DFEDTARL
+    effr:           4.33,   // %, FRED: DFF (weekly avg)
+    tbill3m:        4.25,   // %, FRED: DTB3 (3M T-bill)
+    neutralFloor:   6200,   // $bn -- Afonso-Giannone-LaRocca-Packer (2022) estimate
+    monthlyRunoff:    60,   // $bn/mo (Treasury + MBS combined current pace)
+    gdpNominal:    28500,   // $bn (for % of GDP normalization)
+    fetched: false,
+    asOf: null,
+    source: 'Seed data -- March 2026'
+  },
+  fsD: {
+    nfci:           -0.12,  // FRED: NFCI (weekly, Chicago Fed)
+    swapLines:       0.0,   // $bn outstanding, FRED: SWPT
+    hyOAS:         325.0,   // bp, FRED: BAMLH0A0HYM2
+    xccyBasis:      -8.0,   // bp, EUR/USD 3M cross-currency basis (manual)
+    lambdaFC:        0.5,   // NFCI weight in finance-neutral rule (Borio 2012)
+    creditGDPGap:    0.0,   // std dev units (BDJ 2013 -- Borio-Disyatat-Juselius)
+    productivityDrag:-0.25, // pp/yr (Borio 2016 Pillar II: -0.25 boom, -0.5 post-crisis)
+    cycleHorizonYrs: 5,     // cumulative horizon for r* endogeneity correction
+    nfciP75:         0.50,  // NFCI tight threshold (>0.5 = tight)
+    swapLinesP75:   10.0,   // $bn -- elevated swap line usage
+    xccyBasisP75:  -20.0,   // bp -- deeply negative = stress
+    hyOASP75:      500.0,   // bp -- 75th pctile HY OAS historically
+    lpP75:           0.20,  // % -- 75th pctile DSS liquidity premium
+    finNeutralRate: null,
+    leaningPremium: null,
+    phaseClockAxes: null,   // [nfci, swapLines, xccyBasis, termPremium, hyOAS, lp] pctiles
+    fetched: false,
+    asOf: null,
+    source: 'Seed data -- March 2026'
+  },
 };
 
 function reducer(state, action){
@@ -805,6 +842,14 @@ function reducer(state, action){
       return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
     case 'SET_RIDE_SELECTED':
       return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
+    case 'APPLY_BALANCE_SHEET':
+      return {...state, bsD:{...state.bsD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'APPLY_FIN_STAB':
+      return {...state, fsD:{...state.fsD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'SET_BSD':
+      return {...state, bsD:{...state.bsD, [action.key]:action.value}};
+    case 'SET_FSD':
+      return {...state, fsD:{...state.fsD, [action.key]:action.value}};
     default:
       return state;
   }
@@ -2968,7 +3013,7 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','bs','fs'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
