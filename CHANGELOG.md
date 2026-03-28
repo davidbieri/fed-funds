@@ -16,6 +16,17 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page HTML (Session INDEX-B)
+- `data-theme="light"` default on `<html>`, sticky nav with 4 anchor links (#tabs #sources #guide #cite) + theme toggle button
+- Hero stat 10→11 tabs, hero eyebrow updated with Balance Sheet + Financial Stability
+- Section `id` attributes added for scroll-linked nav highlighting
+- All 11 tab cards assigned `tc-*` identity classes, Tab 10 inline style removed
+- Tab 10 (Balance Sheet) and Tab 11 (Financial Stability) `.tab-new` badges
+- Atlanta Fed MPT → `.mkt.mpt`, FRED → `.mkt.fred2` (inline styles removed)
+- Section label: "Eleven analytical tabs"
+- IntersectionObserver scroll-highlighting, nav scroll shadow, theme persistence via localStorage
+- All `v4.0` strings bumped to `v4.1` (nav badge, modal bar, citations, footer)
+
 ---
 
 ## [4.1] — March 2026

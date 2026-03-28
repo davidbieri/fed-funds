@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -363,7 +363,7 @@ footer{
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-bar">
-      <span class="modal-title">SPIA · VT | MSE · v4.0</span>
+      <span class="modal-title">SPIA · VT | MSE · v4.1</span>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <iframe src="fed_funds_v3.html" title="MSE: A Multi-Market Framework for Federal Reserve Policy Analytics"></iframe>
@@ -372,20 +372,25 @@ footer{
 
 <div class="wrap">
 
-  <nav>
-    <span class="nav-logo">SPIA · VT | davidbieri / fed-funds</span>
+  <nav id="site-nav">
+    <a class="nav-logo" href="#">SPIA · VT | davidbieri / fed-funds</a>
     <div class="nav-links">
-      <span class="nav-badge">v4.0 · Mar 2026</span>
+      <a class="nav-link" href="#tabs">Tabs</a>
+      <a class="nav-link" href="#sources">Sources</a>
+      <a class="nav-link" href="#guide">Guide</a>
+      <a class="nav-link" href="#cite">Cite</a>
+      <span class="nav-badge">v4.1 · Mar 2026</span>
       <a class="nav-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
+      <button class="nav-theme" id="theme-toggle" title="Toggle light/dark mode">◐</button>
     </div>
   </nav>
 
   <div class="hero">
-    <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip · Term Structure · Taylor Rule</div>
+    <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip · Taylor Rule · Balance Sheet · Financial Stability</div>
     <h1 class="hero-title">MSE:<br><em>A Multi-Market Framework<br>for Federal Reserve Policy Analytics</em></h1>
     <p class="hero-sub">A browser-native implementation of the CME FedWatch methodology extended into a full monetary policy analytics suite: unconditional probability lattice from 30-day ZQ futures, three-way prediction market comparison, SOFR term structure, Nelson-Siegel yield curve fitting, Taylor Rule suite with Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. No build step. No server. No dependencies.</p>
     <div class="hero-stats">
-      <div class="stat"><span class="stat-n">10</span><span class="stat-l">analytical tabs</span></div>
+      <div class="stat"><span class="stat-n">11</span><span class="stat-l">analytical tabs</span></div>
       <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
       <div class="stat"><span class="stat-n">10</span><span class="stat-l">historical scenarios</span></div>
       <div class="stat"><span class="stat-n">5</span><span class="stat-l">Taylor variants</span></div>
@@ -400,37 +405,37 @@ footer{
   </div>
 
   <!-- TABS SECTION -->
-  <div class="section">
-    <div class="section-label">Ten analytical tabs</div>
+  <div class="section" id="tabs">
+    <div class="section-label">Eleven analytical tabs</div>
 
     <div class="tab-group-head">Markets &amp; Futures</div>
     <div class="tabs-grid">
-      <div class="tab-card">
+      <div class="tab-card tc-cme">
         <div class="tab-num">01 — FUTURES INPUTS</div>
         <div class="tab-name">ZQ Price Editor</div>
         <div class="tab-desc">Editable 12-month table of CME 30-day Fed Funds futures prices, FOMC meeting flags, and N/M day splits. One-click historical scenario presets reprice the entire chain instantly.</div>
       </div>
-      <div class="tab-card">
+      <div class="tab-card tc-cme">
         <div class="tab-num">02 — EFFR CHAIN</div>
         <div class="tab-name">Rate Propagation</div>
         <div class="tab-desc">Full EFFR anchor chain: non-meeting months fix EFFR(End) = EFFR(Avg) = EFFR(Start+1); meeting months solved via the day-weighted CME FedWatch formula. Per-meeting probability bars.</div>
       </div>
-      <div class="tab-card">
+      <div class="tab-card tc-cme">
         <div class="tab-num">03 — PROBABILITY TREE</div>
         <div class="tab-name">Unconditional Lattice</div>
         <div class="tab-desc">SVG probability lattice across all FOMC meetings. Node opacity ∝ probability. Summary: P(≥1/2/3 cuts), expected cuts, implied rate, final rate distribution. Amber compare overlay.</div>
       </div>
-      <div class="tab-card markets">
+      <div class="tab-card tc-kal">
         <div class="tab-num">04 — PREDICTION MARKETS</div>
         <div class="tab-name">10-Panel Comparison</div>
         <div class="tab-desc">CME vs Kalshi vs Polymarket across 9 panels plus panel ⑩ Signal/Noise Decomposition: PCI component breakdown, platform divergence tracker, conviction spread (Atlanta Fed MPT IQR vs crowd SentimentGap).</div>
       </div>
-      <div class="tab-card sofr">
+      <div class="tab-card tc-sofr">
         <div class="tab-num">05 — SOFR STRIP</div>
         <div class="tab-name">SR3 Forward Curve</div>
         <div class="tab-desc">7 quarterly SR3 contracts (SR3M6–SR3Z7, Jun 2026–Dec 2027). Three-curve chart: SOFR strip, ZQ quarterly EFFR, instantaneous 3M forwards. Per-quarter basis in bp.</div>
       </div>
-      <div class="tab-card">
+      <div class="tab-card tc-dash">
         <div class="tab-num">06 — DASHBOARD</div>
         <div class="tab-name">Unified Cross-Market View</div>
         <div class="tab-desc">Stat cards including PCI score + regime dial + sentiment gap sparklines. Unified rate path chart, cross-market divergence table, policy regime summary with financial stability row (NFCI, leaning premium, cycle phase).</div>
@@ -439,23 +444,30 @@ footer{
 
     <div class="tab-group-head">Analytics &amp; Models</div>
     <div class="tabs-grid">
-      <div class="tab-card yc">
+      <div class="tab-card tc-yc">
         <div class="tab-num">07 — YIELD CURVE</div>
         <div class="tab-name">Nelson-Siegel Term Structure</div>
         <div class="tab-desc">Nelson-Siegel fitting over 7 Treasury CMT maturities (3mo–30yr) with 2,000-iteration Nelder-Mead. Log-scaled spot and forward curves; scenario-shocked paths per FOMC meeting using Bieri-Chincarini empirical factor loadings. Factor cards: β₀ level, β₁ slope, β₂ curvature, τ decay, term premium. H.15 live fetch.</div>
       </div>
-      <div class="tab-card taylor">
+      <div class="tab-card tc-taylor">
         <div class="tab-num">08 — TAYLOR RULE</div>
         <div class="tab-name">Prescriptive Path Analysis</div>
         <div class="tab-desc">Five rule variants: Taylor 1993 (α=1.5, β=0.5), Balanced/Yellen 2012 (α=β=1), Yellen Alt1 (unemployment gap via Okun's Law), Clarida-Gali-Gertler inertial (ρ=0.85), and Judd-Rudebusch ECM (Bieri-Chincarini 2005, designated signal source). Prescribed rate vs CME chart, Taylor−CME gap decomposition, per-meeting rule comparison matrix.</div>
       </div>
-      <div class="tab-card riding">
+      <div class="tab-card tc-riding">
         <div class="tab-num">09 — RIDING</div>
         <div class="tab-name">Riding the Yield Curve</div>
         <div class="tab-desc">7 × 5 instrument–horizon HPR matrix (6mo–30yr × 1mo–18mo) of annualized excess HPR and break-even cushion using Bieri-Chincarini (2005) Eqs. 8–16, 29–30. Five-filter suite: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal, CME expectations signal. Duration-neutral barbell decomposition.</div>
       </div>
-      <div class="tab-card" style="border-left:3px solid var(--sofr)">
-        <div class="tab-num">10 — FINANCIAL STABILITY</div>
+      <div class="tab-card tc-bs">
+        <span class="tab-new">New v4.1</span>
+        <div class="tab-num">10 — BALANCE SHEET</div>
+        <div class="tab-name">QT Monitor &amp; Shadow Rate</div>
+        <div class="tab-desc">4-panel layout: composition stacked bars with KVJ (2011) shadow rate decomposition, monthly runoff pace vs cap with MBS undershoot, corridor mechanics (IORB/EFFR/SVR/RRP), and two-instrument policy space scatter with 9 historical episodes.</div>
+      </div>
+      <div class="tab-card tc-fin">
+        <span class="tab-new">New v4.1</span>
+        <div class="tab-num">11 — FINANCIAL STABILITY</div>
         <div class="tab-name">BIS/Mehrling Framework</div>
         <div class="tab-desc">NFCI vs EFFR path chart with loose/tight regime shading; finance-neutral Taylor Rule (λ_fc slider, Borio/BIS); global dollar stress gauge (Fed swap lines + xccy basis); doom loop scatter (term premium vs HY OAS); five-axis financial cycle phase clock. FRED live fetch: NFCI, SWPT, BAMLH0A0HYM2.</div>
       </div>
@@ -463,7 +475,7 @@ footer{
   </div>
 
   <!-- DATA SOURCES -->
-  <div class="section">
+  <div class="section" id="sources">
     <div class="section-label">Data sources</div>
     <div class="markets-row">
       <div class="mkt cme">
@@ -491,13 +503,13 @@ footer{
         <span class="mkt-desc">Treasury Constant Maturity rates (3mo–30yr) for Nelson-Siegel fitting. Live-fetchable via FRED CSV endpoint.</span>
         <span class="mkt-tag">H.15 CMT · DGS2 → DGS30</span>
       </div>
-      <div class="mkt" style="border-color:var(--taylor)">
-        <span class="mkt-name" style="color:var(--taylor)">Atlanta Fed MPT</span>
+      <div class="mkt mpt">
+        <span class="mkt-name">Atlanta Fed MPT</span>
         <span class="mkt-desc">Options-implied SOFR distribution (p25/p50/p75/IQR) for 4 quarterly SR3 contracts. Powers the PCI options conviction component.</span>
         <span class="mkt-tag">Market Probability Tracker · SR3M6–SR3Z7</span>
       </div>
-      <div class="mkt" style="border-color:var(--muted)">
-        <span class="mkt-name" style="color:var(--muted)">FRED</span>
+      <div class="mkt fred2">
+        <span class="mkt-name">FRED</span>
         <span class="mkt-desc">NFCI (Chicago Fed weekly), CB liquidity swap outstandings (SWPT), ICE BofA HY OAS. Powers Tab 10 Financial Stability panels.</span>
         <span class="mkt-tag">NFCI · SWPT · BAMLH0A0HYM2</span>
       </div>
@@ -505,7 +517,7 @@ footer{
   </div>
 
   <!-- HOW IT WORKS -->
-  <div class="section">
+  <div class="section" id="guide">
     <div class="section-label">How it works</div>
 
     <div style="display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:20px;flex-wrap:wrap">
@@ -945,7 +957,7 @@ footer{
   </script>
 
   <!-- CITATION -->
-  <div class="section">
+  <div class="section" id="cite">
     <div class="section-label">Cite this tool</div>
     <div class="cite-tabs">
       <button class="cite-tab act" onclick="switchCite('apa',this)">APA</button>
@@ -955,14 +967,14 @@ footer{
     <div class="cite-box">
       <button class="cite-copy" onclick="copyCite()">Copy</button>
       <div class="cite-content act" id="cite-apa">
-        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v4.0) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
+        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v4.1) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
       </div>
       <div class="cite-content" id="cite-bib">
         <pre class="cite-text">@software{bieri2026mse,
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {4.0},
+  version     = {4.1},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds},
@@ -973,7 +985,7 @@ footer{
 }</pre>
       </div>
       <div class="cite-content" id="cite-chi">
-        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.0. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
+        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.1. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
       </div>
     </div>
   </div>
@@ -982,7 +994,7 @@ footer{
     <div class="footer-left">
       David Bieri · SPIA · Virginia Tech<br>
       MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v4.0 · MIT License<br>
+      v4.1 · MIT License<br>
       For educational and research purposes only. Not financial advice.
     </div>
     <div class="footer-right">
@@ -1016,6 +1028,44 @@ function copyCite(){
     setTimeout(()=>{btn.textContent='Copy';btn.style.color='';btn.style.borderColor=''},1800);
   });
 }
+</script>
+
+<script>
+/* Theme toggle */
+const html = document.documentElement;
+const btn = document.getElementById('theme-toggle');
+const saved = localStorage.getItem('mse-theme') || 'light';
+html.setAttribute('data-theme', saved);
+btn.textContent = saved === 'dark' ? '○' : '◐';
+btn.addEventListener('click', () => {
+  const next = html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('mse-theme', next);
+  btn.textContent = next === 'dark' ? '○' : '◐';
+});
+
+/* Sticky nav scroll shadow */
+const nav = document.getElementById('site-nav');
+window.addEventListener('scroll', () => {
+  nav.classList.toggle('scrolled', window.scrollY > 10);
+}, {passive: true});
+
+/* IntersectionObserver — highlight nav links as sections scroll into view */
+const sections = document.querySelectorAll('section[id], div[id].section, .section[id]');
+const navLinks = document.querySelectorAll('.nav-link[href^="#"]');
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      navLinks.forEach(l => l.classList.remove('active'));
+      const active = document.querySelector(`.nav-link[href="#${entry.target.id}"]`);
+      if (active) active.classList.add('active');
+    }
+  });
+}, {rootMargin: '-20% 0px -70% 0px'});
+
+document.querySelectorAll('#tabs, #sources, #guide, #cite').forEach(el => {
+  if (el) observer.observe(el);
+});
 </script>
 </body>
 </html>
