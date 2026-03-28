@@ -2435,7 +2435,25 @@ function DashboardTab({state, finance}) {
   html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
   html+='Chair regime risk: <b>'+regimeRisk+'</b><br>';
   html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% \u00b7 Rieder '+(riederP*100).toFixed(0)+'%</span>';
-  html+='</div></div></div>';
+  html+='</div>';
+  // Phase 6: Balance Sheet & Financial Stability regime rows
+  const svrVal=finance.steinSVR||0;
+  const svrCol=Math.abs(svrVal)<5?'var(--c-stress-lo)':Math.abs(svrVal)<15?'var(--c-leaning)':'var(--c-stress-hi)';
+  const lpVal=(finance.dss?finance.dss.liquidityPremium:-0.15);
+  const lpCol=lpVal>0?'var(--c-stress-lo)':lpVal>-0.20?'var(--c-leaning)':'var(--c-stress-hi)';
+  const combVal=finance.combinedStance||0;
+  const gradVal=finance.gradualismGap||0;
+  const gradCol=Math.abs(gradVal)<25?'var(--color-text-tertiary)':gradVal>0?'var(--c-leaning)':'var(--c-stress-lo)';
+  const leanVal=finance.leaningPremium||0;
+  const leanCol2=leanVal>50?'var(--c-stress-hi)':leanVal>0?'var(--c-leaning)':'var(--c-stress-lo)';
+  html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
+  html+='<div>Reserve scarcity (Stein SVR): <b style="color:'+svrCol+'">'+(svrVal>=0?'+':'')+svrVal.toFixed(1)+' bp</b></div>';
+  html+='<div>Liquidity premium (DSS): <b style="color:'+lpCol+'">'+(lpVal*100).toFixed(1)+' bp</b></div>';
+  html+='<div>Combined stance (rate + shadow): <b style="color:var(--c-combined)">'+combVal.toFixed(2)+'%</b></div>';
+  html+='<div>Gradualism gap (SS): <b style="color:'+gradCol+'">'+(gradVal>=0?'+':'')+gradVal.toFixed(0)+' bp</b></div>';
+  html+='<div>Leaning premium (Borio): <b style="color:'+leanCol2+'">'+(leanVal>=0?'+':'')+leanVal.toFixed(0)+' bp</b></div>';
+  html+='</div>';
+  html+='</div></div>';
 
   // Scenario delta panel
   html+='<div class="k-panel">';
