@@ -265,7 +265,7 @@ ZQ prices are derived from the CME N/M weighting formula at each FOMC meeting. S
 ## Architecture
 
 ```
-fed_funds_probability_tree.html   ← React 18 (CDN) application, ~3,500 lines
+fed_funds_v3.html                 ← React 18 (CDN) application, ~4,000 lines
 index.html                        ← Landing page / documentation wrapper
 README.md
 CHANGELOG.md
@@ -274,9 +274,9 @@ CLAUDE.md                         ← Claude Code session instructions
 
 **React 18** via CDN with Babel JSX transform — no build step, no bundler.
 
-**State**: `useReducer` with a 21-action state machine. All derived values computed in a `useFinance` hook (pure memoized pipeline). Ten tabs render from shared state — no globals.
+**State**: `useReducer` with a 25-action state machine. All derived values computed in a `useFinance` hook (pure memoized pipeline). Eleven tabs render from shared state — no globals.
 
-**Signal chain**: ZQ prices → EFFR chain → Probability tree → Prediction markets overlay → SOFR strip → Taylor Rule (JR ECM signal) → Yield Curve (NS + scenario shocks) → Riding (HPR + filter cascade) → Dashboard (unified view + PCI) → Financial Stability (BIS cycle framework).
+**Signal chain**: ZQ prices → EFFR chain → Probability tree → Prediction markets overlay → SOFR strip → Taylor Rule (JR ECM signal) → Yield Curve (NS + scenario shocks) → Riding (HPR + filter cascade) → Dashboard (unified view + PCI) → Balance Sheet (KVJ shadow rate + Stein SVR) → Financial Stability (Borio r* + BDJ gap + phase clock).
 
 **Persistence**: `localStorage` saves ZQ prices, active scenario, and compare scenario across hard refreshes.
 
@@ -287,21 +287,21 @@ CLAUDE.md                         ← Claude Code session instructions
 ```
 davidbieri.github.io/fed-funds/
 ├── index.html                    ← Landing page (this file launches tool in iframe modal)
-└── fed_funds_probability_tree.html  ← The tool itself
+└── fed_funds_v3.html               ← The tool itself
 ```
 
 ---
 
 ## Usage
 
-No build step, no dependencies. Open `fed_funds_probability_tree.html` directly in any modern browser.
+No build step, no dependencies. Open `fed_funds_v3.html` directly in any modern browser.
 
 ```bash
 git clone https://github.com/davidbieri/fed-funds.git
 cd fed-funds
-open fed_funds_probability_tree.html   # macOS
-# or: xdg-open fed_funds_probability_tree.html  (Linux)
-# or: start fed_funds_probability_tree.html      (Windows)
+open fed_funds_v3.html   # macOS
+# or: xdg-open fed_funds_v3.html  (Linux)
+# or: start fed_funds_v3.html      (Windows)
 ```
 
 All values in the **Futures Inputs** tab are editable at any time — override any live-fetched price manually, adjust N/M day splits, or toggle which months contain FOMC meetings. Scenario presets can be activated with a single click and restored just as easily.
@@ -370,7 +370,6 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ## References
 
 - Bieri, D., & Chincarini, L. B. (2005). Riding the yield curve: A variety of strategies. *Journal of Fixed Income*, 15(2), 6–35.
-- Borio, C., Disyatat, P., & Juselius, M. (2016). Rethinking potential output: Embedding information about the financial cycle. *Oxford Economic Papers*, 69(3), 655–677.
 - Clarida, R., Galí, J., & Gertler, M. (1999). The science of monetary policy: A New Keynesian perspective. *Journal of Economic Literature*, 37(4), 1661–1707.
 - Grossman, S. J., & Stiglitz, J. E. (1980). On the impossibility of informationally efficient markets. *American Economic Review*, 70(3), 393–408.
 - Jackwerth, J. C., & Rubinstein, M. (1996). Recovering probability distributions from option prices. *Journal of Finance*, 51(5), 1611–1631.
@@ -383,7 +382,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 - Wolfers, J., & Zitzewitz, E. (2004). Prediction markets. *Journal of Economic Perspectives*, 18(2), 107–126.
 - CME Group. (2024). *CME FedWatch methodology*. https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html
 - Federal Reserve Bank of Atlanta. (2026). *Market Probability Tracker*. https://www.atlantafed.org/research-and-data/data/market-probability-tracker
-- Borio, C., Disyatat, P., & Juselius, M. (2013). Rethinking potential output: Embedding information about the financial cycle (BIS Working Paper No. 404). Bank for International Settlements.
+- Borio, C., Disyatat, P., & Juselius, M. (2013/2017). Rethinking potential output: Embedding information about the financial cycle. BIS Working Paper No. 404; published in *Oxford Economic Papers*, 69(3), 655–677.
 - D'Amico, S., & King, T. B. (2013). Flow and stock effects of large-scale Treasury purchases: Evidence on the importance of local supply. *Journal of Financial Economics*, 108(2), 425–448.
 - Drechsler, I., Savov, A., & Schnabl, P. (2018). A model of monetary policy and risk premia. *Journal of Finance*, 73(1), 317–373.
 - Krishnamurthy, A., & Vissing-Jorgensen, A. (2011). The effects of quantitative easing on interest rates. *Brookings Papers on Economic Activity*, Fall, 215–265.
