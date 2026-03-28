@@ -16,6 +16,13 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-D)
+- Session INDEX-D: nav logo rebranded to personal academic brand (david bieri /
+  Spectral italic + MSE / JetBrains Mono); Eccles epigraph added to hero;
+  sticky footer added (fixed bottom, blur, version/institution/disclaimer/links);
+  footer updated with ecosystem links (david-bieri.com, circular-flows.org);
+  all citation version strings already at v4.1
+
 ### Changed — Landing Page CSS (Session INDEX-C)
 - Session INDEX-C: light-mode accent contrast system (--*-text variants,
   darker hues for white bg legibility); nav/wrap horizontal padding increase;

@@ -96,7 +96,7 @@ body::before{
   z-index:0;
 }
 
-.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 32px}
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 32px;padding-bottom:44px}
 
 /* NAV */
 nav{
@@ -111,9 +111,15 @@ nav{
 }
 nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .nav-logo{
+  font-family:'Spectral',serif;font-size:16px;font-weight:300;
+  font-style:italic;color:var(--text);text-decoration:none;
+  letter-spacing:.02em;transition:color .2s;
+}
+.nav-logo:hover{color:var(--cme-text)}
+.nav-sep{color:var(--faint);font-size:12px;margin:0 10px}
+.nav-tool{
   font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
-  color:var(--cme);letter-spacing:.08em;text-transform:uppercase;
-  text-decoration:none;
+  color:var(--cme-text);letter-spacing:.1em;text-transform:uppercase;
 }
 .nav-links{display:flex;gap:16px;align-items:center}
 .nav-link{
@@ -151,6 +157,12 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   margin-bottom:20px;letter-spacing:-.01em;
 }
 .hero-title em{font-style:italic;color:rgba(232,237,245,0.65)}
+.eccles{
+  font-family:'Spectral',serif;font-size:13px;font-style:italic;
+  color:var(--faint);border-left:2px solid var(--border);
+  padding:4px 0 4px 14px;margin-bottom:20px;line-height:1.6;
+  max-width:560px;
+}
 .hero-sub{
   font-size:16px;line-height:1.7;color:var(--muted);
   max-width:600px;margin-bottom:36px;font-weight:300;
@@ -330,6 +342,27 @@ footer{
 }
 .foot-link:hover{color:var(--cme)}
 
+/* STICKY FOOTER */
+.sticky-foot{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--nav-blur);backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border-top:1px solid var(--border);
+  padding:7px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;
+}
+.sticky-foot-left{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--faint);line-height:1.4;
+}
+.sticky-foot-right{display:flex;gap:16px}
+.sticky-foot-link{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--faint);text-decoration:none;transition:color .15s;
+}
+.sticky-foot-link:hover{color:var(--cme-text)}
+
 /* MODAL */
 .modal-backdrop{
   display:none;position:fixed;inset:0;
@@ -412,7 +445,9 @@ footer{
 <div class="wrap">
 
   <nav id="site-nav">
-    <a class="nav-logo" href="#">SPIA · VT | davidbieri / fed-funds</a>
+    <a class="nav-logo" href="https://www.david-bieri.com" target="_blank">david bieri</a>
+    <span class="nav-sep">|</span>
+    <span class="nav-tool">MSE</span>
     <div class="nav-links">
       <a class="nav-link" href="#tabs">Tabs</a>
       <a class="nav-link" href="#sources">Sources</a>
@@ -427,6 +462,9 @@ footer{
   <div class="hero">
     <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip · Taylor Rule · Balance Sheet · Financial Stability</div>
     <h1 class="hero-title">MSE:<br><em>A Multi-Market Framework<br>for Federal Reserve Policy Analytics</em></h1>
+    <blockquote class="eccles">
+      <em>MSE — after Marriner S. Eccles (1890–1977), principal economic philosopher of the New Deal, architect of the modern Federal Reserve.</em>
+    </blockquote>
     <p class="hero-sub">A browser-native implementation of the CME FedWatch methodology extended into a full monetary policy analytics suite: unconditional probability lattice from 30-day ZQ futures, three-way prediction market comparison, SOFR term structure, Nelson-Siegel yield curve fitting, Taylor Rule suite with Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. No build step. No server. No dependencies.</p>
     <div class="hero-stats">
       <div class="stat"><span class="stat-n">11</span><span class="stat-l">analytical tabs</span></div>
@@ -1031,16 +1069,16 @@ footer{
 
   <footer>
     <div class="footer-left">
-      David Bieri · SPIA · Virginia Tech<br>
+      David Bieri &nbsp;·&nbsp; School of Public and International Affairs &nbsp;·&nbsp; Virginia Tech<br>
       MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v4.1 · MIT License<br>
-      For educational and research purposes only. Not financial advice.
+      v4.1 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; For educational and research purposes only. Not financial advice.
     </div>
     <div class="footer-right">
+      <a class="foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+      <a class="foot-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
       <a class="foot-link" href="fed_funds_v3.html">Tool</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+      <a class="foot-link" href="#cite">Cite</a>
     </div>
   </footer>
 
@@ -1106,5 +1144,17 @@ document.querySelectorAll('#tabs, #sources, #guide, #cite').forEach(el => {
   if (el) observer.observe(el);
 });
 </script>
+
+<div class="sticky-foot">
+  <div class="sticky-foot-left">
+    MSE v4.1 &nbsp;·&nbsp; David Bieri &nbsp;·&nbsp; SPIA · Virginia Tech &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+    <em>For educational and research purposes only. Not financial advice.</em>
+  </div>
+  <div class="sticky-foot-right">
+    <a class="sticky-foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+    <a class="sticky-foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
+    <a class="sticky-foot-link" href="#cite">Cite</a>
+  </div>
+</div>
 </body>
 </html>
