@@ -2874,21 +2874,51 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
             {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson \u2014 Phase 3 extension)</span>}
           </span>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
-          {[
-            {l:'Level \u03b2\u2080', v:nsFactors.level.toFixed(3)+'%', sub:'Long-run rate', col:'var(--c-overlay)'},
-            {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
-            {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
-            {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
-            {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
-          ].map(function(d){return(
-            <div key={d.l} className="fw-stat">
-              <div className="fw-stat-l">{d.l}</div>
-              <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
-              <div className="fw-stat-s">{d.sub}</div>
+        {(()=>{
+          const rStar=state.trD?.naturalRate||0.5;
+          const piStar=state.trD?.inflationTarget||2.0;
+          const safetyPct=(finance.safetyPremBp||0)/100;
+          const lpEffect=finance.dss?finance.dss.riskPremiumEffect:0;
+          const b0=nsFactors.level;
+          const residual=b0-rStar-piStar-safetyPct-lpEffect;
+          const bsFetched=state.bsD?.fetched;
+          const seedBadge=!bsFetched?' \u26a0 seed':'';
+          return (<>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
+              <div className="fw-stat">
+                <div className="fw-stat-l">Level \u03b2\u2080</div>
+                <div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-overlay)'}}>{b0.toFixed(3)}%</div>
+                <div className="fw-stat-s">Long-run rate</div>
+              </div>
+              {[
+                {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
+                {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
+                {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
+                {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
+              ].map(function(d){return(
+                <div key={d.l} className="fw-stat">
+                  <div className="fw-stat-l">{d.l}</div>
+                  <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
+                  <div className="fw-stat-s">{d.sub}</div>
+                </div>
+              );})}
             </div>
-          );})}
-        </div>
+            <div style={{marginTop:'10px',padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)'}}>
+              <div style={{fontSize:'11px',fontWeight:500,color:'var(--c-overlay)',marginBottom:'6px'}}>\u03b2\u2080 decomposition: {b0.toFixed(3)}%</div>
+              <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'2px 12px',fontSize:'10px',fontFamily:'var(--font-mono)'}}>
+                <span style={{color:'var(--color-text-tertiary)'}}>r* + \u03c0*</span>
+                <span style={{color:'var(--color-text-primary)'}}>{(rStar+piStar).toFixed(2)}%</span>
+                <span style={{color:'var(--c-bs)'}}>\u03c8 safety{seedBadge}</span>
+                <span style={{color:'var(--c-bs)'}}>{safetyPct>=0?'+':''}{(safetyPct*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[KVJ 2012]</span></span>
+                <span style={{color:'var(--c-lp)'}}>\u03c8 leverage{seedBadge}</span>
+                <span style={{color:'var(--c-lp)'}}>{lpEffect>=0?'+':''}{(lpEffect*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[DSS 2018]</span></span>
+                <span style={{color:'var(--color-text-tertiary)'}}>Residual</span>
+                <span style={{color:'var(--color-text-secondary)'}}>{residual>=0?'+':''}{(residual*100).toFixed(1)} bp</span>
+              </div>
+              <div style={{fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'6px',lineHeight:1.5}}>\u03b2\u2080 = r* + \u03c0\u1d49 + \u03c8_safety + \u03c8_leverage + residual. KVJ (2012): Treasury supply safety premium. DSS (2018): leverage/liquidity premium.</div>
+            </div>
+          </>);
+        })()}
       </div>
 
       {/* Curve chart */}
