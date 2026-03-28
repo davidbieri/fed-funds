@@ -21,6 +21,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-B2b: Tab 11 Panel 2b -- Gap decomposition stacked bar (JR gap + Borio r* endogeneity correction); leaning premium arrow with marker; editable credit-GDP gap and productivity drag inputs; Borio (2016 Pillar II) r* adjustment displayed. Tab 08 Taylor Rule 6th variant (finance-neutral): trRates.finNeutral in useFinance, teal dashed line in chart SVG, variant chip, summary card, decomposition table column, rule comparison table entry with Borio badge. Borio r* toggle checkbox in coefficient panel -- when enabled, all 6 Taylor variants use finCycleAdjustedRstar instead of LW r*; useFinCycleRstar added to trD initial state
 - Session 6-B5: Tab 11 Panel 5 -- Financial Cycle Phase Clock; 6-axis hexagonal radar SVG (NFCI, swap lines, |xccy basis|, term premium, HY OAS, |DSS LP|) normalized to 75th percentile thresholds; concentric rings, teal filled polygon, color-coded vertex dots; phase clock index via shoelace formula (polygon area / hexagon area); stat cards for all 6 axes
 - Session 6-B6: Dashboard (Tab 06) regime summary box -- 5 new rows: Stein SVR (reserve scarcity), DSS liquidity premium, combined stance (rate + shadow), SS gradualism gap, Borio leaning premium; all color-coded with threshold logic
+- Session 6-B7: Riding Calculator (Tab 09) filter #6 -- SS put signal toggle; ssPut added to rideFilters, rideMatrix extended with ssPutSignalVal param, ssPutSignal computed before rideData in useFinance
 
 ---
 

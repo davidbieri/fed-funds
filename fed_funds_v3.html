@@ -610,7 +610,7 @@ function durationNeutralXR(hRide, hOvernight, hBuyHold, omega) {
 //   -> Array[7][5] of cell objects
 // Instrument rows (7): 0.5, 1, 2, 5, 7, 10, 30yr
 // Horizon cols (5):    1/12, 3/12, 6/12, 1, 1.5yr
-function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters) {
+function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters, ssPutSignalVal) {
   var MATS = [0.5, 1, 2, 5, 7, 10, 30];
   var HORIZONS = [1/12, 3/12, 6/12, 1, 1.5];
   var overnightRate = syncedYcD[0].rate; // 3mo as overnight proxy
@@ -657,6 +657,7 @@ function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSig
       !f.cushion75        || cushion > 15, // rough 75th pctile proxy (15bp)
       !f.taylorRule       || taylorSignalVal !== 1,
       !f.cmeExpectations  || cmeFuturesSignal === -1,
+      !f.ssPut            || (ssPutSignalVal||0) === 1,
     ];
     var failCount = passes.filter(function(p){return !p;}).length;
     var signal = failCount === 0 ? 'ride' : failCount <= 1 ? 'marginal' : 'hold';
@@ -679,7 +680,7 @@ const INITIAL_STATE = {
   polyD: polyD,
   srD: srD.map(r=>({...r})),
   ycD: ycD.map(r=>({...r})),
-  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true, ssPut:false},
   rideSelected: {matIdx:3, hIdx:1},
   taylor: {
     piStar: 2.0,       // inflation target (%)
@@ -1074,9 +1075,6 @@ function useFinance(state) {
       };
     });
 
-    // Riding-the-yield-curve matrix
-    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
-
     // Phase 6: Balance Sheet analytics
     const qtChannels     = qtShadowAdjChannels(state.bsD);
     const svr            = steinSVR(state.bsD);
@@ -1092,6 +1090,9 @@ function useFinance(state) {
     const leanPrem       = leaningPremium(state.trD, state.fsD, terminalRate, effrStart, fnGap);
     const gradGap        = gradualismGap(terminalRate, state.trD.sepLongRunDot);
     const ssPutSignal    = ssTermPremiumPutSignal(nsFitParams, effrStart, (state.fsD.nfciP75 ?? 0.50) * 120);
+
+    // Riding-the-yield-curve matrix (after ssPutSignal for filter #6)
+    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters, ssPutSignal);
 
     return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance, terminalRate, safetyPremBp, finNeutralGap:fnGap, rstarAdj, finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal};
   }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD, state.fsD]);
@@ -3029,6 +3030,7 @@ function RidingTab({state, dispatch, finance}) {
     {key:'cushion75',        label:'75th pctile cushion'},
     {key:'taylorRule',       label:'Taylor rule signal'},
     {key:'cmeExpectations',  label:'CME signal'},
+    {key:'ssPut',            label:'SS put signal'},
   ];
 
   const sel = state.rideSelected;
