@@ -3359,6 +3359,92 @@ function BalanceSheetTab({state, dispatch, finance}) {
 }
 
 // ============================================================================
+// TAB 11 --- Financial Stability (Borio-Mehrling)
+// ============================================================================
+
+function FinStabTab({state, dispatch, finance}) {
+  const {fsD, bsD, trD} = state;
+  const {finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal, dss} = finance;
+
+  function setFsd(key, val){ dispatch({type:'SET_FSD', key, value:parseFloat(val)||0}); }
+
+  const nfci=fsD.nfci||0;
+  const nfciRegime=nfci<-0.5?'loose':nfci>0.5?'tight':'neutral';
+  const nfciColor=nfciRegime==='loose'?'var(--c-stress-lo)':nfciRegime==='tight'?'var(--c-stress-hi)':'var(--color-text-tertiary)';
+
+  // --- Panel 1: NFCI gauge ---
+  const W1=600, H1=80, barY=30, barH=20;
+  const xMin=-3, xMax1=3;
+  const xSc=v=>40+((v-xMin)/(xMax1-xMin))*520;
+  const needleX=Math.max(40,Math.min(560,xSc(nfci)));
+
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  // background zones
+  svg1+='<rect x="40" y="'+barY+'" width="'+(xSc(-0.5)-40)+'" height="'+barH+'" fill="var(--c-stress-lo)" opacity=".2"/>';
+  svg1+='<rect x="'+xSc(-0.5)+'" y="'+barY+'" width="'+(xSc(0.5)-xSc(-0.5))+'" height="'+barH+'" fill="var(--c-neutral-floor)" opacity=".15"/>';
+  svg1+='<rect x="'+xSc(0.5)+'" y="'+barY+'" width="'+(560-xSc(0.5))+'" height="'+barH+'" fill="var(--c-stress-hi)" opacity=".2"/>';
+  // zone labels
+  svg1+='<text x="'+xSc(-1.75)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--c-stress-lo)">LOOSE</text>';
+  svg1+='<text x="'+xSc(0)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">NEUTRAL</text>';
+  svg1+='<text x="'+xSc(1.75)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--c-stress-hi)">TIGHT</text>';
+  // threshold lines
+  svg1+='<line x1="'+xSc(-0.5)+'" y1="'+(barY-4)+'" x2="'+xSc(-0.5)+'" y2="'+(barY+barH+4)+'" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+  svg1+='<line x1="'+xSc(0.5)+'" y1="'+(barY-4)+'" x2="'+xSc(0.5)+'" y2="'+(barY+barH+4)+'" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+  // axis ticks
+  [-2,-1,0,1,2].forEach(v=>{
+    svg1+='<line x1="'+xSc(v)+'" y1="'+(barY+barH)+'" x2="'+xSc(v)+'" y2="'+(barY+barH+5)+'" stroke="var(--color-text-tertiary)" stroke-width=".8"/>';
+    svg1+='<text x="'+xSc(v)+'" y="'+(barY+barH+14)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v+'</text>';
+  });
+  // needle
+  svg1+='<rect x="'+(needleX-2)+'" y="'+(barY-6)+'" width="4" height="'+(barH+12)+'" fill="'+nfciColor+'" rx="2"/>';
+  svg1+='<text x="'+needleX+'" y="'+(barY-9)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="'+nfciColor+'">'+(nfci>=0?'+':'')+nfci.toFixed(2)+'</text>';
+  svg1+='</svg>';
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
+        <div>
+          <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Financial Stability</h3>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+            <span className="data-badge">{fsD.fetched?'live':'seed'}</span>
+            {' '}{fsD.source}{fsD.asOf?' \u00b7 '+fsD.asOf:''}
+          </div>
+        </div>
+        <button className="refresh-btn" onClick={()=>fetchFinancialStability(dispatch)}>&#x27f3; Fetch FRED</button>
+      </div>
+
+      <div style={{background:nfciRegime==='loose'?'rgba(22,163,74,0.07)':nfciRegime==='tight'?'rgba(220,38,38,0.07)':'transparent',borderLeft:'3px solid '+nfciColor,padding:'6px 12px',marginBottom:'12px',fontSize:'11px',color:nfciColor,borderRadius:'0 var(--border-radius-md) var(--border-radius-md) 0'}}>
+        Financial conditions: <b>{nfciRegime.toUpperCase()}</b> regime (NFCI {nfci>=0?'+':''}{nfci.toFixed(2)}).
+        {nfciRegime==='loose'&&' Policy is leaning WITH the financial cycle wind (Borio 2012).'}
+        {nfciRegime==='tight'&&' Conditions tighter than average. Monitor stress indicators.'}
+        {nfciRegime==='neutral'&&' Conditions near historical average.'}
+      </div>
+
+      <div className="k-grid">
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2460 Financial Conditions vs. Policy Stance</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Chicago Fed NFCI (weekly, FRED: NFCI)</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg1}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:nfciColor}}>NFCI</div><div className="fw-stat-v" style={{fontSize:'16px',color:nfciColor}}>{nfci>=0?'+':''}{nfci.toFixed(2)}</div><div className="fw-stat-s">{nfciRegime} regime</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.hyOAS||325).toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA HY index</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Xccy basis</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.xccyBasis||-8).toFixed(0)} bp</div><div className="fw-stat-s">EUR/USD 3M</div></div>
+            <div className="fw-stat">
+              <div className="fw-stat-l">\u03bb_fc (NFCI weight)</div>
+              <div><input className="fw-in" type="number" value={fsD.lambdaFC} style={{width:'55px'}} onChange={e=>setFsd('lambdaFC',e.target.value)} step="0.1" min="0" max="2"/></div>
+              <div className="fw-stat-s">Borio (2012) finance-neutral</div>
+            </div>
+          </div>
+          <div className="k-note">NFCI: Chicago Fed National Financial Conditions Index. Positive = tighter than average. Regime fills per Borio (2014, JBF): financial cycle affects optimal policy stance. \u03bb_fc weights NFCI in finance-neutral Taylor Rule (Panel 2).</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -3452,6 +3538,7 @@ function App() {
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
       {state.fwActive==='bs' && <BalanceSheetTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='fs' && <FinStabTab state={state} dispatch={dispatch} finance={finance}/>}
       {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','bs','fs'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>

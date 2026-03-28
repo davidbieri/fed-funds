@@ -14,6 +14,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-A3: Tab 10 (Balance Sheet) Panels 1+2 -- BalanceSheetTab component with composition stacked bar chart (current vs neutral floor), KVJ 4-channel breakdown, editable neutral floor/runoff inputs, runoff pace vs cap bar chart with MBS undershoot; Fetch H.4.1 button; tab routing wired
 - Session 6-A4: Tab 10 Panels 3+4 -- Corridor mechanics (IORB, EFFR, Stein SVR, DSS liquidity premium, RRP with regime color coding), two-instrument policy space scatter (9 historical episodes, current position, neutral floor reference, combined stance)
 - Session 6-A5: Tab 07 NS beta0 decomposition -- 4-component breakdown (r*+pi*, psi_safety KVJ 2012, psi_leverage DSS 2018, residual) added to Yield Curve factor cards panel; seed badge when bsD not fetched
+- Session 6-B1: Tab 11 (Financial Stability) shell + Panel 1 -- FinStabTab component with NFCI regime detection (loose/neutral/tight), colored regime band, NFCI horizontal gauge SVG with 3 zones and needle, stat cards (NFCI, HY OAS, xccy basis, editable lambda_fc); Fetch FRED button; tab routing wired
 
 ---
 
