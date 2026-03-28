@@ -19,6 +19,9 @@
   --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
   --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;--c-taylor:#e11d48;--c-taylor-mod:#f43f5e;
   --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
+  /* --- Phase 6: Balance Sheet & Financial Stability --- */
+  --c-bs:#0ea5e9;--c-bs-mbs:#0369a1;--c-neutral-floor:#64748b;--c-combined:#7c3aed;
+  --c-fin-neutral:#0d9488;--c-stress-hi:#dc2626;--c-stress-lo:#16a34a;--c-leaning:#f97316;--c-lp:#8b5cf6;
 }
 @media(prefers-color-scheme:dark){
   :root{
@@ -29,12 +32,15 @@
     --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
     --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;--c-taylor:#fb7185;--c-taylor-mod:#fda4af;
     --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
+    --c-bs:#38bdf8;--c-bs-mbs:#0284c7;--c-neutral-floor:#94a3b8;--c-combined:#a78bfa;
+    --c-fin-neutral:#2dd4bf;--c-stress-hi:#ef4444;--c-stress-lo:#22c55e;--c-leaning:#fb923c;--c-lp:#a78bfa;
   }
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto}
 .fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
 .fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
+.tab-group-divider{display:inline-block;width:1px;height:1.2em;background:var(--color-border-secondary);margin:0 6px;vertical-align:middle;opacity:0.5}
 .fwt{width:100%;border-collapse:collapse}
 .fwt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
 .fwt td{padding:5px 8px;border-bottom:.5px solid var(--color-border-tertiary);font-size:12px;vertical-align:middle}
@@ -604,7 +610,7 @@ function durationNeutralXR(hRide, hOvernight, hBuyHold, omega) {
 //   -> Array[7][5] of cell objects
 // Instrument rows (7): 0.5, 1, 2, 5, 7, 10, 30yr
 // Horizon cols (5):    1/12, 3/12, 6/12, 1, 1.5yr
-function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters) {
+function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSignalVal, rideFilters, ssPutSignalVal) {
   var MATS = [0.5, 1, 2, 5, 7, 10, 30];
   var HORIZONS = [1/12, 3/12, 6/12, 1, 1.5];
   var overnightRate = syncedYcD[0].rate; // 3mo as overnight proxy
@@ -651,6 +657,7 @@ function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSig
       !f.cushion75        || cushion > 15, // rough 75th pctile proxy (15bp)
       !f.taylorRule       || taylorSignalVal !== 1,
       !f.cmeExpectations  || cmeFuturesSignal === -1,
+      !f.ssPut            || (ssPutSignalVal||0) === 1,
     ];
     var failCount = passes.filter(function(p){return !p;}).length;
     var signal = failCount === 0 ? 'ride' : failCount <= 1 ? 'marginal' : 'hold';
@@ -673,7 +680,7 @@ const INITIAL_STATE = {
   polyD: polyD,
   srD: srD.map(r=>({...r})),
   ycD: ycD.map(r=>({...r})),
-  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true},
+  rideFilters: {positiveSlope:true, positiveCushion:true, cushion75:false, taylorRule:false, cmeExpectations:true, ssPut:false},
   rideSelected: {matIdx:3, hIdx:1},
   taylor: {
     piStar: 2.0,       // inflation target (%)
@@ -706,6 +713,45 @@ const INITIAL_STATE = {
     jrLambda3: 0.3,            // JR lagged gap weight
     jrGamma: 0.85,             // JR partial adjustment speed
     ruleVariant: 'taylor93',   // active variant: taylor93|balanced|yellen|juddRudebusch|cgg
+    sepLongRunDot: 2.875,    // FOMC SEP median longer-run FFR (Dec 2024 projection)
+    useFinCycleRstar: false, // Borio (2016) finance-cycle adjusted r* toggle
+  },
+  bsD: {
+    totalAssets:    8500,   // $bn, FRED: WALCL
+    treasuries:     4400,   // $bn, FRED: WTREGEN
+    mbs:            2300,   // $bn, FRED: WMBSEC
+    rrpUsage:        400,   // $bn, FRED: RRPONTSYD
+    reserves:       3200,   // $bn, FRED: WRESBAL
+    iorb:           4.40,   // %, FRED: DFEDTARL
+    effr:           4.33,   // %, FRED: DFF (weekly avg)
+    tbill3m:        4.25,   // %, FRED: DTB3 (3M T-bill)
+    neutralFloor:   6200,   // $bn -- Afonso-Giannone-LaRocca-Packer (2022) estimate
+    monthlyRunoff:    60,   // $bn/mo (Treasury + MBS combined current pace)
+    gdpNominal:    28500,   // $bn (for % of GDP normalization)
+    fetched: false,
+    asOf: null,
+    source: 'Seed data -- March 2026'
+  },
+  fsD: {
+    nfci:           -0.12,  // FRED: NFCI (weekly, Chicago Fed)
+    swapLines:       0.0,   // $bn outstanding, FRED: SWPT
+    hyOAS:         325.0,   // bp, FRED: BAMLH0A0HYM2
+    xccyBasis:      -8.0,   // bp, EUR/USD 3M cross-currency basis (manual)
+    lambdaFC:        0.5,   // NFCI weight in finance-neutral rule (Borio 2012)
+    creditGDPGap:    0.0,   // std dev units (BDJ 2013 -- Borio-Disyatat-Juselius)
+    productivityDrag:-0.25, // pp/yr (Borio 2016 Pillar II: -0.25 boom, -0.5 post-crisis)
+    cycleHorizonYrs: 5,     // cumulative horizon for r* endogeneity correction
+    nfciP75:         0.50,  // NFCI tight threshold (>0.5 = tight)
+    swapLinesP75:   10.0,   // $bn -- elevated swap line usage
+    xccyBasisP75:  -20.0,   // bp -- deeply negative = stress
+    hyOASP75:      500.0,   // bp -- 75th pctile HY OAS historically
+    lpP75:           0.20,  // % -- 75th pctile DSS liquidity premium
+    finNeutralRate: null,
+    leaningPremium: null,
+    phaseClockAxes: null,   // [nfci, swapLines, xccyBasis, termPremium, hyOAS, lp] pctiles
+    fetched: false,
+    asOf: null,
+    source: 'Seed data -- March 2026'
   },
 };
 
@@ -799,9 +845,142 @@ function reducer(state, action){
       return {...state, rideFilters:{...state.rideFilters, [action.key]:!state.rideFilters[action.key]}};
     case 'SET_RIDE_SELECTED':
       return {...state, rideSelected:{matIdx:action.matIdx, hIdx:action.hIdx}};
+    case 'APPLY_BALANCE_SHEET':
+      return {...state, bsD:{...state.bsD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'APPLY_FIN_STAB':
+      return {...state, fsD:{...state.fsD, ...action.data, fetched:true, asOf:action.data.asOf, source:action.data.source}};
+    case 'SET_BSD':
+      return {...state, bsD:{...state.bsD, [action.key]:action.value}};
+    case 'SET_FSD':
+      return {...state, fsD:{...state.fsD, [action.key]:action.value}};
     default:
       return state;
   }
+}
+
+// ============================================================================
+// MATH LAYER --- Phase 6: Balance Sheet & Financial Stability
+// ============================================================================
+
+// qtShadowAdjChannels(bsD) -> { total, components: { duration, safety, signaling, mbs } }
+// 4-channel shadow rate decomposition: Krishnamurthy & Vissing-Jorgensen (2011, BPEA).
+// KVJ show QE works through distinct channels; QT reverses the sign.
+// Calibration: KVJ event-study magnitudes scaled from stock ($600bn QE1) to
+// steady-state flow using Gagnon et al. (2011) flow/stock ratio ~1/20.
+// Positive output = tightening effect (BS above neutral = accommodative = negative tighten).
+function qtShadowAdjChannels(bsD){
+  const neutralT   = (bsD.neutralFloor || 6200) * 0.52;
+  const neutralMBS = (bsD.neutralFloor || 6200) * 0.27;
+  const excessT    = (bsD.treasuries   || 4400) - neutralT;
+  const excessMBS  = (bsD.mbs          || 2300) - neutralMBS;
+  // Duration risk channel (Vayanos-Vila preferred habitat, Greenwood-Vayanos 2010)
+  // KVJ: $600bn QE => ~33bp on 10yr; k_dur = 33/600/20 = 0.00275 bp per $bn
+  const duration  = -(excessT + excessMBS) * 0.00275 * 12;
+  // Safety channel (KVJ 2010, 2012 JPE) -- Treasuries only
+  // k_safe = 0.0015 bp per $bn per month
+  const safety    = -excessT * 0.0015 * 12;
+  // Signaling channel (Eggertsson-Woodford 2003) -- T-only
+  // k_sig = 0.0010 bp per $bn per month
+  const signaling = -excessT * 0.0010 * 12;
+  // MBS prepayment/default risk channel -- MBS only
+  // KVJ: QE1 MBS => ~50bp; k_mbs = 0.0035 bp per $bn per month
+  const mbs       = -excessMBS * 0.0035 * 12;
+  const total = duration + safety + signaling + mbs;
+  return {total, components:{duration, safety, signaling, mbs}};
+}
+
+// steinSVR(bsD) -> bp
+// Shadow Value of Reserves -- Stein (2012, QJE 127:1, Section IV).
+// SVR = EFFR - IORB (observable from FRED DFF - DFEDTARL).
+// SVR < 5bp: ample reserves; 5-15bp: transition; >15bp: scarce (Sep 2019 hit ~40bp).
+function steinSVR(bsD){
+  return ((bsD.effr || 4.33) - (bsD.iorb || 4.40)) * 100;
+}
+
+// dssRiskChannel(bsD) -> { liquidityPremium, impliedLeverage, riskPremiumEffect }
+// Drechsler, Savov & Schnabl (2018, JoF 73:1) -- nominal rate controls liquidity premium.
+// Empirical proxy (Nagel 2016, QJE): LP = 3M T-bill - IORB.
+// DSS mechanism: LP -> leverage -> risk premia; phi ~ 2 (bank leverage multiplier).
+function dssRiskChannel(bsD){
+  const lp  = (bsD.tbill3m || 4.25) - (bsD.iorb || 4.40);
+  const phi = 2.0;
+  return {
+    liquidityPremium:  lp,
+    impliedLeverage:   Math.max(0, 10 + lp * 5),
+    riskPremiumEffect: lp * phi
+  };
+}
+
+// qtYieldShock(monthlyRunoff, months) -> { mat: bp_change }
+// QT impact on yield curve by maturity: KVJ (2011) + D'Amico-King (2013).
+// bp change per $bn*month of runoff, calibrated from flow/stock estimates.
+function qtYieldShock(monthlyRunoff, months){
+  const t=monthlyRunoff*months;
+  return {0.25:t*0.02, 0.5:t*0.025, 1:t*0.03, 2:t*0.03, 5:t*0.08, 7:t*0.09, 10:t*0.10, 20:t*0.07, 30:t*0.04};
+}
+
+// nsSafetyPremium(bsD) -> bp
+// KVJ (2012, JPE 120:2): Treasury supply affects safety premium paid for near-zero-default assets.
+// Each 1% of GDP change in T supply (private hands) => ~7bp change in safety premium.
+function nsSafetyPremium(bsD){
+  const fedTshare = (bsD.treasuries || 4400) / (bsD.gdpNominal || 28500) * 100;
+  const baseShare = 15.4;
+  const kSafety   = 7.0;
+  return (fedTshare - baseShare) * kSafety;
+}
+
+// finNeutralOutputGap(trD, fsD) -> % of potential GDP
+// Borio, Disyatat & Juselius (2013, BIS WP404; 2017, Oxford Econ Papers 69:3).
+// y_gap_fn = y_gap_hp - alpha_c * (credit/GDP gap); alpha_c ~ 0.5.
+function finNeutralOutputGap(trD, fsD){
+  const hpGap   = trD.outputGap    ?? -0.5;
+  const creditG = fsD.creditGDPGap ?? 0.0;
+  return hpGap - 0.5 * creditG;
+}
+
+// finCycleAdjustedRstar(trD, fsD) -> %
+// Borio (2016, Cato Journal 36:2, Pillar II): LW r* biased down by financial-boom
+// productivity drag. Corrects upward by accumulated drag over cycle horizon.
+function finCycleAdjustedRstar(trD, fsD){
+  const lwRstar = trD.naturalRate      ?? 0.5;
+  const drag    = fsD.productivityDrag ?? -0.25;
+  const horizon = fsD.cycleHorizonYrs  ?? 5;
+  return lwRstar - (drag * horizon) / 100;
+}
+
+// finNeutralRate(trD, fsD, prevFFR, prevGap) -> %
+// Borio (2012, 2014, 2016): JR ECM augmented with NFCI financial conditions term.
+// FFR*_fn = JR_prescribed + lambda_fc * NFCI
+function finNeutralRate(trD, fsD, prevFFR, prevGap){
+  const jrBase = taylorRateJR(trD, prevFFR, prevGap);
+  return jrBase + (fsD.lambdaFC ?? 0.5) * (fsD.nfci ?? -0.12);
+}
+
+// leaningPremium(trD, fsD, marketImplied, prevFFR, prevGap) -> bp
+// Gap between finance-neutral prescription and market-implied terminal rate.
+// Positive = market prices BELOW finance-neutral (leaning with the wind = risky).
+function leaningPremium(trD, fsD, marketImplied, prevFFR, prevGap){
+  return (finNeutralRate(trD, fsD, prevFFR, prevGap) - marketImplied) * 100;
+}
+
+// gradualismGap(terminalZQ, sepLongRunDot) -> bp
+// Stein & Sunderam (2018, JoF 73:3): SEP long-run dot minus ZQ-implied terminal.
+// Positive = market prices less tightening than Fed's long-run target.
+function gradualismGap(terminalZQ, sepLongRunDot){
+  return ((sepLongRunDot ?? 2.875) - terminalZQ) * 100;
+}
+
+// ssTermPremiumPutSignal(nsParams, effrStart, termPremP75) -> +1 | 0 | -1
+// Stein & Sunderam (2018): elevated term premium => Fed put activation => likely cuts.
+// +1 = bullish (term prem > p75), -1 = compressed (< p25), 0 = normal.
+function ssTermPremiumPutSignal(nsParams, effrStart, termPremP75){
+  if(!nsParams || !nsParams.beta0) return 0;
+  const termPremBp = (nsParams.beta0 - effrStart) * 100;
+  const p75 = termPremP75 ?? 60;
+  const p25 = p75 * 0.25;
+  if(termPremBp > p75)  return +1;
+  if(termPremBp < p25)  return -1;
+  return 0;
 }
 
 // ============================================================================
@@ -823,18 +1002,22 @@ function useFinance(state) {
     }
     // Taylor rule prescriptions (all 4 variants)
     const t = state.trD ?? {};
-    const prevGap = t.outputGap ?? -0.5;
-    const gap = t.gapMeasure === 'unemployment'
-      ? -2 * ((t.unemploymentRate ?? 4.1) - (t.unemploymentNatural ?? 4.1))
-      : (t.outputGap ?? -0.5);
+    // Borio r* toggle: conditionally swap LW r* for finance-cycle adjusted r*
+    const earlyRstarAdj = finCycleAdjustedRstar(t, state.fsD);
+    const effectiveT = t.useFinCycleRstar ? {...t, naturalRate: earlyRstarAdj} : t;
+    const prevGap = effectiveT.outputGap ?? -0.5;
+    const gap = effectiveT.gapMeasure === 'unemployment'
+      ? -2 * ((effectiveT.unemploymentRate ?? 4.1) - (effectiveT.unemploymentNatural ?? 4.1))
+      : (effectiveT.outputGap ?? -0.5);
     const trRates = {
-      taylor93:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 0.5*gap,
-      balanced:      (t.naturalRate??0.5) + (t.inflationTarget??2.0) + 1.5*((t.inflationRate??2.8)-(t.inflationTarget??2.0)) + 1.0*gap,
-      yellen:        taylorRateYellen(t),
-      juddRudebusch: taylorRateJR(t, state.fwLb, prevGap),
+      taylor93:      (effectiveT.naturalRate??0.5) + (effectiveT.inflationTarget??2.0) + 1.5*((effectiveT.inflationRate??2.8)-(effectiveT.inflationTarget??2.0)) + 0.5*gap,
+      balanced:      (effectiveT.naturalRate??0.5) + (effectiveT.inflationTarget??2.0) + 1.5*((effectiveT.inflationRate??2.8)-(effectiveT.inflationTarget??2.0)) + 1.0*gap,
+      yellen:        taylorRateYellen(effectiveT),
+      juddRudebusch: taylorRateJR(effectiveT, state.fwLb, prevGap),
     };
     // CGG inertial (backward-compatible with existing chart)
-    trRates.cgg = state.fwLb + (1 - (t.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
+    trRates.cgg = state.fwLb + (1 - (effectiveT.rhoSmoothing ?? 0.85)) * (trRates.taylor93 - state.fwLb);
+    trRates.finNeutral = trRates.juddRudebusch + (state.fsD?.lambdaFC ?? 0.5) * (state.fsD?.nfci ?? -0.12);
 
     // Taylor signal: JR is the primary signal (Bieri-Chincarini Exhibit 7)
     const jrPrescribed = trRates.juddRudebusch;
@@ -845,9 +1028,9 @@ function useFinance(state) {
     // JR implied path: apply taylorRateJR meeting-by-meeting, carrying forward prevFFR
     const jrImpliedPath = (() => {
       let prev = state.fwLb;
-      const pg = t.outputGap ?? -0.5;
+      const pg = effectiveT.outputGap ?? -0.5;
       return meetings.map(row => {
-        const rate = taylorRateJR(t, prev, pg);
+        const rate = taylorRateJR(effectiveT, prev, pg);
         prev = rate;
         return rate;
       });
@@ -900,11 +1083,35 @@ function useFinance(state) {
       };
     });
 
-    // Riding-the-yield-curve matrix
-    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
+    // QT shock curve: 12M of balance sheet runoff applied to yield curve
+    const qtShocks = qtYieldShock(state.bsD.monthlyRunoff||60, 12);
+    const qtShockedYcD = syncedYcD.map(pt=>{
+      const closest = [0.25,0.5,1,2,5,7,10,20,30].reduce((b,m)=>Math.abs(m-pt.mat)<Math.abs(b-pt.mat)?m:b);
+      return {...pt, rate: pt.rate + (qtShocks[closest]||0)/100};
+    });
+    const qtShockedParams = nsFit(qtShockedYcD.map(d=>({mat:d.mat, rate:d.rate})));
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
+    // Phase 6: Balance Sheet analytics
+    const qtChannels     = qtShadowAdjChannels(state.bsD);
+    const svr            = steinSVR(state.bsD);
+    const dss            = dssRiskChannel(state.bsD);
+    const combinedStance = effrStart + qtChannels.total / 100;
+
+    // Phase 6: Financial Stability analytics
+    const terminalRate   = meetings.length > 0 ? (chain[state.fwD.findIndex(d=>d.lb===meetings[meetings.length-1].lb)]?.end ?? effrStart) : effrStart;
+    const safetyPremBp   = nsSafetyPremium(state.bsD);
+    const fnGap          = finNeutralOutputGap(state.trD, state.fsD);
+    const rstarAdj       = finCycleAdjustedRstar(state.trD, state.fsD);
+    const fnRate         = finNeutralRate(state.trD, state.fsD, effrStart, fnGap);
+    const leanPrem       = leaningPremium(state.trD, state.fsD, terminalRate, effrStart, fnGap);
+    const gradGap        = gradualismGap(terminalRate, state.trD.sepLongRunDot);
+    const ssPutSignal    = ssTermPremiumPutSignal(nsFitParams, effrStart, (state.fsD.nfciP75 ?? 0.50) * 120);
+
+    // Riding-the-yield-curve matrix (after ssPutSignal for filter #6)
+    const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters, ssPutSignal);
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance, terminalRate, safetyPremBp, finNeutralGap:fnGap, rstarAdj, finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal, qtShocks, qtShockedParams};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD, state.fsD]);
 }
 
 // ============================================================================
@@ -1034,6 +1241,68 @@ async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshS
     setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' \u00b7 '+(p.asOf||today)}));
   }catch(e){setRefreshStatus(s=>({...s, yc:'\u26a0 '+(e.message||'Failed \u2014 rates unchanged')}));}
   finally{setFetching(f=>({...f, yc:false}));}
+}
+
+// fetchBalanceSheet() -- Batch-fetches 8 FRED series from Fed H.4.1 weekly release
+// FRED CSV pattern: https://fred.stlouisfed.org/graph/fredgraph.csv?id=SERIES
+// Series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3
+async function fetchBalanceSheet(dispatch){
+  const SERIES=[
+    ['WALCL',     'totalAssets', 1],
+    ['WTREGEN',   'treasuries',  1],
+    ['WMBSEC',    'mbs',         1],
+    ['RRPONTSYD', 'rrpUsage',    1000],
+    ['WRESBAL',   'reserves',    1],
+    ['DFEDTARL',  'iorb',        1],
+    ['DFF',       'effr',        1],
+    ['DTB3',      'tbill3m',     1],
+  ];
+  const BASE='https://fred.stlouisfed.org/graph/fredgraph.csv?id=';
+  try{
+    const results=await Promise.all(
+      SERIES.map(([id])=>
+        fetch(BASE+id).then(r=>r.text()).then(txt=>{
+          const lines=txt.trim().split('\n').filter(Boolean);
+          const last=lines[lines.length-1].split(',');
+          return {date:last[0], value:parseFloat(last[1])};
+        })
+      )
+    );
+    const data={asOf:results[0].date, source:'FRED H.4.1 (live)'};
+    SERIES.forEach(([,key,divisor],i)=>{data[key]=results[i].value/divisor;});
+    dispatch({type:'APPLY_BALANCE_SHEET', data});
+    return data;
+  }catch(err){console.error('fetchBalanceSheet error:',err);return null;}
+}
+
+// fetchFinancialStability() -- Batch-fetches 3 FRED financial stability series
+// Series: NFCI (Chicago Fed), SWPT (swap lines), BAMLH0A0HYM2 (HY OAS)
+async function fetchFinancialStability(dispatch){
+  const SERIES=[
+    ['NFCI',         'nfci',      1],
+    ['SWPT',         'swapLines', 1000],
+    ['BAMLH0A0HYM2', 'hyOAS',    1],
+  ];
+  const BASE='https://fred.stlouisfed.org/graph/fredgraph.csv?id=';
+  try{
+    const results=await Promise.all(
+      SERIES.map(([id])=>
+        fetch(BASE+id).then(r=>r.text()).then(txt=>{
+          const lines=txt.trim().split('\n').filter(Boolean);
+          const last=lines[lines.length-1].split(',');
+          return {date:last[0], value:parseFloat(last[1])};
+        })
+      )
+    );
+    const data={asOf:results[0].date, source:'FRED (live)'};
+    SERIES.forEach(([,key,divisor],i)=>{
+      let v=results[i].value;
+      if(key==='hyOAS'&&v<20) v=v*100;
+      data[key]=v/(key==='hyOAS'?1:divisor);
+    });
+    dispatch({type:'APPLY_FIN_STAB', data});
+    return data;
+  }catch(err){console.error('fetchFinancialStability error:',err);return null;}
 }
 
 // ============================================================================
@@ -1456,7 +1725,7 @@ function ycCurveChart(ycD){
   return svg;
 }
 
-function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jrPath) {
+function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jrPath, fnPath) {
   const W=720, H=180, mt=28, mb=32, ml=38, mr=14;
   const n=meetings.length;
   if(n===0) return '<div style="color:var(--color-text-tertiary);font-size:13px">No meetings detected.</div>';
@@ -1474,7 +1743,8 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
 
   const {classic, balanced, inertialC, inertialB}=taylorPaths;
   const jrV=jrPath||[];
-  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB,...jrV];
+  const fnV=fnPath||[];
+  const allV=[effrStart,...cmeRates,...classic,...balanced,...inertialC,...inertialB,...jrV,...fnV];
   const minR=Math.min(...allV)-0.15, maxR=Math.max(...allV)+0.15;
   const ys=v=>mt+H*(1-(v-minR)/(maxR-minR));
 
@@ -1515,6 +1785,13 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
     jrV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-taylor)" stroke="var(--color-background-primary)" stroke-width="1" opacity=".95"/>';});
   }
 
+  // Finance-neutral path (teal dashed)
+  if(fnV.length){
+    const fnPts=fnV.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
+    svg+='<polyline points="'+fnPts+'" fill="none" stroke="var(--c-fin-neutral)" stroke-width="2" stroke-dasharray="8,4" opacity=".85"/>';
+    fnV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-fin-neutral)" opacity=".85"/>';});
+  }
+
   // CME implied path (blue)
   const cmePts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+cmePts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".85"/>';
@@ -1535,7 +1812,8 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
   svg+='<text x="'+(ml+115)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".65">- - Classic</text>';
   svg+='<text x="'+(ml+175)+'" y="14" font-size="8" fill="var(--c-taylor-mod)" font-family="var(--font-sans)">- - Balanced</text>';
   svg+='<text x="'+(ml+255)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".5">... CGG</text>';
-  svg+='<text x="'+(ml+305)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf CME implied</text>';
+  svg+='<text x="'+(ml+305)+'" y="14" font-size="8" fill="var(--c-fin-neutral)" font-family="var(--font-sans)">- - Fin-neutral</text>';
+  svg+='<text x="'+(ml+390)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf CME implied</text>';
 
   svg+='</svg>';
   return svg;
@@ -2174,7 +2452,25 @@ function DashboardTab({state, finance}) {
   html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
   html+='Chair regime risk: <b>'+regimeRisk+'</b><br>';
   html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% \u00b7 Rieder '+(riederP*100).toFixed(0)+'%</span>';
-  html+='</div></div></div>';
+  html+='</div>';
+  // Phase 6: Balance Sheet & Financial Stability regime rows
+  const svrVal=finance.steinSVR||0;
+  const svrCol=Math.abs(svrVal)<5?'var(--c-stress-lo)':Math.abs(svrVal)<15?'var(--c-leaning)':'var(--c-stress-hi)';
+  const lpVal=(finance.dss?finance.dss.liquidityPremium:-0.15);
+  const lpCol=lpVal>0?'var(--c-stress-lo)':lpVal>-0.20?'var(--c-leaning)':'var(--c-stress-hi)';
+  const combVal=finance.combinedStance||0;
+  const gradVal=finance.gradualismGap||0;
+  const gradCol=Math.abs(gradVal)<25?'var(--color-text-tertiary)':gradVal>0?'var(--c-leaning)':'var(--c-stress-lo)';
+  const leanVal=finance.leaningPremium||0;
+  const leanCol2=leanVal>50?'var(--c-stress-hi)':leanVal>0?'var(--c-leaning)':'var(--c-stress-lo)';
+  html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
+  html+='<div>Reserve scarcity (Stein SVR): <b style="color:'+svrCol+'">'+(svrVal>=0?'+':'')+svrVal.toFixed(1)+' bp</b></div>';
+  html+='<div>Liquidity premium (DSS): <b style="color:'+lpCol+'">'+(lpVal*100).toFixed(1)+' bp</b></div>';
+  html+='<div>Combined stance (rate + shadow): <b style="color:var(--c-combined)">'+combVal.toFixed(2)+'%</b></div>';
+  html+='<div>Gradualism gap (SS): <b style="color:'+gradCol+'">'+(gradVal>=0?'+':'')+gradVal.toFixed(0)+' bp</b></div>';
+  html+='<div>Leaning premium (Borio): <b style="color:'+leanCol2+'">'+(leanVal>=0?'+':'')+leanVal.toFixed(0)+' bp</b></div>';
+  html+='</div>';
+  html+='</div></div>';
 
   // Scenario delta panel
   html+='<div class="k-panel">';
@@ -2206,6 +2502,7 @@ function buildRuleComparisonTable(trRates, effrStart, fwLb) {
     {key:'balanced',      label:'Balanced approach',   note:'\u03b2=1.0 (Yellen 2012/2017 speeches)'},
     {key:'cgg',           label:'CGG Inertial',        note:'\u03c1=0.85 smoothing around Taylor 1993'},
     {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM \u2014 highest R\u00b2 for \u0394FFTR prediction'},
+    {key:'finNeutral',    label:'Finance-neutral',     note:'JR + \u03bb\u00b7NFCI (Borio 2012/2014)'},
   ];
   const threshold = 0.125;
   var h = '<table class="fwt"><thead><tr><th>Rule</th><th>Prescribed</th><th>Gap vs EFFR (bp)</th><th>Signal</th><th>Notes</th></tr></thead><tbody>';
@@ -2217,11 +2514,15 @@ function buildRuleComparisonTable(trRates, effrStart, fwLb) {
     var sigLabel = signal === 0 ? '= Neutral' : signal === 1 ? '\u2191 Hike' : '\u2193 Cut';
     var sigCol = signal === 0 ? 'var(--color-text-tertiary)' : signal === 1 ? 'var(--color-text-danger)' : 'var(--color-text-info)';
     var isJR = r.key === 'juddRudebusch';
+    var isFN = r.key === 'finNeutral';
+    var rateCol = isFN ? 'var(--c-fin-neutral)' : 'var(--c-taylor)';
     h += '<tr style="'+(isJR?'background:var(--color-background-info)':'')+'">';
-    h += '<td style="font-weight:'+(isJR?600:400)+';white-space:nowrap">'+r.label;
+    h += '<td style="font-weight:'+(isJR?600:400)+';white-space:nowrap;'+(isFN?'color:var(--c-fin-neutral)':'')+'">';
+    h += r.label;
     if(isJR) h += ' <span style="font-size:9px;color:var(--c-taylor);background:rgba(225,29,72,.1);padding:1px 5px;border-radius:8px;margin-left:4px">signal source</span>';
+    if(isFN) h += ' <span style="font-size:9px;color:var(--c-fin-neutral);background:rgba(13,148,136,.1);padding:1px 5px;border-radius:8px;margin-left:4px">Borio</span>';
     h += '</td>';
-    h += '<td style="font-family:var(--font-mono);color:var(--c-taylor)">'+rate.toFixed(2)+'%</td>';
+    h += '<td style="font-family:var(--font-mono);color:'+rateCol+'">'+rate.toFixed(2)+'%</td>';
     h += '<td style="font-family:var(--font-mono);color:'+(gap>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(gap>0?'+':'')+gap.toFixed(0)+'</td>';
     h += '<td style="font-weight:600;color:'+sigCol+'">'+sigLabel+'</td>';
     h += '<td style="font-size:10px;color:var(--color-text-tertiary)">'+r.note+'</td>';
@@ -2236,6 +2537,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   const lb = state.fwLb;
   const t = state.taylor;
   const tr = state.trD;
+  const fnNfciAdj = (state.fsD?.lambdaFC ?? 0.5) * (state.fsD?.nfci ?? -0.12);
 
   const taylorPaths = useMemo(() =>
     taylorMeetingPath(t, meetings, effrStart, lb),
@@ -2250,6 +2552,10 @@ function TaylorRuleTab({state, dispatch, finance}) {
       return lb + ek * 0.25;
     });
   }, [meetings, states, lb]);
+
+  // Finance-neutral implied path: JR path + lambda*NFCI at each meeting
+  const fnImpliedPath = jrImpliedPath.map(r => r + fnNfciAdj);
+  const fnNow = trRates.finNeutral;
 
   const classicNow = taylorPaths.classic[0];
   const balancedNow = taylorPaths.balanced[0];
@@ -2286,13 +2592,15 @@ function TaylorRuleTab({state, dispatch, finance}) {
     {key:'cgg',      label:'CGG Inertial'},
     {key:'yellen',   label:'Yellen Alt1'},
     {key:'juddRudebusch', label:'Judd-Rudebusch'},
+    {key:'finNeutral',    label:'Fin-Neutral'},
   ];
   html += '<div style="display:flex;gap:4px;background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:3px;margin-bottom:6px;width:fit-content;flex-wrap:wrap">';
   variants.forEach(v => {
     const isAct = ruleVariant === v.key;
-    html += '<div class="fw-tab'+(isAct?' act':'')+'" data-rule-variant="'+v.key+'" style="cursor:pointer'+(v.key==='juddRudebusch'&&isAct?';border-color:var(--c-taylor)':'')+'">';
+    html += '<div class="fw-tab'+(isAct?' act':'')+'" data-rule-variant="'+v.key+'" style="cursor:pointer'+(v.key==='juddRudebusch'&&isAct?';border-color:var(--c-taylor)':'')+(v.key==='finNeutral'&&isAct?';border-color:var(--c-fin-neutral)':'')+'">';
     html += v.label;
     if(v.key==='juddRudebusch') html += ' <span style="font-size:8px;color:var(--c-taylor);margin-left:2px">\u2605</span>';
+    if(v.key==='finNeutral') html += ' <span style="font-size:8px;color:var(--c-fin-neutral);margin-left:2px">\u25cf</span>';
     html += '</div>';
   });
   html += '</div>';
@@ -2306,6 +2614,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">JR gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':gapNow<-0.05?'policy too tight':'near neutral')+'</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l" style="color:var(--c-fin-neutral)">Fin-neutral</div><div class="fw-stat-v" style="color:var(--c-fin-neutral)">'+(fnNow!==undefined?fnNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">JR + \u03bb\u00b7NFCI (Borio)</div></div>';
   html += '</div>';
 
   // Parameter tables side by side
@@ -2322,6 +2631,18 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += paramField('End-horizon GDP forecast', 'yEnd', -5, 10, 0.1, '%');
   html += paramField('Neutral real rate (r*)', 'rStar', -2, 5, 0.1, '%');
   html += '</tbody></table>';
+  // Borio r* toggle
+  html += '<div style="margin-top:8px;padding:6px 8px;border-radius:var(--border-radius-md);background:'+(tr.useFinCycleRstar?'rgba(13,148,136,.08)':'transparent')+';border:.5px solid '+(tr.useFinCycleRstar?'var(--c-fin-neutral)':'var(--color-border-tertiary)')+'">';
+  html += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;cursor:pointer;color:var(--color-text-secondary)">';
+  html += '<input type="checkbox" data-borio-rstar '+(tr.useFinCycleRstar?'checked':'')+'/>';
+  html += 'Use finance-cycle adjusted r* (Borio 2016, Pillar II)</label>';
+  if(tr.useFinCycleRstar){
+    const adjR=finance.rstarAdj||0.5;
+    const lwR=tr.naturalRate||0.5;
+    const corrBp=((adjR-lwR)*100).toFixed(0);
+    html += '<div style="font-size:10px;color:var(--c-fin-neutral);margin-top:4px">Adjusted r*: <b>'+adjR.toFixed(3)+'%</b> (LW: '+lwR.toFixed(2)+'% + '+corrBp+'bp correction)</div>';
+  }
+  html += '</div>';
   // Gap measure toggle
   html += '<div style="margin-top:8px;display:flex;gap:4px;align-items:center">';
   html += '<span style="font-size:10px;color:var(--color-text-tertiary);margin-right:4px">Gap measure:</span>';
@@ -2365,8 +2686,8 @@ function TaylorRuleTab({state, dispatch, finance}) {
   // Main chart — now includes JR path
   html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Prescribed rate path vs CME market-implied path</span></div>';
-  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t, jrImpliedPath);
-  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
+  html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t, jrImpliedPath, fnImpliedPath);
+  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Teal dashed = finance-neutral (Borio 2012). Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
   html += '</div>';
 
   // Gap chart
@@ -2379,7 +2700,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   // Decomposition table — now includes JR column
   html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Meeting-by-meeting decomposition</span></div>';
-  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
+  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th style="color:var(--c-fin-neutral)">Fin-neutral</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
   const n = meetings.length;
   for (let i = 0; i < n; i++) {
     const t2 = n > 1 ? i / (n - 1) : 0;
@@ -2396,6 +2717,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
     html += '<td style="font-family:var(--font-mono);color:var(--c-taylor);opacity:.7">' + taylorPaths.classic[i].toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:var(--c-taylor-mod)">' + taylorPaths.balanced[i].toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);font-weight:600;color:var(--c-taylor)">' + jrRate.toFixed(2) + '%</td>';
+    html += '<td style="font-family:var(--font-mono);color:var(--c-fin-neutral)">' + (fnImpliedPath[i]!==undefined?fnImpliedPath[i].toFixed(2):'--') + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:var(--c-cme)">' + cmeRates[i].toFixed(2) + '%</td>';
     html += '<td style="font-family:var(--font-mono);color:' + gCol + '">' + (gap > 0 ? '+' : '') + gap.toFixed(2) + '</td>';
     html += '</tr>';
@@ -2436,15 +2758,20 @@ function TaylorRuleTab({state, dispatch, finance}) {
       const v = e.currentTarget.dataset.gapMeasure;
       if (v) dispatch({type: 'UPDATE_TR', key: 'gapMeasure', value: v});
     };
+    const borioHandler = (e) => {
+      dispatch({type:'UPDATE_TR', key:'useFinCycleRstar', value:e.target.checked});
+    };
     document.querySelectorAll('[data-taylor-key]').forEach(el => el.addEventListener('change', taylorHandler));
     document.querySelectorAll('[data-tr-key]').forEach(el => el.addEventListener('change', trHandler));
     document.querySelectorAll('[data-rule-variant]').forEach(el => el.addEventListener('click', variantHandler));
     document.querySelectorAll('[data-gap-measure]').forEach(el => el.addEventListener('click', gapHandler));
+    document.querySelectorAll('[data-borio-rstar]').forEach(el => el.addEventListener('change', borioHandler));
     return () => {
       document.querySelectorAll('[data-taylor-key]').forEach(el => el.removeEventListener('change', taylorHandler));
       document.querySelectorAll('[data-tr-key]').forEach(el => el.removeEventListener('change', trHandler));
       document.querySelectorAll('[data-rule-variant]').forEach(el => el.removeEventListener('click', variantHandler));
       document.querySelectorAll('[data-gap-measure]').forEach(el => el.removeEventListener('click', gapHandler));
+      document.querySelectorAll('[data-borio-rstar]').forEach(el => el.removeEventListener('change', borioHandler));
     };
   });
 
@@ -2452,7 +2779,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
 }
 
 function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
-  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD} = finance;
+  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD, qtShocks, qtShockedParams} = finance;
   const [selectedMeeting, setSelectedMeeting] = React.useState(null);
   const [showAll, setShowAll] = React.useState(false);
   const [model, setModel] = React.useState('ns');
@@ -2495,6 +2822,12 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.5" opacity="'+opacity+'" stroke-dasharray="4,2"/>';
     });
 
+    // QT shock curve (sky-blue dashed)
+    if(qtShockedParams){
+      var qtPts = Array.from({length:80},function(_,i){var m=0.08+(i/79)*29.92;return xs(m).toFixed(1)+','+ys(nsYield(m,qtShockedParams)).toFixed(1);}).join(' ');
+      svg+='<polyline points="'+qtPts+'" fill="none" stroke="var(--c-bs)" stroke-width="1.8" stroke-dasharray="8,4" opacity=".7"/>';
+    }
+
     // NS instantaneous forward (dashed amber)
     var fwdPts = nsForwardPoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
     svg+='<polyline points="'+fwdPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".5"/>';
@@ -2519,6 +2852,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
     svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
     svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
     svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd \u00b7 --- scenario</text>';
+    svg+='<text x="'+(ml+330)+'" y="14" font-size="8" fill="var(--c-bs)" font-family="var(--font-sans)">--- QT shock (12M)</text>';
     svg+='</svg>';
     return svg;
   }
@@ -2544,6 +2878,20 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(slopeChg)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(parseFloat(slopeChg)>0?'+':'')+slopeChg+'</td>';
       h+='<td>'+signal+'</td></tr>';
     });
+    // QT shock row
+    if(qtShocks){
+      var qtTotal=Object.values(qtShocks).reduce(function(s,v){return s+v;},0)/Object.keys(qtShocks).length;
+      h+='<tr style="border-top:1.5px solid var(--color-border-secondary)">';
+      h+='<td style="white-space:nowrap;font-weight:500;color:var(--c-bs)">QT (12M)</td>';
+      h+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">\u2014</td>';
+      mats.forEach(function(mt){
+        var d=(qtShocks[mt.m]||0).toFixed(1);
+        h+='<td style="font-family:var(--font-mono);color:var(--c-bs)">+'+d+'</td>';
+      });
+      var qtSlope=((qtShocks[2]||0)-(qtShocks[10]||0)).toFixed(1);
+      h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(qtSlope)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+qtSlope+'</td>';
+      h+='<td style="color:var(--c-bs)">KVJ+D\u2019Amico</td></tr>';
+    }
     h+='</tbody></table>';
     return h;
   }
@@ -2627,21 +2975,51 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
             {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson \u2014 Phase 3 extension)</span>}
           </span>
         </div>
-        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
-          {[
-            {l:'Level \u03b2\u2080', v:nsFactors.level.toFixed(3)+'%', sub:'Long-run rate', col:'var(--c-overlay)'},
-            {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
-            {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
-            {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
-            {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
-          ].map(function(d){return(
-            <div key={d.l} className="fw-stat">
-              <div className="fw-stat-l">{d.l}</div>
-              <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
-              <div className="fw-stat-s">{d.sub}</div>
+        {(()=>{
+          const rStar=state.trD?.naturalRate||0.5;
+          const piStar=state.trD?.inflationTarget||2.0;
+          const safetyPct=(finance.safetyPremBp||0)/100;
+          const lpEffect=finance.dss?finance.dss.riskPremiumEffect:0;
+          const b0=nsFactors.level;
+          const residual=b0-rStar-piStar-safetyPct-lpEffect;
+          const bsFetched=state.bsD?.fetched;
+          const seedBadge=!bsFetched?' \u26a0 seed':'';
+          return (<>
+            <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
+              <div className="fw-stat">
+                <div className="fw-stat-l">Level \u03b2\u2080</div>
+                <div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-overlay)'}}>{b0.toFixed(3)}%</div>
+                <div className="fw-stat-s">Long-run rate</div>
+              </div>
+              {[
+                {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
+                {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
+                {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
+                {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
+              ].map(function(d){return(
+                <div key={d.l} className="fw-stat">
+                  <div className="fw-stat-l">{d.l}</div>
+                  <div className="fw-stat-v" style={{fontSize:'16px',color:d.col}}>{d.v}</div>
+                  <div className="fw-stat-s">{d.sub}</div>
+                </div>
+              );})}
             </div>
-          );})}
-        </div>
+            <div style={{marginTop:'10px',padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)'}}>
+              <div style={{fontSize:'11px',fontWeight:500,color:'var(--c-overlay)',marginBottom:'6px'}}>\u03b2\u2080 decomposition: {b0.toFixed(3)}%</div>
+              <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'2px 12px',fontSize:'10px',fontFamily:'var(--font-mono)'}}>
+                <span style={{color:'var(--color-text-tertiary)'}}>r* + \u03c0*</span>
+                <span style={{color:'var(--color-text-primary)'}}>{(rStar+piStar).toFixed(2)}%</span>
+                <span style={{color:'var(--c-bs)'}}>\u03c8 safety{seedBadge}</span>
+                <span style={{color:'var(--c-bs)'}}>{safetyPct>=0?'+':''}{(safetyPct*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[KVJ 2012]</span></span>
+                <span style={{color:'var(--c-lp)'}}>\u03c8 leverage{seedBadge}</span>
+                <span style={{color:'var(--c-lp)'}}>{lpEffect>=0?'+':''}{(lpEffect*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[DSS 2018]</span></span>
+                <span style={{color:'var(--color-text-tertiary)'}}>Residual</span>
+                <span style={{color:'var(--color-text-secondary)'}}>{residual>=0?'+':''}{(residual*100).toFixed(1)} bp</span>
+              </div>
+              <div style={{fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'6px',lineHeight:1.5}}>\u03b2\u2080 = r* + \u03c0\u1d49 + \u03c8_safety + \u03c8_leverage + residual. KVJ (2012): Treasury supply safety premium. DSS (2018): leverage/liquidity premium.</div>
+            </div>
+          </>);
+        })()}
       </div>
 
       {/* Curve chart */}
@@ -2663,7 +3041,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
           </div>
         </div>
         <SvgPanel html={buildCurveChart()}/>
-        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting. X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp. Click a meeting button to overlay the shocked curve for that meeting.</div>
+        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting \u00b7 sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'\u2019'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
       </div>
 
       {/* Shock impact table */}
@@ -2689,6 +3067,7 @@ function RidingTab({state, dispatch, finance}) {
     {key:'cushion75',        label:'75th pctile cushion'},
     {key:'taylorRule',       label:'Taylor rule signal'},
     {key:'cmeExpectations',  label:'CME signal'},
+    {key:'ssPut',            label:'SS put signal'},
   ];
 
   const sel = state.rideSelected;
@@ -2870,6 +3249,686 @@ function RidingTab({state, dispatch, finance}) {
 }
 
 // ============================================================================
+// TAB 10 --- Balance Sheet & QT Monitor
+// ============================================================================
+
+function BalanceSheetTab({state, dispatch, finance}) {
+  const {bsD} = state;
+  const {qtChannels, steinSVR:svr, combinedStance, effrStart} = finance;
+
+  function setBsd(key, val){ dispatch({type:'SET_BSD', key, value:parseFloat(val)||0}); }
+
+  // --- Panel 1: Composition bar chart ---
+  const W1=680, H1=220;
+  const PD={t:20,r:20,b:40,l:60};
+  const cw=W1-PD.l-PD.r, ch=H1-PD.t-PD.b;
+  const current=bsD.totalAssets||8500, neutral=bsD.neutralFloor||6200;
+  const maxVal=current*1.1;
+  const yS=v=>PD.t+ch*(1-v/maxVal);
+  const barW=cw*0.22;
+  const treasury=bsD.treasuries||4400, mbs=bsD.mbs||2300, other=Math.max(0,current-treasury-mbs);
+  const tR=treasury/current, mR=mbs/current;
+  const nT=neutral*tR, nM=neutral*mR, nO=Math.max(0,neutral-nT-nM);
+  const runway=bsD.monthlyRunoff>0?Math.round((current-neutral)/bsD.monthlyRunoff):999;
+  const shadowBp=qtChannels?qtChannels.total.toFixed(1):'\u2014';
+
+  function stackBar(x, vals, colors){
+    let svg='';
+    let cumul=0;
+    vals.forEach((v,i)=>{
+      const h=(v/maxVal)*ch;
+      const y=yS(cumul+v);
+      svg+='<rect x="'+x+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+Math.max(0,h).toFixed(1)+'" fill="'+colors[i]+'" opacity=".85" rx="1.5"/>';
+      cumul+=v;
+    });
+    return svg;
+  }
+
+  const x1=PD.l+cw*0.18, x2=PD.l+cw*0.58;
+  const cols=['var(--c-bs)','var(--c-bs-mbs)','var(--color-border-secondary)'];
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  [0,2000,4000,6000,8000].forEach(v=>{
+    const y=yS(v);
+    svg1+='<line x1="'+PD.l+'" y1="'+y.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    if(v>0) svg1+='<text x="'+(PD.l-6)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">$'+(v/1000)+'T</text>';
+  });
+  svg1+=stackBar(x1,[treasury,mbs,other],cols);
+  svg1+=stackBar(x2,[nT,nM,nO],cols);
+  // neutral floor dashed line
+  const nY=yS(neutral);
+  svg1+='<line x1="'+PD.l+'" y1="'+nY.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+nY.toFixed(1)+'" stroke="var(--c-neutral-floor)" stroke-width="1.5" stroke-dasharray="6,4"/>';
+  svg1+='<text x="'+(PD.l+cw-4)+'" y="'+(nY-5).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">Floor ~$'+(neutral/1000).toFixed(1)+'T</text>';
+  // labels
+  svg1+='<text x="'+(x1+barW/2).toFixed(1)+'" y="'+(H1-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Current</text>';
+  svg1+='<text x="'+(x2+barW/2).toFixed(1)+'" y="'+(H1-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Neutral Floor</text>';
+  // runway annotation
+  svg1+='<text x="'+(W1/2)+'" y="'+(H1-22)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">QT runway at $'+bsD.monthlyRunoff+'bn/mo: ~'+runway+' months to floor</text>';
+  svg1+='</svg>';
+
+  // --- Panel 2: Runoff pace vs cap ---
+  const capT=25, capMBS=35;
+  const actualTotal=bsD.monthlyRunoff||60;
+  const actT=actualTotal*0.55, actM=actualTotal*0.45;
+  const undershoot=capMBS-actM;
+  const cumUndershoot=Math.round(undershoot*20);
+  const W2=420, H2=150, xMax=40;
+  const xSc=v=>(v/xMax)*300;
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  // Treasury row
+  svg2+='<text x="88" y="32" text-anchor="end" font-size="10" fill="var(--color-text-primary)">Treasury</text>';
+  svg2+='<rect x="95" y="18" width="'+xSc(capT).toFixed(1)+'" height="26" fill="var(--c-neutral-floor)" opacity=".25" rx="2"/>';
+  svg2+='<rect x="95" y="18" width="'+xSc(actT).toFixed(1)+'" height="26" fill="var(--c-bs)" opacity=".85" rx="2"/>';
+  svg2+='<text x="'+(99+xSc(actT)).toFixed(1)+'" y="36" font-size="9" fill="var(--c-bs)" font-family="var(--font-mono)">$'+actT.toFixed(0)+'bn</text>';
+  svg2+='<text x="'+(99+xSc(capT)).toFixed(1)+'" y="36" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">cap $'+capT+'bn</text>';
+  // MBS row
+  svg2+='<text x="88" y="82" text-anchor="end" font-size="10" fill="var(--color-text-primary)">MBS</text>';
+  svg2+='<rect x="95" y="68" width="'+xSc(capMBS).toFixed(1)+'" height="26" fill="var(--c-neutral-floor)" opacity=".25" rx="2"/>';
+  svg2+='<rect x="95" y="68" width="'+xSc(actM).toFixed(1)+'" height="26" fill="var(--c-bs-mbs)" opacity=".85" rx="2"/>';
+  svg2+='<text x="'+(99+xSc(actM)).toFixed(1)+'" y="86" font-size="9" fill="var(--c-bs-mbs)" font-family="var(--font-mono)">$'+actM.toFixed(0)+'bn</text>';
+  svg2+='<text x="'+(99+xSc(capMBS)).toFixed(1)+'" y="86" font-size="9" fill="var(--c-neutral-floor)" font-family="var(--font-mono)">cap $'+capMBS+'bn</text>';
+  // undershoot note
+  svg2+='<text x="10" y="120" font-size="9" fill="var(--color-text-tertiary)">MBS undershoot (est. cumulative since QT start): ~$'+cumUndershoot+'bn</text>';
+  svg2+='<text x="10" y="138" font-size="9" fill="var(--color-text-tertiary)">Actual QT pace slower than cap due to low mortgage prepayments.</text>';
+  svg2+='</svg>';
+
+  // --- Panel 3: Corridor mechanics ---
+  const iorb=bsD.iorb||4.40, effr=bsD.effr||4.33, tbill3=bsD.tbill3m||4.25;
+  const dss=finance.dss;
+  const lp=dss?dss.liquidityPremium:(tbill3-iorb);
+  const svrBp=svr!=null?svr:((effr-iorb)*100);
+  const svrColor=Math.abs(svrBp)<5?'var(--c-stress-lo)':Math.abs(svrBp)<15?'var(--c-leaning)':'var(--c-stress-hi)';
+  const lpColor=lp>0?'var(--c-stress-lo)':lp>-0.20?'var(--c-leaning)':'var(--c-stress-hi)';
+  const svrNote=Math.abs(svrBp)<5?' Ample reserves (SVR \u2248 0).':Math.abs(svrBp)<15?' Transition zone. Monitor reserves.':' \u26a0 Scarce reserves. Sep 2019 episode began at ~15bp.';
+  const lpNote=lp>0?' Positive: ample liquidity. Low leverage cost (DSS 2018).':lp>-0.20?' Slightly negative: tightening liquidity conditions.':' Negative: expensive leverage. Risk premia widening expected (DSS 2018).';
+
+  // --- Panel 4: Two-instrument policy space ---
+  const W4=680, H4=300;
+  const P4={t:30,r:80,b:50,l:70};
+  const cw4=W4-P4.l-P4.r, ch4=H4-P4.t-P4.b;
+  const xMin=5, xMax4=40, yMin4=-6, yMax4=8;
+  const xSc4=v=>P4.l+((v-xMin)/(xMax4-xMin))*cw4;
+  const ySc4=v=>P4.t+ch4-((v-yMin4)/(yMax4-yMin4))*ch4;
+  const inflation=state.trD?.inflationRate||2.8;
+  const curX=(bsD.totalAssets||8500)/(bsD.gdpNominal||28500)*100;
+  const curY=(bsD.effr||4.33)-inflation;
+  const neutralX=(bsD.neutralFloor||6200)/(bsD.gdpNominal||28500)*100;
+  const episodes=[
+    {x:6,y:2.5,lb:'Pre-GFC (2007)'},{x:15,y:-2.5,lb:'QE1 (2009)'},
+    {x:20,y:-3.0,lb:'QE2 (2010)'},{x:26,y:-2.8,lb:'QE3 peak (2014)'},
+    {x:24,y:-1.0,lb:'QT start (2018)'},{x:19,y:-0.5,lb:'Sep-19 repo'},
+    {x:37,y:-7.5,lb:'COVID (2020)'},{x:35,y:-4.0,lb:'Liftoff (Mar 22)'},
+    {x:32,y:1.0,lb:'QT + hike (2023)'},
+  ];
+
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  // grid
+  [10,20,30].forEach(x=>{
+    svg4+='<line x1="'+xSc4(x)+'" y1="'+P4.t+'" x2="'+xSc4(x)+'" y2="'+(P4.t+ch4)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg4+='<text x="'+xSc4(x)+'" y="'+(P4.t+ch4+14)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">'+x+'%</text>';
+  });
+  [-4,-2,0,2,4,6].forEach(y=>{
+    svg4+='<line x1="'+P4.l+'" y1="'+ySc4(y)+'" x2="'+(P4.l+cw4)+'" y2="'+ySc4(y)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg4+='<text x="'+(P4.l-8)+'" y="'+(ySc4(y)+4)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y+'%</text>';
+  });
+  // zero real EFFR line
+  svg4+='<line x1="'+P4.l+'" y1="'+ySc4(0)+'" x2="'+(P4.l+cw4)+'" y2="'+ySc4(0)+'" stroke="var(--c-neutral-floor)" stroke-width="1" stroke-dasharray="4,3"/>';
+  // neutral floor vertical
+  svg4+='<line x1="'+xSc4(neutralX)+'" y1="'+P4.t+'" x2="'+xSc4(neutralX)+'" y2="'+(P4.t+ch4)+'" stroke="var(--c-neutral-floor)" stroke-width="1.2" stroke-dasharray="6,4"/>';
+  svg4+='<text x="'+(xSc4(neutralX)+3)+'" y="'+(P4.t+14)+'" font-size="9" fill="var(--c-neutral-floor)">Floor</text>';
+  // episodes
+  episodes.forEach(ep=>{
+    const ex=xSc4(ep.x), ey=ySc4(ep.y);
+    svg4+='<circle cx="'+ex+'" cy="'+ey+'" r="3.5" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+    svg4+='<text x="'+(ex+6)+'" y="'+(ey+3)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+ep.lb+'</text>';
+  });
+  // current position
+  svg4+='<circle cx="'+xSc4(curX)+'" cy="'+ySc4(curY)+'" r="7" fill="var(--c-combined)" opacity=".9"/>';
+  svg4+='<text x="'+(xSc4(curX)+10)+'" y="'+(ySc4(curY)+4)+'" font-size="10" font-weight="bold" fill="var(--c-combined)">Now</text>';
+  // axis labels
+  svg4+='<text x="'+(P4.l+cw4/2)+'" y="'+(H4-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Fed Total Assets (% of GDP)</text>';
+  svg4+='<text x="14" y="'+(P4.t+ch4/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P4.t+ch4/2)+')">Real EFFR (%)</text>';
+  svg4+='</svg>';
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
+        <div>
+          <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Balance Sheet &amp; QT Monitor</h3>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+            <span className="data-badge">{bsD.fetched?'live':'seed'}</span>
+            {' '}{bsD.source}{bsD.asOf?' \u00b7 '+bsD.asOf:''}
+          </div>
+        </div>
+        <button className="refresh-btn" onClick={()=>fetchBalanceSheet(dispatch)}>&#x27f3; Fetch H.4.1</button>
+      </div>
+
+      <div className="k-grid">
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2460 Balance Sheet Composition</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>
+              KVJ (2011) shadow rate: <b style={{color:parseFloat(shadowBp)>0?'var(--c-stress-hi)':'var(--c-stress-lo)'}}>{shadowBp} bp</b>
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg1}}/>
+          <div style={{display:'flex',gap:'14px',flexWrap:'wrap',fontSize:'10px',margin:'8px 0',color:'var(--color-text-secondary)'}}>
+            <span style={{color:'var(--c-bs)'}}>Duration: {qtChannels?qtChannels.components.duration.toFixed(1):'\u2014'} bp</span>
+            <span>Safety: {qtChannels?qtChannels.components.safety.toFixed(1):'\u2014'} bp</span>
+            <span>Signaling: {qtChannels?qtChannels.components.signaling.toFixed(1):'\u2014'} bp</span>
+            <span style={{color:'var(--c-bs-mbs)'}}>MBS: {qtChannels?qtChannels.components.mbs.toFixed(1):'\u2014'} bp</span>
+          </div>
+          <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
+            <label style={{color:'var(--color-text-secondary)'}}>Neutral floor ($bn):
+              <input className="fw-in" type="number" value={bsD.neutralFloor} style={{width:'80px',marginLeft:'4px'}}
+                onChange={e=>setBsd('neutralFloor',e.target.value)} step="100"/>
+            </label>
+            <label style={{color:'var(--color-text-secondary)'}}>Monthly runoff ($bn):
+              <input className="fw-in" type="number" value={bsD.monthlyRunoff} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setBsd('monthlyRunoff',e.target.value)} step="5"/>
+            </label>
+          </div>
+          <div className="k-note">Sources: Fed H.4.1 (FRED: WALCL, WTREGEN, WMBSEC). Shadow rate via Krishnamurthy &amp; Vissing-Jorgensen (2011) channel decomposition. Neutral floor: Afonso-Giannone-LaRocca-Packer (2022) reserve demand model.</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr"><span className="k-title">\u2461 Monthly Runoff: Pace vs. Cap</span></div>
+          <div dangerouslySetInnerHTML={{__html:svg2}}/>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr"><span className="k-title">\u2462 Corridor Mechanics: Stein (2012) SVR &amp; DSS Liquidity Premium</span></div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'8px',margin:'8px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">IORB</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{iorb.toFixed(2)}%</div><div className="fw-stat-s">Interest on reserve balances</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">EFFR</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{effr.toFixed(2)}%</div><div className="fw-stat-s">Effective fed funds rate</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:svrColor}}>Stein SVR</div><div className="fw-stat-v" style={{fontSize:'16px',color:svrColor}}>{svrBp>=0?'+':''}{svrBp.toFixed(1)} bp</div><div className="fw-stat-s">EFFR \u2212 IORB.{svrNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:lpColor}}>DSS Liquidity Prem.</div><div className="fw-stat-v" style={{fontSize:'16px',color:lpColor}}>{(lp*100).toFixed(1)} bp</div><div className="fw-stat-s">3M T-bill \u2212 IORB.{lpNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">RRP Outstanding</div><div className="fw-stat-v" style={{fontSize:'16px'}}>${(bsD.rrpUsage||400).toFixed(0)}bn</div><div className="fw-stat-s">RRP draining to zero signals reserve transition</div></div>
+          </div>
+          <div className="k-note">SVR framework: Stein (2012, QJE). Liquidity premium channel: Drechsler, Savov &amp; Schnabl (2018, JoF). Near-money proxy: Nagel (2016, QJE).</div>
+        </div>
+
+        <div className="k-panel k-full">
+          <div className="k-hdr">
+            <span className="k-title">\u2463 Two-Instrument Policy Space</span>
+            <span style={{fontSize:'10px',color:'var(--c-combined)'}}>Combined stance: {combinedStance.toFixed(2)}%</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg4}}/>
+          <div className="k-note">Combined stance = EFFR + KVJ (2011) shadow rate equivalent. Violet dot = current position. Historical episodes approximate. Neutral floor = Afonso et al. (2022). Framework: Stein (2012, QJE) two-instrument monetary policy.</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TAB 11 --- Financial Stability (Borio-Mehrling)
+// ============================================================================
+
+function FinStabTab({state, dispatch, finance}) {
+  const {fsD, bsD, trD} = state;
+  const {finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal, dss} = finance;
+
+  function setFsd(key, val){ dispatch({type:'SET_FSD', key, value:parseFloat(val)||0}); }
+
+  const nfci=fsD.nfci||0;
+  const nfciRegime=nfci<-0.5?'loose':nfci>0.5?'tight':'neutral';
+  const nfciColor=nfciRegime==='loose'?'var(--c-stress-lo)':nfciRegime==='tight'?'var(--c-stress-hi)':'var(--color-text-tertiary)';
+
+  // --- Panel 1: NFCI gauge ---
+  const W1=600, H1=80, barY=30, barH=20;
+  const xMin=-3, xMax1=3;
+  const xSc=v=>40+((v-xMin)/(xMax1-xMin))*520;
+  const needleX=Math.max(40,Math.min(560,xSc(nfci)));
+
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  // background zones
+  svg1+='<rect x="40" y="'+barY+'" width="'+(xSc(-0.5)-40)+'" height="'+barH+'" fill="var(--c-stress-lo)" opacity=".2"/>';
+  svg1+='<rect x="'+xSc(-0.5)+'" y="'+barY+'" width="'+(xSc(0.5)-xSc(-0.5))+'" height="'+barH+'" fill="var(--c-neutral-floor)" opacity=".15"/>';
+  svg1+='<rect x="'+xSc(0.5)+'" y="'+barY+'" width="'+(560-xSc(0.5))+'" height="'+barH+'" fill="var(--c-stress-hi)" opacity=".2"/>';
+  // zone labels
+  svg1+='<text x="'+xSc(-1.75)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--c-stress-lo)">LOOSE</text>';
+  svg1+='<text x="'+xSc(0)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">NEUTRAL</text>';
+  svg1+='<text x="'+xSc(1.75)+'" y="'+(barY+barH+16)+'" text-anchor="middle" font-size="9" fill="var(--c-stress-hi)">TIGHT</text>';
+  // threshold lines
+  svg1+='<line x1="'+xSc(-0.5)+'" y1="'+(barY-4)+'" x2="'+xSc(-0.5)+'" y2="'+(barY+barH+4)+'" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+  svg1+='<line x1="'+xSc(0.5)+'" y1="'+(barY-4)+'" x2="'+xSc(0.5)+'" y2="'+(barY+barH+4)+'" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+  // axis ticks
+  [-2,-1,0,1,2].forEach(v=>{
+    svg1+='<line x1="'+xSc(v)+'" y1="'+(barY+barH)+'" x2="'+xSc(v)+'" y2="'+(barY+barH+5)+'" stroke="var(--color-text-tertiary)" stroke-width=".8"/>';
+    svg1+='<text x="'+xSc(v)+'" y="'+(barY+barH+14)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v+'</text>';
+  });
+  // needle
+  svg1+='<rect x="'+(needleX-2)+'" y="'+(barY-6)+'" width="4" height="'+(barH+12)+'" fill="'+nfciColor+'" rx="2"/>';
+  svg1+='<text x="'+needleX+'" y="'+(barY-9)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="'+nfciColor+'">'+(nfci>=0?'+':'')+nfci.toFixed(2)+'</text>';
+  svg1+='</svg>';
+
+  // --- Panel 2: Finance-neutral Taylor Rule gap ---
+  const effrNow=finance.effrStart||3.64;
+  const jrRate=finance.taylorJRRate||3.5;
+  const fnRateVal=fnRate||jrRate;
+  const termRate=finance.terminalRate||3.0;
+  const sepDot=state.trD?.sepLongRunDot||2.875;
+  const leanBp=leanPrem||0;
+  const leanColor=leanBp>0?'var(--c-leaning)':leanBp<-25?'var(--c-stress-lo)':'var(--color-text-secondary)';
+
+  // Horizontal rate comparison chart
+  const W2=660, H2=170;
+  const P2={t:24,r:30,b:30,l:50};
+  const cw2=W2-P2.l-P2.r, ch2=H2-P2.t-P2.b;
+  const rates=[effrNow, jrRate, fnRateVal, termRate, sepDot];
+  const rMin=Math.floor(Math.min(...rates)*2)/2-0.5;
+  const rMax=Math.ceil(Math.max(...rates)*2)/2+0.5;
+  const xSc2=v=>P2.l+((v-rMin)/(rMax-rMin))*cw2;
+  const rowH=ch2/5;
+
+  const rateRows=[
+    {lb:'EFFR (current)',       val:effrNow,   col:'var(--c-cme)'},
+    {lb:'JR ECM prescribed',    val:jrRate,    col:'var(--c-taylor)'},
+    {lb:'Finance-neutral (Borio)', val:fnRateVal, col:'var(--c-fin-neutral)'},
+    {lb:'ZQ terminal (12M)',    val:termRate,  col:'var(--c-dots)'},
+    {lb:'SEP long-run dot',     val:sepDot,    col:'var(--color-text-tertiary)'},
+  ];
+
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  // x-axis grid
+  for(let r=Math.ceil(rMin*2)/2;r<=rMax;r+=0.5){
+    const x=xSc2(r);
+    svg2+='<line x1="'+x+'" y1="'+P2.t+'" x2="'+x+'" y2="'+(P2.t+ch2)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg2+='<text x="'+x+'" y="'+(H2-8)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+r.toFixed(1)+'%</text>';
+  }
+  // leaning premium shaded region between fnRate and termRate
+  const leanX1=Math.min(xSc2(fnRateVal),xSc2(termRate));
+  const leanX2=Math.max(xSc2(fnRateVal),xSc2(termRate));
+  svg2+='<rect x="'+leanX1+'" y="'+P2.t+'" width="'+(leanX2-leanX1)+'" height="'+ch2+'" fill="var(--c-leaning)" opacity=".08"/>';
+  // rate rows
+  rateRows.forEach((r,i)=>{
+    const y=P2.t+i*rowH+rowH/2;
+    const x=xSc2(r.val);
+    svg2+='<line x1="'+P2.l+'" y1="'+y+'" x2="'+(P2.l+cw2)+'" y2="'+y+'" stroke="var(--color-border-tertiary)" stroke-width=".3"/>';
+    svg2+='<circle cx="'+x+'" cy="'+y+'" r="5" fill="'+r.col+'"/>';
+    svg2+='<text x="'+(x+8)+'" y="'+(y+3)+'" font-size="9" fill="'+r.col+'" font-family="var(--font-mono)">'+r.val.toFixed(2)+'%</text>';
+    svg2+='<text x="'+(P2.l-4)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" fill="var(--color-text-secondary)">'+r.lb+'</text>';
+  });
+  // leaning premium annotation
+  const leanMidX=(xSc2(fnRateVal)+xSc2(termRate))/2;
+  svg2+='<text x="'+leanMidX+'" y="'+(P2.t+ch2+18)+'" text-anchor="middle" font-size="9" font-weight="500" fill="var(--c-leaning)">Leaning premium: '+(leanBp>=0?'+':'')+leanBp.toFixed(0)+' bp</text>';
+  svg2+='</svg>';
+
+  // --- Panel 2b: Gap decomposition stacked bar ---
+  const jrGapBp=(jrRate-termRate)*100;
+  const rstarDiffBp=((finance.rstarAdj||0.5)-(state.trD?.naturalRate||0.5))*100;
+  const W3=640, H3=155;
+  const cx3=W3/2, barY3=42;
+  const pxBp=Math.min(2.0, (cx3-60)/Math.max(Math.abs(jrGapBp)+Math.abs(rstarDiffBp),1));
+  const jrDir=jrGapBp>=0?1:-1;
+  const jrW3=Math.abs(jrGapBp)*pxBp;
+  const rsW3=Math.abs(rstarDiffBp)*pxBp;
+
+  let svg3='<svg viewBox="0 0 '+W3+' '+H3+'" style="width:100%;display:block">';
+  svg3+='<defs><marker id="arr-lean" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--c-leaning)"/></marker></defs>';
+  // zero line
+  svg3+='<line x1="'+cx3+'" y1="16" x2="'+cx3+'" y2="'+(H3-28)+'" stroke="var(--color-text-primary)" stroke-width="1.2"/>';
+  svg3+='<text x="'+cx3+'" y="12" text-anchor="middle" font-size="9" fill="var(--color-text-secondary)">Market-implied terminal</text>';
+  // JR gap bar
+  const jrX3=jrDir>0?cx3:cx3-jrW3;
+  svg3+='<rect x="'+jrX3+'" y="'+barY3+'" width="'+Math.max(1,jrW3)+'" height="26" fill="var(--c-taylor)" opacity=".7" rx="2"/>';
+  const jrLblX3=jrDir>0?cx3+jrW3+5:cx3-jrW3-5;
+  svg3+='<text x="'+jrLblX3+'" y="'+(barY3+17)+'" text-anchor="'+(jrDir>0?'start':'end')+'" font-size="10" fill="var(--c-taylor)">JR ECM: '+(jrGapBp>=0?'+':'')+jrGapBp.toFixed(0)+' bp</text>';
+  // r* correction bar (stacked)
+  const rsX3=jrDir>0?cx3+jrW3:cx3-jrW3-rsW3;
+  svg3+='<rect x="'+rsX3+'" y="'+barY3+'" width="'+Math.max(1,rsW3)+'" height="26" fill="var(--c-fin-neutral)" opacity=".7" rx="2"/>';
+  const rsLblX3=jrDir>0?rsX3+rsW3+5:rsX3-5;
+  svg3+='<text x="'+rsLblX3+'" y="'+(barY3+17)+'" text-anchor="'+(jrDir>0?'start':'end')+'" font-size="10" fill="var(--c-fin-neutral)">r* corr: '+(rstarDiffBp>=0?'+':'')+rstarDiffBp.toFixed(0)+' bp</text>';
+  // total leaning premium arrow
+  const arrEnd=cx3+Math.min(Math.max(leanBp*pxBp,-250),250);
+  svg3+='<line x1="'+cx3+'" y1="'+(barY3+44)+'" x2="'+arrEnd+'" y2="'+(barY3+44)+'" stroke="var(--c-leaning)" stroke-width="2.5" marker-end="url(#arr-lean)"/>';
+  svg3+='<text x="'+(arrEnd+(leanBp>=0?6:-6))+'" y="'+(barY3+48)+'" text-anchor="'+(leanBp>=0?'start':'end')+'" font-size="10" font-weight="500" fill="var(--c-leaning)">Total leaning: '+(leanBp>=0?'+':'')+leanBp.toFixed(0)+' bp</text>';
+  // axis labels
+  svg3+='<text x="20" y="'+(H3-6)+'" font-size="9" fill="var(--color-text-tertiary)">Too accommodative (leaning with wind)</text>';
+  svg3+='<text x="'+(W3-20)+'" y="'+(H3-6)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)">Too restrictive (leaning against wind)</text>';
+  svg3+='</svg>';
+
+  // --- Panel 3: McCauley (2019) dollar safe asset gauge ---
+  const reserves=bsD.reserves||3200, gdp=bsD.gdpNominal||28500;
+  const reservesPctGdp=reserves/gdp*100;
+  const swapLn=fsD.swapLines||0, xccyBp=fsD.xccyBasis||-8;
+  // Layer thresholds
+  const resThreshLo=8, resThreshHi=14; // % of GDP
+  const swapThresh=fsD.swapLinesP75||10; // $bn
+  const xccyThresh=fsD.xccyBasisP75||-20; // bp
+
+  const resColor=reservesPctGdp>=resThreshHi?'var(--c-stress-lo)':reservesPctGdp>=resThreshLo?'var(--c-leaning)':'var(--c-stress-hi)';
+  const swapColor=swapLn<1?'var(--c-stress-lo)':swapLn<swapThresh?'var(--c-leaning)':'var(--c-stress-hi)';
+  const xccyColor=xccyBp>-5?'var(--c-stress-lo)':xccyBp>xccyThresh?'var(--c-leaning)':'var(--c-stress-hi)';
+
+  // Horizontal gauge for each layer
+  const W4=580, H4=130;
+  const gY=[22,58,94], gH=18;
+  const gL=100, gR=W4-20, gW=gR-gL;
+  function gaugeBar(yi, val, min, max, col, label, unit){
+    const clamped=Math.max(min,Math.min(max,val));
+    const x=gL+((clamped-min)/(max-min))*gW;
+    let s='';
+    s+='<text x="'+(gL-4)+'" y="'+(gY[yi]+gH/2+4)+'" text-anchor="end" font-size="9" fill="var(--color-text-secondary)">'+label+'</text>';
+    s+='<rect x="'+gL+'" y="'+gY[yi]+'" width="'+gW+'" height="'+gH+'" fill="var(--color-background-secondary)" rx="3"/>';
+    s+='<rect x="'+gL+'" y="'+gY[yi]+'" width="'+(x-gL)+'" height="'+gH+'" fill="'+col+'" opacity=".6" rx="3"/>';
+    s+='<rect x="'+(x-2)+'" y="'+(gY[yi]-3)+'" width="4" height="'+(gH+6)+'" fill="'+col+'" rx="2"/>';
+    s+='<text x="'+(x+6)+'" y="'+(gY[yi]+gH/2+4)+'" font-size="10" font-weight="500" fill="'+col+'" font-family="var(--font-mono)">'+val.toFixed(1)+unit+'</text>';
+    // min/max labels
+    s+='<text x="'+gL+'" y="'+(gY[yi]+gH+12)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+min+unit+'</text>';
+    s+='<text x="'+gR+'" y="'+(gY[yi]+gH+12)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)">'+max+unit+'</text>';
+    return s;
+  }
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  svg4+=gaugeBar(0, reservesPctGdp, 0, 20, resColor, 'Reserves/GDP', '%');
+  svg4+=gaugeBar(1, swapLn, 0, 50, swapColor, 'Swap lines', 'bn');
+  svg4+=gaugeBar(2, xccyBp, -50, 10, xccyColor, 'Xccy basis', 'bp');
+  svg4+='</svg>';
+
+  // --- Panel 4: Doom loop scatter (term premium vs HY OAS, bubble = LP) ---
+  const termPremBp=(finance.termPremium||0)*100;
+  const hyOAS=fsD.hyOAS||325;
+  const lpAbs=Math.abs(dss?dss.liquidityPremium:0)*100;
+  const bubbleR=Math.max(5,Math.min(25,lpAbs*1.5));
+  const ssSignal=ssPutSignal||0;
+
+  const W5=500, H5=280;
+  const P5={t:30,r:30,b:45,l:55};
+  const cw5=W5-P5.l-P5.r, ch5=H5-P5.t-P5.b;
+  const xMin5=-50, xMax5=150, yMin5=200, yMax5=700;
+  const xSc5=v=>P5.l+((v-xMin5)/(xMax5-xMin5))*cw5;
+  const ySc5=v=>P5.t+ch5-((v-yMin5)/(yMax5-yMin5))*ch5;
+
+  let svg5='<svg viewBox="0 0 '+W5+' '+H5+'" style="width:100%;display:block">';
+  [-25,0,25,50,75,100,125].forEach(x=>{
+    svg5+='<line x1="'+xSc5(x)+'" y1="'+P5.t+'" x2="'+xSc5(x)+'" y2="'+(P5.t+ch5)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg5+='<text x="'+xSc5(x)+'" y="'+(H5-18)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+x+'</text>';
+  });
+  [250,350,450,550,650].forEach(y=>{
+    svg5+='<line x1="'+P5.l+'" y1="'+ySc5(y)+'" x2="'+(P5.l+cw5)+'" y2="'+ySc5(y)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg5+='<text x="'+(P5.l-4)+'" y="'+(ySc5(y)+3)+'" text-anchor="end" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y+'</text>';
+  });
+  // zero term premium vertical
+  svg5+='<line x1="'+xSc5(0)+'" y1="'+P5.t+'" x2="'+xSc5(0)+'" y2="'+(P5.t+ch5)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>';
+  // SS put threshold
+  const ssThreshX=xSc5(60);
+  svg5+='<line x1="'+ssThreshX+'" y1="'+P5.t+'" x2="'+ssThreshX+'" y2="'+(P5.t+ch5)+'" stroke="var(--c-leaning)" stroke-width="1" stroke-dasharray="6,4" opacity=".6"/>';
+  svg5+='<text x="'+(ssThreshX+3)+'" y="'+(P5.t+10)+'" font-size="8" fill="var(--c-leaning)">SS put threshold</text>';
+  // stress zone shading
+  svg5+='<rect x="'+xSc5(60)+'" y="'+ySc5(yMax5)+'" width="'+(P5.l+cw5-xSc5(60))+'" height="'+(ySc5(450)-ySc5(yMax5))+'" fill="var(--c-stress-hi)" opacity=".04"/>';
+  // current position bubble
+  const cx5=xSc5(Math.max(xMin5,Math.min(xMax5,termPremBp)));
+  const cy5=ySc5(Math.max(yMin5,Math.min(yMax5,hyOAS)));
+  const bubbleCol=ssSignal>0?'var(--c-leaning)':ssSignal<0?'var(--c-stress-lo)':'var(--c-lp)';
+  svg5+='<circle cx="'+cx5+'" cy="'+cy5+'" r="'+bubbleR+'" fill="'+bubbleCol+'" opacity=".35" stroke="'+bubbleCol+'" stroke-width="1.5"/>';
+  svg5+='<circle cx="'+cx5+'" cy="'+cy5+'" r="3" fill="'+bubbleCol+'"/>';
+  svg5+='<text x="'+(cx5+bubbleR+4)+'" y="'+(cy5+4)+'" font-size="10" font-weight="500" fill="'+bubbleCol+'">Now</text>';
+  svg5+='<text x="'+(P5.l+cw5/2)+'" y="'+(H5-2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Term Premium (bp)</text>';
+  svg5+='<text x="14" y="'+(P5.t+ch5/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P5.t+ch5/2)+')">HY OAS (bp)</text>';
+  svg5+='</svg>';
+
+  // --- Panel 4b: Policy feedback circuit (6-node directed graph) ---
+  const W6=560, H6=300;
+  const nds=[
+    {id:'EFFR',  x:280,y:30,  col:'var(--c-cme)'},
+    {id:'LP',    x:500,y:100, col:'var(--c-lp)'},
+    {id:'HY',    x:500,y:210, col:'var(--c-stress-hi)'},
+    {id:'NFCI',  x:280,y:275, col:'var(--c-fin-neutral)'},
+    {id:'FN',    x:60, y:210, col:'var(--c-fin-neutral)'},
+    {id:'TP',    x:60, y:100, col:'var(--c-leaning)'},
+  ];
+  const ndLabels={EFFR:'Policy rate',LP:'DSS Liquidity Prem.',HY:'HY OAS / Risk Premia',NFCI:'Fin. conditions',FN:'Finance-neutral rate',TP:'Term Prem. (SS put)'};
+  const edgs=[
+    {f:'EFFR',t:'LP',  lb:'DSS: rate \u2192 LP'},
+    {f:'LP',  t:'HY',  lb:'\u03d5\u00d7LP \u2192 risk premia'},
+    {f:'HY',  t:'NFCI',lb:'spreads \u2192 NFCI'},
+    {f:'NFCI',t:'FN',  lb:'\u03bb\u00b7NFCI \u2192 fin-neutral'},
+    {f:'FN',  t:'EFFR',lb:'prescription \u2192 rate'},
+    {f:'TP',  t:'EFFR',lb:'SS put: TP\u2191 \u2192 cut'},
+  ];
+  let svg6='<svg viewBox="0 0 '+W6+' '+H6+'" style="width:100%;display:block">';
+  svg6+='<defs><marker id="arr-circ" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--color-text-secondary)"/></marker></defs>';
+  edgs.forEach(e=>{
+    const fn=nds.find(n=>n.id===e.f), tn=nds.find(n=>n.id===e.t);
+    // offset line endpoints to node edge (r=20)
+    const dx=tn.x-fn.x, dy=tn.y-fn.y, d=Math.sqrt(dx*dx+dy*dy);
+    const x1=fn.x+dx/d*22, y1=fn.y+dy/d*22, x2=tn.x-dx/d*22, y2=tn.y-dy/d*22;
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    svg6+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--color-text-tertiary)" stroke-width="1.2" marker-end="url(#arr-circ)" opacity=".6"/>';
+    svg6+='<text x="'+mx+'" y="'+(my-6)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)">'+e.lb+'</text>';
+  });
+  nds.forEach(n=>{
+    svg6+='<circle cx="'+n.x+'" cy="'+n.y+'" r="20" fill="var(--color-background-secondary)" stroke="'+n.col+'" stroke-width="2"/>';
+    svg6+='<text x="'+n.x+'" y="'+(n.y+4)+'" text-anchor="middle" font-size="8.5" font-weight="600" fill="'+n.col+'">'+n.id+'</text>';
+    svg6+='<text x="'+n.x+'" y="'+(n.y+34)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-secondary)">'+ndLabels[n.id]+'</text>';
+  });
+  svg6+='</svg>';
+
+  // --- Panel 5: Financial Cycle Phase Clock (6-axis radar) ---
+  const tpBpClock=(finance.termPremium||0)*100;
+  const lpAbsClock=Math.abs(dss?dss.liquidityPremium:0);
+  // 6 axes normalized to 0-100 percentile
+  const axes=[
+    {lb:'NFCI',       val:Math.min(100,Math.max(0,(nfci/(fsD.nfciP75||0.5))*50+50)),      raw:(nfci>=0?'+':'')+nfci.toFixed(2)},
+    {lb:'Swap lines', val:Math.min(100,(swapLn/(fsD.swapLinesP75||10))*100),                raw:'$'+swapLn.toFixed(1)+'bn'},
+    {lb:'|Xccy basis|',val:Math.min(100,(Math.abs(xccyBp)/Math.abs(fsD.xccyBasisP75||-20))*100), raw:xccyBp.toFixed(0)+' bp'},
+    {lb:'Term prem',  val:Math.min(100,Math.max(0,(tpBpClock/60)*100)),                     raw:tpBpClock.toFixed(0)+' bp'},
+    {lb:'HY OAS',     val:Math.min(100,(hyOAS/(fsD.hyOASP75||500))*100),                    raw:hyOAS.toFixed(0)+' bp'},
+    {lb:'|DSS LP|',   val:Math.min(100,(lpAbsClock/(fsD.lpP75||0.20))*100),                 raw:(lpAbsClock*100).toFixed(0)+' bp'},
+  ];
+  const nAxes=axes.length;
+  const cx7=200, cy7=170, R7=120;
+  const angleStep=2*Math.PI/nAxes;
+  const ptOnAxis=(ai,r)=>{
+    const a=-Math.PI/2+ai*angleStep;
+    return {x:cx7+Math.cos(a)*r, y:cy7+Math.sin(a)*r};
+  };
+
+  let svg7='<svg viewBox="0 0 400 340" style="width:100%;max-width:420px;display:block;margin:0 auto">';
+  // concentric rings at 25,50,75,100%
+  [0.25,0.5,0.75,1.0].forEach(pct=>{
+    const r=R7*pct;
+    let ring='';
+    for(let i=0;i<nAxes;i++){
+      const p=ptOnAxis(i,r);
+      ring+=(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);
+    }
+    ring+='Z';
+    svg7+='<path d="'+ring+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    if(pct===1.0) svg7+='<path d="'+ring+'" fill="none" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  });
+  // axis lines + labels
+  axes.forEach((a,i)=>{
+    const outer=ptOnAxis(i,R7+8);
+    const labelPt=ptOnAxis(i,R7+28);
+    svg7+='<line x1="'+cx7+'" y1="'+cy7+'" x2="'+outer.x.toFixed(1)+'" y2="'+outer.y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg7+='<text x="'+labelPt.x.toFixed(1)+'" y="'+labelPt.y.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="var(--color-text-secondary)">'+a.lb+'</text>';
+    // raw value below label
+    svg7+='<text x="'+labelPt.x.toFixed(1)+'" y="'+(labelPt.y+12).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+a.raw+'</text>';
+  });
+  // filled polygon
+  let polyPath='';
+  axes.forEach((a,i)=>{
+    const r=R7*(a.val/100);
+    const p=ptOnAxis(i,r);
+    polyPath+=(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);
+  });
+  polyPath+='Z';
+  svg7+='<path d="'+polyPath+'" fill="var(--c-fin-neutral)" opacity=".2" stroke="var(--c-fin-neutral)" stroke-width="2"/>';
+  // vertex dots
+  axes.forEach((a,i)=>{
+    const r=R7*(a.val/100);
+    const p=ptOnAxis(i,r);
+    const dotCol=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
+    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+dotCol+'"/>';
+  });
+  // Phase clock index = polygon area / hexagon area * 100
+  // Shoelace formula for polygon area
+  let polyArea=0;
+  axes.forEach((a,i)=>{
+    const r1=R7*(a.val/100), r2=R7*(axes[(i+1)%nAxes].val/100);
+    const p1=ptOnAxis(i,r1), p2=ptOnAxis((i+1)%nAxes,r2);
+    polyArea+=p1.x*p2.y-p2.x*p1.y;
+  });
+  polyArea=Math.abs(polyArea)/2;
+  const hexArea=nAxes*0.5*R7*R7*Math.sin(angleStep); // area of regular hexagon at r=R7
+  const phaseIdx=Math.min(100,(polyArea/hexArea)*100);
+  const phaseCol=phaseIdx>66?'var(--c-stress-hi)':phaseIdx>33?'var(--c-leaning)':'var(--c-stress-lo)';
+  // center label
+  svg7+='<text x="'+cx7+'" y="'+(cy7-4)+'" text-anchor="middle" font-size="22" font-weight="600" fill="'+phaseCol+'">'+phaseIdx.toFixed(0)+'</text>';
+  svg7+='<text x="'+cx7+'" y="'+(cy7+12)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">Phase Clock Index</text>';
+  svg7+='</svg>';
+
+  return (
+    <div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
+        <div>
+          <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Financial Stability</h3>
+          <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+            <span className="data-badge">{fsD.fetched?'live':'seed'}</span>
+            {' '}{fsD.source}{fsD.asOf?' \u00b7 '+fsD.asOf:''}
+          </div>
+        </div>
+        <button className="refresh-btn" onClick={()=>fetchFinancialStability(dispatch)}>&#x27f3; Fetch FRED</button>
+      </div>
+
+      <div style={{background:nfciRegime==='loose'?'rgba(22,163,74,0.07)':nfciRegime==='tight'?'rgba(220,38,38,0.07)':'transparent',borderLeft:'3px solid '+nfciColor,padding:'6px 12px',marginBottom:'12px',fontSize:'11px',color:nfciColor,borderRadius:'0 var(--border-radius-md) var(--border-radius-md) 0'}}>
+        Financial conditions: <b>{nfciRegime.toUpperCase()}</b> regime (NFCI {nfci>=0?'+':''}{nfci.toFixed(2)}).
+        {nfciRegime==='loose'&&' Policy is leaning WITH the financial cycle wind (Borio 2012).'}
+        {nfciRegime==='tight'&&' Conditions tighter than average. Monitor stress indicators.'}
+        {nfciRegime==='neutral'&&' Conditions near historical average.'}
+      </div>
+
+      <div className="k-grid">
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2460 Financial Conditions vs. Policy Stance</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Chicago Fed NFCI (weekly, FRED: NFCI)</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg1}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:nfciColor}}>NFCI</div><div className="fw-stat-v" style={{fontSize:'16px',color:nfciColor}}>{nfci>=0?'+':''}{nfci.toFixed(2)}</div><div className="fw-stat-s">{nfciRegime} regime</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.hyOAS||325).toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA HY index</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Xccy basis</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.xccyBasis||-8).toFixed(0)} bp</div><div className="fw-stat-s">EUR/USD 3M</div></div>
+            <div className="fw-stat">
+              <div className="fw-stat-l">\u03bb_fc (NFCI weight)</div>
+              <div><input className="fw-in" type="number" value={fsD.lambdaFC} style={{width:'55px'}} onChange={e=>setFsd('lambdaFC',e.target.value)} step="0.1" min="0" max="2"/></div>
+              <div className="fw-stat-s">Borio (2012) finance-neutral</div>
+            </div>
+          </div>
+          <div className="k-note">NFCI: Chicago Fed National Financial Conditions Index. Positive = tighter than average. Regime fills per Borio (2014, JBF): financial cycle affects optimal policy stance. \u03bb_fc weights NFCI in finance-neutral Taylor Rule (Panel 2).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2461 Finance-Neutral Taylor Rule Gap</span>
+            <span style={{fontSize:'10px',color:leanColor}}>Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg2}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral rate</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Inflation-neutral only</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>Leaning premium</div><div className="fw-stat-v" style={{fontSize:'16px',color:leanColor}}>{leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</div><div className="fw-stat-s">{leanBp>0?'Market below fin-neutral':'Market at/above fin-neutral'}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot \u2212 ZQ terminal (SS 2018)</div></div>
+          </div>
+          <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (\u03bb_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2461b Gap Decomposition: JR + r* Endogeneity</span>
+            <span style={{fontSize:'10px',color:leanBp>50?'var(--c-stress-hi)':leanBp<-50?'var(--c-stress-lo)':'var(--c-leaning)'}}>
+              Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg3}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">CME terminal</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termRate.toFixed(2)}%</div><div className="fw-stat-s">Market-implied 12M</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Gap: {jrGapBp>=0?'+':''}{jrGapBp.toFixed(0)} bp</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Borio r* adj.</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{(finance.rstarAdj||0.5).toFixed(3)}%</div><div className="fw-stat-s">Corr: {rstarDiffBp>=0?'+':''}{rstarDiffBp.toFixed(0)} bp vs LW</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI + r* corr</div></div>
+          </div>
+          <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
+            <label style={{color:'var(--color-text-secondary)'}}>Credit-GDP gap (\u03c3):
+              <input className="fw-in" type="number" value={fsD.creditGDPGap} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setFsd('creditGDPGap',e.target.value)} step="0.1" min="-3" max="3"/>
+            </label>
+            <label style={{color:'var(--color-text-secondary)'}}>Productivity drag (pp/yr):
+              <input className="fw-in" type="number" value={fsD.productivityDrag} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setFsd('productivityDrag',e.target.value)} step="0.05" min="-2" max="0"/>
+            </label>
+          </div>
+          <div className="k-note">Finance-neutral rule: JR ECM + \u03bb_fc \u00d7 NFCI (Borio 2012/2014). r* endogeneity correction: Borio (2016, Cato J, Pillar II) productivity drag ({fsD.productivityDrag} pp/yr \u00d7 {fsD.cycleHorizonYrs} yr). Finance-neutral output gap: Borio, Disyatat &amp; Juselius (2013, BIS WP404).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2462 Dollar Safe Asset Gauge (McCauley 2019)</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>3-layer assessment</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg4}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:resColor}}>Reserves / GDP</div><div className="fw-stat-v" style={{fontSize:'16px',color:resColor}}>{reservesPctGdp.toFixed(1)}%</div><div className="fw-stat-s">${reserves.toFixed(0)}bn / ${(gdp/1000).toFixed(1)}T</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:swapColor}}>Swap line drawdowns</div><div className="fw-stat-v" style={{fontSize:'16px',color:swapColor}}>${swapLn.toFixed(1)}bn</div><div className="fw-stat-s">{swapLn<1?'No emergency demand':'CB dollar demand active'}</div></div>
+            <div className="fw-stat">
+              <div className="fw-stat-l" style={{color:xccyColor}}>EUR/USD xccy basis</div>
+              <div className="fw-stat-v" style={{fontSize:'16px',color:xccyColor}}>{xccyBp.toFixed(0)} bp</div>
+              <div className="fw-stat-s">
+                <span className="data-badge" style={{background:'var(--color-background-info)',color:'var(--color-text-warning)',fontSize:'9px'}}>\u26a0 manual</span>
+                {' '}<input className="fw-in" type="number" value={fsD.xccyBasis} style={{width:'55px'}} onChange={e=>setFsd('xccyBasis',e.target.value)} step="1"/>
+              </div>
+            </div>
+          </div>
+          <div className="k-note">McCauley (2019, BIS WP 782): the dollar functions as the global safe asset. Layer 1 (structural): Fed reserve balances relative to GDP measure the supply of ultimate dollar safe assets. Layer 2 (institutional): CB swap line drawdowns signal emergency offshore dollar demand. Layer 3 (market): EUR/USD cross-currency basis prices the marginal cost of dollar funding \u2014 deeply negative = acute scarcity. Xccy basis requires manual entry (no free public API).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2463 Doom Loop Scatter: Term Premium vs. HY OAS</span>
+            <span style={{fontSize:'10px',color:bubbleCol}}>
+              SS put: {ssSignal>0?'\u2705 active':ssSignal<0?'\u274c compressed':'\u2014 normal'}
+              {' \u00b7 '}LP bubble: {lpAbs.toFixed(0)} bp
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg5}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">Term premium</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termPremBp.toFixed(0)} bp</div><div className="fw-stat-s">\u03b2\u2080 \u2212 EFFR</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{hyOAS.toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA index</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-lp)'}}>DSS LP</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-lp)'}}>{(dss?dss.liquidityPremium*100:0).toFixed(0)} bp</div><div className="fw-stat-s">Bubble radius</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>SS put signal</div><div className="fw-stat-v" style={{fontSize:'14px',color:bubbleCol}}>{ssSignal>0?'ACTIVE':ssSignal<0?'COMPRESSED':'NORMAL'}</div><div className="fw-stat-s">Stein-Sunderam 2018</div></div>
+          </div>
+          <div className="k-note">Mehrling doom loop: elevated term premium + wide HY spreads + negative LP = reinforcing tightening spiral. Bubble size = |DSS liquidity premium|. Orange = SS put active (TP &gt; 75th pctile). SS put threshold at 60bp (Kim-Wright/ACM historical calibration).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2463b Policy Feedback Circuit (BIS/Mehrling Framework)</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>6-node directed graph</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg6}}/>
+          <div className="k-note">The Mehrling-BIS feedback circuit: EFFR \u2192 DSS liquidity premium \u2192 risk premia (HY OAS) \u2192 NFCI \u2192 finance-neutral rate \u2192 policy prescription \u2192 EFFR. The Stein-Sunderam (2018) term premium put provides an additional stabilizing channel: when TP rises above the 75th percentile, the Fed cuts to mitigate bond-market volatility. When the loop reinforces (all arrows tightening simultaneously), the Mehrling doom loop is active.</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2464 Financial Cycle Phase Clock</span>
+            <span style={{fontSize:'10px',color:phaseCol}}>Phase index: {phaseIdx.toFixed(0)}/100</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg7}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(90px,1fr))',gap:'8px',margin:'10px 0'}}>
+            {axes.map(a=>{
+              const col=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
+              return <div key={a.lb} className="fw-stat"><div className="fw-stat-l">{a.lb}</div><div className="fw-stat-v" style={{fontSize:'14px',color:col}}>{a.val.toFixed(0)}%</div><div className="fw-stat-s">{a.raw}</div></div>;
+            })}
+          </div>
+          <div className="k-note">6-axis radar normalized to historical 75th percentile thresholds. Phase clock index = polygon area / full hexagon area \u00d7 100. Green (&lt;33): benign. Amber (33\u201366): monitor. Red (&gt;66): stress regime. Axes: NFCI (Chicago Fed), swap lines (FRED: SWPT), |xccy basis| (manual), term premium (\u03b2\u2080\u2212EFFR), HY OAS (FRED: BAMLH0A0HYM2), |DSS liquidity premium| (Nagel 2016 proxy). Framework synthesis: Borio (2012/2016), McCauley (2019), Stein-Sunderam (2018), DSS (2018).</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
 // REACT APP
 // ============================================================================
 
@@ -2902,6 +3961,9 @@ function App() {
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
     {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
     {id:'riding',     label:'\ud83d\udcca Riding'},
+    {id:'_divider'},
+    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet'},
+    {id:'fs',         label:'\ud83d\udee1 Fin. Stability'},
   ];
 
   return (
@@ -2928,18 +3990,20 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (ZQ futures chain) · Kalshi &amp; Polymarket prediction markets · SOFR strip · Dashboard · Nelson-Siegel yield curve · Taylor Rule suite · Bieri-Chincarini riding calculator. 12 months forward, 9 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (ZQ futures chain) · Kalshi &amp; Polymarket prediction markets · SOFR strip · Dashboard · Nelson-Siegel yield curve · Taylor Rule suite (6 variants) · Bieri-Chincarini riding calculator · Fed balance sheet &amp; QT monitor · Financial stability (BIS/Mehrling). 12 months forward, 11 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
 
       <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
-        {TABS.map(t=>(
-          <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
-            onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
-            {t.label}
-          </div>
-        ))}
+        {TABS.map(t=>
+          t.id==='_divider'
+            ? <span key="_div" className="tab-group-divider" title="Analytics tabs">|</span>
+            : <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
+                onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
+                {t.label}
+              </div>
+        )}
       </div>
 
       {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}
@@ -2957,7 +4021,9 @@ function App() {
         fetching={fetching} setFetching={setFetching}
         refreshStatus={refreshStatus} setRefreshStatus={setRefreshStatus} apiKey={apiKey}/>}
       {state.fwActive==='riding' && <RidingTab state={state} dispatch={dispatch} finance={finance}/>}
-      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding'].includes(state.fwActive) &&
+      {state.fwActive==='bs' && <BalanceSheetTab state={state} dispatch={dispatch} finance={finance}/>}
+      {state.fwActive==='fs' && <FinStabTab state={state} dispatch={dispatch} finance={finance}/>}
+      {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','bs','fs'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
     </div>
   );
