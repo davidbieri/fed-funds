@@ -3568,6 +3568,85 @@ function FinStabTab({state, dispatch, finance}) {
   svg4+=gaugeBar(2, xccyBp, -50, 10, xccyColor, 'Xccy basis', 'bp');
   svg4+='</svg>';
 
+  // --- Panel 4: Doom loop scatter (term premium vs HY OAS, bubble = LP) ---
+  const termPremBp=(finance.termPremium||0)*100;
+  const hyOAS=fsD.hyOAS||325;
+  const lpAbs=Math.abs(dss?dss.liquidityPremium:0)*100;
+  const bubbleR=Math.max(5,Math.min(25,lpAbs*1.5));
+  const ssSignal=ssPutSignal||0;
+
+  const W5=500, H5=280;
+  const P5={t:30,r:30,b:45,l:55};
+  const cw5=W5-P5.l-P5.r, ch5=H5-P5.t-P5.b;
+  const xMin5=-50, xMax5=150, yMin5=200, yMax5=700;
+  const xSc5=v=>P5.l+((v-xMin5)/(xMax5-xMin5))*cw5;
+  const ySc5=v=>P5.t+ch5-((v-yMin5)/(yMax5-yMin5))*ch5;
+
+  let svg5='<svg viewBox="0 0 '+W5+' '+H5+'" style="width:100%;display:block">';
+  [-25,0,25,50,75,100,125].forEach(x=>{
+    svg5+='<line x1="'+xSc5(x)+'" y1="'+P5.t+'" x2="'+xSc5(x)+'" y2="'+(P5.t+ch5)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg5+='<text x="'+xSc5(x)+'" y="'+(H5-18)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+x+'</text>';
+  });
+  [250,350,450,550,650].forEach(y=>{
+    svg5+='<line x1="'+P5.l+'" y1="'+ySc5(y)+'" x2="'+(P5.l+cw5)+'" y2="'+ySc5(y)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg5+='<text x="'+(P5.l-4)+'" y="'+(ySc5(y)+3)+'" text-anchor="end" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y+'</text>';
+  });
+  // zero term premium vertical
+  svg5+='<line x1="'+xSc5(0)+'" y1="'+P5.t+'" x2="'+xSc5(0)+'" y2="'+(P5.t+ch5)+'" stroke="var(--color-text-tertiary)" stroke-width="1" stroke-dasharray="4,3"/>';
+  // SS put threshold
+  const ssThreshX=xSc5(60);
+  svg5+='<line x1="'+ssThreshX+'" y1="'+P5.t+'" x2="'+ssThreshX+'" y2="'+(P5.t+ch5)+'" stroke="var(--c-leaning)" stroke-width="1" stroke-dasharray="6,4" opacity=".6"/>';
+  svg5+='<text x="'+(ssThreshX+3)+'" y="'+(P5.t+10)+'" font-size="8" fill="var(--c-leaning)">SS put threshold</text>';
+  // stress zone shading
+  svg5+='<rect x="'+xSc5(60)+'" y="'+ySc5(yMax5)+'" width="'+(P5.l+cw5-xSc5(60))+'" height="'+(ySc5(450)-ySc5(yMax5))+'" fill="var(--c-stress-hi)" opacity=".04"/>';
+  // current position bubble
+  const cx5=xSc5(Math.max(xMin5,Math.min(xMax5,termPremBp)));
+  const cy5=ySc5(Math.max(yMin5,Math.min(yMax5,hyOAS)));
+  const bubbleCol=ssSignal>0?'var(--c-leaning)':ssSignal<0?'var(--c-stress-lo)':'var(--c-lp)';
+  svg5+='<circle cx="'+cx5+'" cy="'+cy5+'" r="'+bubbleR+'" fill="'+bubbleCol+'" opacity=".35" stroke="'+bubbleCol+'" stroke-width="1.5"/>';
+  svg5+='<circle cx="'+cx5+'" cy="'+cy5+'" r="3" fill="'+bubbleCol+'"/>';
+  svg5+='<text x="'+(cx5+bubbleR+4)+'" y="'+(cy5+4)+'" font-size="10" font-weight="500" fill="'+bubbleCol+'">Now</text>';
+  svg5+='<text x="'+(P5.l+cw5/2)+'" y="'+(H5-2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Term Premium (bp)</text>';
+  svg5+='<text x="14" y="'+(P5.t+ch5/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P5.t+ch5/2)+')">HY OAS (bp)</text>';
+  svg5+='</svg>';
+
+  // --- Panel 4b: Policy feedback circuit (6-node directed graph) ---
+  const W6=560, H6=300;
+  const nds=[
+    {id:'EFFR',  x:280,y:30,  col:'var(--c-cme)'},
+    {id:'LP',    x:500,y:100, col:'var(--c-lp)'},
+    {id:'HY',    x:500,y:210, col:'var(--c-stress-hi)'},
+    {id:'NFCI',  x:280,y:275, col:'var(--c-fin-neutral)'},
+    {id:'FN',    x:60, y:210, col:'var(--c-fin-neutral)'},
+    {id:'TP',    x:60, y:100, col:'var(--c-leaning)'},
+  ];
+  const ndLabels={EFFR:'Policy rate',LP:'DSS Liquidity Prem.',HY:'HY OAS / Risk Premia',NFCI:'Fin. conditions',FN:'Finance-neutral rate',TP:'Term Prem. (SS put)'};
+  const edgs=[
+    {f:'EFFR',t:'LP',  lb:'DSS: rate \u2192 LP'},
+    {f:'LP',  t:'HY',  lb:'\u03d5\u00d7LP \u2192 risk premia'},
+    {f:'HY',  t:'NFCI',lb:'spreads \u2192 NFCI'},
+    {f:'NFCI',t:'FN',  lb:'\u03bb\u00b7NFCI \u2192 fin-neutral'},
+    {f:'FN',  t:'EFFR',lb:'prescription \u2192 rate'},
+    {f:'TP',  t:'EFFR',lb:'SS put: TP\u2191 \u2192 cut'},
+  ];
+  let svg6='<svg viewBox="0 0 '+W6+' '+H6+'" style="width:100%;display:block">';
+  svg6+='<defs><marker id="arr-circ" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--color-text-secondary)"/></marker></defs>';
+  edgs.forEach(e=>{
+    const fn=nds.find(n=>n.id===e.f), tn=nds.find(n=>n.id===e.t);
+    // offset line endpoints to node edge (r=20)
+    const dx=tn.x-fn.x, dy=tn.y-fn.y, d=Math.sqrt(dx*dx+dy*dy);
+    const x1=fn.x+dx/d*22, y1=fn.y+dy/d*22, x2=tn.x-dx/d*22, y2=tn.y-dy/d*22;
+    const mx=(x1+x2)/2, my=(y1+y2)/2;
+    svg6+='<line x1="'+x1+'" y1="'+y1+'" x2="'+x2+'" y2="'+y2+'" stroke="var(--color-text-tertiary)" stroke-width="1.2" marker-end="url(#arr-circ)" opacity=".6"/>';
+    svg6+='<text x="'+mx+'" y="'+(my-6)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)">'+e.lb+'</text>';
+  });
+  nds.forEach(n=>{
+    svg6+='<circle cx="'+n.x+'" cy="'+n.y+'" r="20" fill="var(--color-background-secondary)" stroke="'+n.col+'" stroke-width="2"/>';
+    svg6+='<text x="'+n.x+'" y="'+(n.y+4)+'" text-anchor="middle" font-size="8.5" font-weight="600" fill="'+n.col+'">'+n.id+'</text>';
+    svg6+='<text x="'+n.x+'" y="'+(n.y+34)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-secondary)">'+ndLabels[n.id]+'</text>';
+  });
+  svg6+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3669,6 +3748,33 @@ function FinStabTab({state, dispatch, finance}) {
             </div>
           </div>
           <div className="k-note">McCauley (2019, BIS WP 782): the dollar functions as the global safe asset. Layer 1 (structural): Fed reserve balances relative to GDP measure the supply of ultimate dollar safe assets. Layer 2 (institutional): CB swap line drawdowns signal emergency offshore dollar demand. Layer 3 (market): EUR/USD cross-currency basis prices the marginal cost of dollar funding \u2014 deeply negative = acute scarcity. Xccy basis requires manual entry (no free public API).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2463 Doom Loop Scatter: Term Premium vs. HY OAS</span>
+            <span style={{fontSize:'10px',color:bubbleCol}}>
+              SS put: {ssSignal>0?'\u2705 active':ssSignal<0?'\u274c compressed':'\u2014 normal'}
+              {' \u00b7 '}LP bubble: {lpAbs.toFixed(0)} bp
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg5}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">Term premium</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termPremBp.toFixed(0)} bp</div><div className="fw-stat-s">\u03b2\u2080 \u2212 EFFR</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{hyOAS.toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA index</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-lp)'}}>DSS LP</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-lp)'}}>{(dss?dss.liquidityPremium*100:0).toFixed(0)} bp</div><div className="fw-stat-s">Bubble radius</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>SS put signal</div><div className="fw-stat-v" style={{fontSize:'14px',color:bubbleCol}}>{ssSignal>0?'ACTIVE':ssSignal<0?'COMPRESSED':'NORMAL'}</div><div className="fw-stat-s">Stein-Sunderam 2018</div></div>
+          </div>
+          <div className="k-note">Mehrling doom loop: elevated term premium + wide HY spreads + negative LP = reinforcing tightening spiral. Bubble size = |DSS liquidity premium|. Orange = SS put active (TP &gt; 75th pctile). SS put threshold at 60bp (Kim-Wright/ACM historical calibration).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2463b Policy Feedback Circuit (BIS/Mehrling Framework)</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>6-node directed graph</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg6}}/>
+          <div className="k-note">The Mehrling-BIS feedback circuit: EFFR \u2192 DSS liquidity premium \u2192 risk premia (HY OAS) \u2192 NFCI \u2192 finance-neutral rate \u2192 policy prescription \u2192 EFFR. The Stein-Sunderam (2018) term premium put provides an additional stabilizing channel: when TP rises above the 75th percentile, the Fed cuts to mitigate bond-market volatility. When the loop reinforces (all arrows tightening simultaneously), the Mehrling doom loop is active.</div>
         </div>
       </div>
     </div>
