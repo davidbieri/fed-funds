@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Landing Page CSS (Session INDEX-A)
+- CSS theme system: light/dark toggle via `data-theme` attribute on `<html>`
+- Sticky nav with backdrop blur, `.active` link state, `.scrolled` shadow, `.nav-theme` toggle button
+- Tab card identity color system (`--card-accent` per card, `.tab-num` inherits accent color)
+- Typography scale +1–2px across all elements (section-label, tab-group-head, hero-sub, stat-n, etc.)
+- `.tab-new` badge class for recently added tabs
+- `.mkt.mpt` + `.mkt.fred2` source card classes (Taylor rose, Financial teal)
+- Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
+- Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
+
 ---
 
 ## [4.1] — March 2026
