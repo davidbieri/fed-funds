@@ -16,6 +16,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page CSS (Session INDEX-C)
+- Session INDEX-C: light-mode accent contrast system (--*-text variants,
+  darker hues for white bg legibility); nav/wrap horizontal padding increase;
+  section-label, ug-ntab, ug-head, ug-body font-size increases
+
 ### Changed — Landing Page HTML (Session INDEX-B)
 - `data-theme="light"` default on `<html>`, sticky nav with 4 anchor links (#tabs #sources #guide #cite) + theme toggle button
 - Hero stat 10→11 tabs, hero eyebrow updated with Balance Sheet + Financial Stability
