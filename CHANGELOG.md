@@ -16,6 +16,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-G)
+- Session INDEX-G: probability tree SVG illustrative lattice added (3-meeting
+  example, opacity-encoded nodes, terminal distribution bars, legend);
+  prediction markets panel ⑩ Signal/Noise card added; all 10 panel cards
+  color-coded by primary source (CME blue / Kalshi orange / Polymarket cyan)
+
 ### Changed — Landing Page (Session INDEX-F)
 - Session INDEX-F: How it works — standardized design language across all 10
   tabs (PURPOSE / MECHANICS / WHAT TO LOOK FOR / KEY OUTPUT template);
