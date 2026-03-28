@@ -856,6 +856,59 @@ function reducer(state, action){
 }
 
 // ============================================================================
+// MATH LAYER --- Phase 6: Balance Sheet & Financial Stability
+// ============================================================================
+
+// qtShadowAdjChannels(bsD) -> { total, components: { duration, safety, signaling, mbs } }
+// 4-channel shadow rate decomposition: Krishnamurthy & Vissing-Jorgensen (2011, BPEA).
+// KVJ show QE works through distinct channels; QT reverses the sign.
+// Calibration: KVJ event-study magnitudes scaled from stock ($600bn QE1) to
+// steady-state flow using Gagnon et al. (2011) flow/stock ratio ~1/20.
+// Positive output = tightening effect (BS above neutral = accommodative = negative tighten).
+function qtShadowAdjChannels(bsD){
+  const neutralT   = (bsD.neutralFloor || 6200) * 0.52;
+  const neutralMBS = (bsD.neutralFloor || 6200) * 0.27;
+  const excessT    = (bsD.treasuries   || 4400) - neutralT;
+  const excessMBS  = (bsD.mbs          || 2300) - neutralMBS;
+  // Duration risk channel (Vayanos-Vila preferred habitat, Greenwood-Vayanos 2010)
+  // KVJ: $600bn QE => ~33bp on 10yr; k_dur = 33/600/20 = 0.00275 bp per $bn
+  const duration  = -(excessT + excessMBS) * 0.00275 * 12;
+  // Safety channel (KVJ 2010, 2012 JPE) -- Treasuries only
+  // k_safe = 0.0015 bp per $bn per month
+  const safety    = -excessT * 0.0015 * 12;
+  // Signaling channel (Eggertsson-Woodford 2003) -- T-only
+  // k_sig = 0.0010 bp per $bn per month
+  const signaling = -excessT * 0.0010 * 12;
+  // MBS prepayment/default risk channel -- MBS only
+  // KVJ: QE1 MBS => ~50bp; k_mbs = 0.0035 bp per $bn per month
+  const mbs       = -excessMBS * 0.0035 * 12;
+  const total = duration + safety + signaling + mbs;
+  return {total, components:{duration, safety, signaling, mbs}};
+}
+
+// steinSVR(bsD) -> bp
+// Shadow Value of Reserves -- Stein (2012, QJE 127:1, Section IV).
+// SVR = EFFR - IORB (observable from FRED DFF - DFEDTARL).
+// SVR < 5bp: ample reserves; 5-15bp: transition; >15bp: scarce (Sep 2019 hit ~40bp).
+function steinSVR(bsD){
+  return ((bsD.effr || 4.33) - (bsD.iorb || 4.40)) * 100;
+}
+
+// dssRiskChannel(bsD) -> { liquidityPremium, impliedLeverage, riskPremiumEffect }
+// Drechsler, Savov & Schnabl (2018, JoF 73:1) -- nominal rate controls liquidity premium.
+// Empirical proxy (Nagel 2016, QJE): LP = 3M T-bill - IORB.
+// DSS mechanism: LP -> leverage -> risk premia; phi ~ 2 (bank leverage multiplier).
+function dssRiskChannel(bsD){
+  const lp  = (bsD.tbill3m || 4.25) - (bsD.iorb || 4.40);
+  const phi = 2.0;
+  return {
+    liquidityPremium:  lp,
+    impliedLeverage:   Math.max(0, 10 + lp * 5),
+    riskPremiumEffect: lp * phi
+  };
+}
+
+// ============================================================================
 // DERIVED COMPUTATION HOOK
 // ============================================================================
 
@@ -954,8 +1007,14 @@ function useFinance(state) {
     // Riding-the-yield-curve matrix
     const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters);
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData};
-  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters]);
+    // Phase 6: Balance Sheet analytics
+    const qtChannels     = qtShadowAdjChannels(state.bsD);
+    const svr            = steinSVR(state.bsD);
+    const dss            = dssRiskChannel(state.bsD);
+    const combinedStance = effrStart + qtChannels.total / 100;
+
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance};
+  }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD]);
 }
 
 // ============================================================================
