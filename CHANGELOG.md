@@ -22,6 +22,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-B5: Tab 11 Panel 5 -- Financial Cycle Phase Clock; 6-axis hexagonal radar SVG (NFCI, swap lines, |xccy basis|, term premium, HY OAS, |DSS LP|) normalized to 75th percentile thresholds; concentric rings, teal filled polygon, color-coded vertex dots; phase clock index via shoelace formula (polygon area / hexagon area); stat cards for all 6 axes
 - Session 6-B6: Dashboard (Tab 06) regime summary box -- 5 new rows: Stein SVR (reserve scarcity), DSS liquidity premium, combined stance (rate + shadow), SS gradualism gap, Borio leaning premium; all color-coded with threshold logic
 - Session 6-B7: Riding Calculator (Tab 09) filter #6 -- SS put signal toggle; ssPut added to rideFilters, rideMatrix extended with ssPutSignalVal param, ssPutSignal computed before rideData in useFinance
+- Session 6-B8: Yield Curve (Tab 07) QT shock channel -- qtYieldShock() math function (KVJ 2011 + D'Amico-King 2013 loadings); QT shocked NS curve computed in useFinance; sky-blue dashed overlay on curve chart with legend; QT (12M) row in shock impact table; links Tab 07 to Tab 10 balance sheet via monthlyRunoff
 
 ---
 

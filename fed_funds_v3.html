@@ -911,6 +911,14 @@ function dssRiskChannel(bsD){
   };
 }
 
+// qtYieldShock(monthlyRunoff, months) -> { mat: bp_change }
+// QT impact on yield curve by maturity: KVJ (2011) + D'Amico-King (2013).
+// bp change per $bn*month of runoff, calibrated from flow/stock estimates.
+function qtYieldShock(monthlyRunoff, months){
+  const t=monthlyRunoff*months;
+  return {0.25:t*0.02, 0.5:t*0.025, 1:t*0.03, 2:t*0.03, 5:t*0.08, 7:t*0.09, 10:t*0.10, 20:t*0.07, 30:t*0.04};
+}
+
 // nsSafetyPremium(bsD) -> bp
 // KVJ (2012, JPE 120:2): Treasury supply affects safety premium paid for near-zero-default assets.
 // Each 1% of GDP change in T supply (private hands) => ~7bp change in safety premium.
@@ -1075,6 +1083,14 @@ function useFinance(state) {
       };
     });
 
+    // QT shock curve: 12M of balance sheet runoff applied to yield curve
+    const qtShocks = qtYieldShock(state.bsD.monthlyRunoff||60, 12);
+    const qtShockedYcD = syncedYcD.map(pt=>{
+      const closest = [0.25,0.5,1,2,5,7,10,20,30].reduce((b,m)=>Math.abs(m-pt.mat)<Math.abs(b-pt.mat)?m:b);
+      return {...pt, rate: pt.rate + (qtShocks[closest]||0)/100};
+    });
+    const qtShockedParams = nsFit(qtShockedYcD.map(d=>({mat:d.mat, rate:d.rate})));
+
     // Phase 6: Balance Sheet analytics
     const qtChannels     = qtShadowAdjChannels(state.bsD);
     const svr            = steinSVR(state.bsD);
@@ -1094,7 +1110,7 @@ function useFinance(state) {
     // Riding-the-yield-curve matrix (after ssPutSignal for filter #6)
     const rideData = rideMatrix(syncedYcD, nsFitParams, scenarioCurves, state.fwD, state.fwLb, taylorSignalVal, state.rideFilters, ssPutSignal);
 
-    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance, terminalRate, safetyPremBp, finNeutralGap:fnGap, rstarAdj, finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal};
+    return {chain, meetings, states, final, zqAvgs, instFwd, compareSeries, effrStart, syncedYcD, trRates, taylorSignalVal, taylorJRRate, jrImpliedPath, nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, termPremium, scenarioCurves, rideData, qtChannels, steinSVR:svr, dss, combinedStance, terminalRate, safetyPremBp, finNeutralGap:fnGap, rstarAdj, finNeutralRate:fnRate, leaningPremium:leanPrem, gradualismGap:gradGap, ssPutSignal, qtShocks, qtShockedParams};
   }, [state.fwD, state.srD, state.ycD, state.fwCompareScenario, state.fwLb, state.trD, state.rideFilters, state.bsD, state.fsD]);
 }
 
@@ -2763,7 +2779,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
 }
 
 function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refreshStatus, setRefreshStatus, apiKey}) {
-  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD} = finance;
+  const {nsFitParams, nsCurvePoints, nsForwardPoints, nsFactors, scenarioCurves, syncedYcD, qtShocks, qtShockedParams} = finance;
   const [selectedMeeting, setSelectedMeeting] = React.useState(null);
   const [showAll, setShowAll] = React.useState(false);
   const [model, setModel] = React.useState('ns');
@@ -2806,6 +2822,12 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       svg+='<polyline points="'+pts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.5" opacity="'+opacity+'" stroke-dasharray="4,2"/>';
     });
 
+    // QT shock curve (sky-blue dashed)
+    if(qtShockedParams){
+      var qtPts = Array.from({length:80},function(_,i){var m=0.08+(i/79)*29.92;return xs(m).toFixed(1)+','+ys(nsYield(m,qtShockedParams)).toFixed(1);}).join(' ');
+      svg+='<polyline points="'+qtPts+'" fill="none" stroke="var(--c-bs)" stroke-width="1.8" stroke-dasharray="8,4" opacity=".7"/>';
+    }
+
     // NS instantaneous forward (dashed amber)
     var fwdPts = nsForwardPoints.map(function(d){return xs(d.mat).toFixed(1)+','+ys(d.rate).toFixed(1);}).join(' ');
     svg+='<polyline points="'+fwdPts+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".5"/>';
@@ -2830,6 +2852,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
     svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
     svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
     svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd \u00b7 --- scenario</text>';
+    svg+='<text x="'+(ml+330)+'" y="14" font-size="8" fill="var(--c-bs)" font-family="var(--font-sans)">--- QT shock (12M)</text>';
     svg+='</svg>';
     return svg;
   }
@@ -2855,6 +2878,20 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(slopeChg)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+(parseFloat(slopeChg)>0?'+':'')+slopeChg+'</td>';
       h+='<td>'+signal+'</td></tr>';
     });
+    // QT shock row
+    if(qtShocks){
+      var qtTotal=Object.values(qtShocks).reduce(function(s,v){return s+v;},0)/Object.keys(qtShocks).length;
+      h+='<tr style="border-top:1.5px solid var(--color-border-secondary)">';
+      h+='<td style="white-space:nowrap;font-weight:500;color:var(--c-bs)">QT (12M)</td>';
+      h+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">\u2014</td>';
+      mats.forEach(function(mt){
+        var d=(qtShocks[mt.m]||0).toFixed(1);
+        h+='<td style="font-family:var(--font-mono);color:var(--c-bs)">+'+d+'</td>';
+      });
+      var qtSlope=((qtShocks[2]||0)-(qtShocks[10]||0)).toFixed(1);
+      h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(qtSlope)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+qtSlope+'</td>';
+      h+='<td style="color:var(--c-bs)">KVJ+D\u2019Amico</td></tr>';
+    }
     h+='</tbody></table>';
     return h;
   }
@@ -3004,7 +3041,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
           </div>
         </div>
         <SvgPanel html={buildCurveChart()}/>
-        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting. X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp. Click a meeting button to overlay the shocked curve for that meeting.</div>
+        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting \u00b7 sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'\u2019'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
       </div>
 
       {/* Shock impact table */}
