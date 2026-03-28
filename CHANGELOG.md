@@ -16,6 +16,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-H)
+- Session INDEX-H: SOFR strip illustrative SVG added (3-curve chart with
+  SR3/ZQ/forward + basis bars + trough marker + legend); yield curve
+  illustrative SVG added (CMT data points + NS spot + forward + scenario
+  fan curves + factor cards + RMSE badge)
+
 ### Changed — Landing Page (Session INDEX-G)
 - Session INDEX-G: probability tree SVG illustrative lattice added (3-meeting
   example, opacity-encoded nodes, terminal distribution bars, legend);
