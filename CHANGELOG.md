@@ -6,23 +6,72 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
-- Session 6-A0: Phase 6 CSS tokens (9 new custom properties for balance sheet and financial stability), dark-mode variants, `.tab-group-divider` style, tab nav restructured with divider between Dashboard and Yield Curve groups, `bs` and `fs` tab entries added to TABS array
-- Session 6-A1: bsD (14 fields) + fsD (19 fields) added to INITIAL_STATE; APPLY_BALANCE_SHEET, APPLY_FIN_STAB, SET_BSD, SET_FSD reducer cases added; 'bs' and 'fs' registered in tab routing array
-- Session 6-A2: fetchBalanceSheet() (8 FRED H.4.1 series: WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3) and fetchFinancialStability() (3 FRED series: NFCI, SWPT, BAMLH0A0HYM2) batch-fetch functions added
-- Session 6-A2b: Math Batch 1 -- qtShadowAdjChannels (KVJ 2011 4-channel decomposition), steinSVR (Stein 2012 shadow value of reserves), dssRiskChannel (DSS 2018 liquidity premium); all wired into useFinance with combinedStance
-- Session 6-A2c: Math Batch 2 -- nsSafetyPremium (KVJ 2012), finNeutralOutputGap (BDJ 2013), finCycleAdjustedRstar (Borio 2016 Pillar II), finNeutralRate (Borio NFCI-augmented JR), leaningPremium, gradualismGap (SS 2018), ssTermPremiumPutSignal; sepLongRunDot added to trD; all wired into useFinance
-- Session 6-A3: Tab 10 (Balance Sheet) Panels 1+2 -- BalanceSheetTab component with composition stacked bar chart (current vs neutral floor), KVJ 4-channel breakdown, editable neutral floor/runoff inputs, runoff pace vs cap bar chart with MBS undershoot; Fetch H.4.1 button; tab routing wired
-- Session 6-A4: Tab 10 Panels 3+4 -- Corridor mechanics (IORB, EFFR, Stein SVR, DSS liquidity premium, RRP with regime color coding), two-instrument policy space scatter (9 historical episodes, current position, neutral floor reference, combined stance)
-- Session 6-A5: Tab 07 NS beta0 decomposition -- 4-component breakdown (r*+pi*, psi_safety KVJ 2012, psi_leverage DSS 2018, residual) added to Yield Curve factor cards panel; seed badge when bsD not fetched
-- Session 6-B1: Tab 11 (Financial Stability) shell + Panel 1 -- FinStabTab component with NFCI regime detection (loose/neutral/tight), colored regime band, NFCI horizontal gauge SVG with 3 zones and needle, stat cards (NFCI, HY OAS, xccy basis, editable lambda_fc); Fetch FRED button; tab routing wired
-- Session 6-B2: Tab 11 Panel 2 -- Finance-neutral Taylor Rule gap visualization; horizontal rate comparison SVG (EFFR, JR ECM, finance-neutral, ZQ terminal, SEP dot); leaning premium shaded region + annotation; stat cards (finance-neutral rate, JR prescribed, leaning premium, gradualism gap SS 2018)
-- Session 6-B4: Tab 11 Panel 4 -- Doom loop scatter (term premium vs HY OAS, LP bubble size, SS put threshold, stress zone shading); Panel 4b -- 6-node policy feedback circuit directed graph (EFFR/LP/HY/NFCI/FN/TP with labeled edges); Mehrling doom loop framework
-- Session 6-B3: Tab 11 Panel 3 -- McCauley (2019) dollar safe asset gauge; 3-layer horizontal bars (reserves/GDP, swap line drawdowns, EUR/USD xccy basis); color-coded regime thresholds; manual-entry amber badge for xccy basis with inline input
-- Session 6-B2b: Tab 11 Panel 2b -- Gap decomposition stacked bar (JR gap + Borio r* endogeneity correction); leaning premium arrow with marker; editable credit-GDP gap and productivity drag inputs; Borio (2016 Pillar II) r* adjustment displayed. Tab 08 Taylor Rule 6th variant (finance-neutral): trRates.finNeutral in useFinance, teal dashed line in chart SVG, variant chip, summary card, decomposition table column, rule comparison table entry with Borio badge. Borio r* toggle checkbox in coefficient panel -- when enabled, all 6 Taylor variants use finCycleAdjustedRstar instead of LW r*; useFinCycleRstar added to trD initial state
-- Session 6-B5: Tab 11 Panel 5 -- Financial Cycle Phase Clock; 6-axis hexagonal radar SVG (NFCI, swap lines, |xccy basis|, term premium, HY OAS, |DSS LP|) normalized to 75th percentile thresholds; concentric rings, teal filled polygon, color-coded vertex dots; phase clock index via shoelace formula (polygon area / hexagon area); stat cards for all 6 axes
-- Session 6-B6: Dashboard (Tab 06) regime summary box -- 5 new rows: Stein SVR (reserve scarcity), DSS liquidity premium, combined stance (rate + shadow), SS gradualism gap, Borio leaning premium; all color-coded with threshold logic
-- Session 6-B7: Riding Calculator (Tab 09) filter #6 -- SS put signal toggle; ssPut added to rideFilters, rideMatrix extended with ssPutSignalVal param, ssPutSignal computed before rideData in useFinance
-- Session 6-B8: Yield Curve (Tab 07) QT shock channel -- qtYieldShock() math function (KVJ 2011 + D'Amico-King 2013 loadings); QT shocked NS curve computed in useFinance; sky-blue dashed overlay on curve chart with legend; QT (12M) row in shock impact table; links Tab 07 to Tab 10 balance sheet via monthlyRunoff
+---
+
+## [4.1] — March 2026
+
+### Added — Balance Sheet & QT Monitor (Tab 10)
+
+- **BalanceSheetTab**: 4-panel layout with Fetch H.4.1 button (8 FRED series)
+- Panel 1: Composition stacked bars (current vs neutral floor), KVJ (2011) 4-channel shadow rate decomposition (duration, safety, signaling, MBS), editable neutral floor + monthly runoff
+- Panel 2: Monthly runoff pace vs cap (Treasury + MBS) with cumulative MBS undershoot
+- Panel 3: Corridor mechanics — IORB, EFFR, Stein (2012) SVR, DSS (2018) liquidity premium, RRP with 3-tier regime coloring
+- Panel 4: Two-instrument policy space scatter — 9 historical episodes (Pre-GFC through 2023), current "Now" position, neutral floor reference, combined stance (EFFR + KVJ shadow)
+
+### Added — Financial Stability (Tab 11)
+
+- **FinStabTab**: 7-panel layout with NFCI regime band and Fetch FRED button (3 series)
+- Panel 1: NFCI horizontal gauge with 3 zones (loose/neutral/tight), stat cards (NFCI, HY OAS, xccy basis, editable lambda_fc)
+- Panel 2: Finance-neutral Taylor Rule gap — 5 rate dots (EFFR, JR, fin-neutral, ZQ terminal, SEP dot), leaning premium shaded region
+- Panel 2b: Gap decomposition stacked bar (JR base gap + Borio r* correction), leaning premium arrow, editable credit-GDP gap and productivity drag
+- Panel 3: McCauley (2019) dollar safe asset gauge — 3-layer bars (reserves/GDP, swap line drawdowns, EUR/USD xccy basis)
+- Panel 4: Doom loop scatter (term premium vs HY OAS, DSS LP bubble size, SS put threshold)
+- Panel 4b: Policy feedback circuit — 6-node directed graph (EFFR/LP/HY/NFCI/FN/TP)
+- Panel 5: Financial Cycle Phase Clock — 6-axis hexagonal radar, shoelace area index (0-100)
+
+### Added — Math layer (10 pure functions)
+
+- `qtShadowAdjChannels()`: KVJ (2011) 4-channel shadow rate decomposition
+- `steinSVR()`: Stein (2012) shadow value of reserves (EFFR - IORB)
+- `dssRiskChannel()`: DSS (2018) liquidity premium, implied leverage, risk premium effect
+- `nsSafetyPremium()`: KVJ (2012) Treasury supply safety premium
+- `finNeutralOutputGap()`: BDJ (2013) finance-neutral output gap
+- `finCycleAdjustedRstar()`: Borio (2016 Pillar II) productivity-drag r* correction
+- `finNeutralRate()`: Borio (2012/2014) JR ECM + lambda*NFCI augmentation
+- `leaningPremium()`: finance-neutral vs market-implied terminal gap
+- `gradualismGap()`: Stein & Sunderam (2018) SEP dot vs ZQ terminal
+- `ssTermPremiumPutSignal()`: SS (2018) term premium put signal (+1/0/-1)
+- `qtYieldShock()`: KVJ (2011) + D'Amico-King (2013) QT yield curve loadings
+
+### Added — Cross-tab integration
+
+- **Tab 07 (Yield Curve)**: NS beta0 decomposition (r* + pi* + psi_safety + psi_leverage + residual); QT shock curve overlay (sky-blue dashed) with shock impact table row
+- **Tab 08 (Taylor Rule)**: 6th variant (finance-neutral, teal dashed); Borio r* toggle checkbox; finance-neutral column in decomposition table and rule comparison matrix
+- **Tab 06 (Dashboard)**: 5 new regime rows (Stein SVR, DSS LP, combined stance, SS gradualism gap, Borio leaning premium)
+- **Tab 09 (Riding)**: 6th filter (SS term-premium put signal)
+
+### Added — Data layer
+
+- `bsD` state object (14 fields): Fed H.4.1 weekly balance sheet data
+- `fsD` state object (19 fields): financial stability indicators + model parameters
+- `fetchBalanceSheet()`: 8 FRED series (WALCL, WTREGEN, WMBSEC, RRPONTSYD, WRESBAL, DFEDTARL, DFF, DTB3)
+- `fetchFinancialStability()`: 3 FRED series (NFCI, SWPT, BAMLH0A0HYM2)
+- 4 new reducer actions: APPLY_BALANCE_SHEET, APPLY_FIN_STAB, SET_BSD, SET_FSD
+- 9 Phase 6 CSS tokens with dark-mode variants; tab nav divider between analytics groups
+
+### Academic references (Phase 6)
+
+- Afonso, Giannone, LaRocca & Packer (2022) — reserve demand / neutral floor estimation
+- Borio (2012, 2014, 2016 Cato Journal) — finance-neutral r*, financial cycle, leaning against the wind
+- Borio, Disyatat & Juselius (2013, BIS WP404; 2017 Oxford Econ Papers) — finance-neutral output gap
+- D'Amico & King (2013) — local supply effects on yield curve (flow/stock QE channel)
+- Drechsler, Savov & Schnabl (2018, JoF) — monetary policy and risk premia via liquidity premium
+- Krishnamurthy & Vissing-Jorgensen (2011, BPEA; 2012, JPE) — QE channels (duration, safety, signaling, MBS)
+- McCauley (2019, BIS WP 782) — dollar as global safe asset, 3-layer stress architecture
+- Mehrling (2016) — BIS financial cycle framework, dollar doom loop
+- Nagel (2016, QJE) — near-money convenience yield as liquidity premium proxy
+- Stein (2012, QJE) — shadow value of reserves, two-instrument monetary policy
+- Stein & Sunderam (2018, JoF) — Fed gradualism, term premium put, bond market volatility aversion
 
 ---
 
