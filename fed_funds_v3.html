@@ -3199,6 +3199,64 @@ function BalanceSheetTab({state, dispatch, finance}) {
   svg2+='<text x="10" y="138" font-size="9" fill="var(--color-text-tertiary)">Actual QT pace slower than cap due to low mortgage prepayments.</text>';
   svg2+='</svg>';
 
+  // --- Panel 3: Corridor mechanics ---
+  const iorb=bsD.iorb||4.40, effr=bsD.effr||4.33, tbill3=bsD.tbill3m||4.25;
+  const dss=finance.dss;
+  const lp=dss?dss.liquidityPremium:(tbill3-iorb);
+  const svrBp=svr!=null?svr:((effr-iorb)*100);
+  const svrColor=Math.abs(svrBp)<5?'var(--c-stress-lo)':Math.abs(svrBp)<15?'var(--c-leaning)':'var(--c-stress-hi)';
+  const lpColor=lp>0?'var(--c-stress-lo)':lp>-0.20?'var(--c-leaning)':'var(--c-stress-hi)';
+  const svrNote=Math.abs(svrBp)<5?' Ample reserves (SVR \u2248 0).':Math.abs(svrBp)<15?' Transition zone. Monitor reserves.':' \u26a0 Scarce reserves. Sep 2019 episode began at ~15bp.';
+  const lpNote=lp>0?' Positive: ample liquidity. Low leverage cost (DSS 2018).':lp>-0.20?' Slightly negative: tightening liquidity conditions.':' Negative: expensive leverage. Risk premia widening expected (DSS 2018).';
+
+  // --- Panel 4: Two-instrument policy space ---
+  const W4=680, H4=300;
+  const P4={t:30,r:80,b:50,l:70};
+  const cw4=W4-P4.l-P4.r, ch4=H4-P4.t-P4.b;
+  const xMin=5, xMax4=40, yMin4=-6, yMax4=8;
+  const xSc4=v=>P4.l+((v-xMin)/(xMax4-xMin))*cw4;
+  const ySc4=v=>P4.t+ch4-((v-yMin4)/(yMax4-yMin4))*ch4;
+  const inflation=state.trD?.inflationRate||2.8;
+  const curX=(bsD.totalAssets||8500)/(bsD.gdpNominal||28500)*100;
+  const curY=(bsD.effr||4.33)-inflation;
+  const neutralX=(bsD.neutralFloor||6200)/(bsD.gdpNominal||28500)*100;
+  const episodes=[
+    {x:6,y:2.5,lb:'Pre-GFC (2007)'},{x:15,y:-2.5,lb:'QE1 (2009)'},
+    {x:20,y:-3.0,lb:'QE2 (2010)'},{x:26,y:-2.8,lb:'QE3 peak (2014)'},
+    {x:24,y:-1.0,lb:'QT start (2018)'},{x:19,y:-0.5,lb:'Sep-19 repo'},
+    {x:37,y:-7.5,lb:'COVID (2020)'},{x:35,y:-4.0,lb:'Liftoff (Mar 22)'},
+    {x:32,y:1.0,lb:'QT + hike (2023)'},
+  ];
+
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  // grid
+  [10,20,30].forEach(x=>{
+    svg4+='<line x1="'+xSc4(x)+'" y1="'+P4.t+'" x2="'+xSc4(x)+'" y2="'+(P4.t+ch4)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg4+='<text x="'+xSc4(x)+'" y="'+(P4.t+ch4+14)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">'+x+'%</text>';
+  });
+  [-4,-2,0,2,4,6].forEach(y=>{
+    svg4+='<line x1="'+P4.l+'" y1="'+ySc4(y)+'" x2="'+(P4.l+cw4)+'" y2="'+ySc4(y)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg4+='<text x="'+(P4.l-8)+'" y="'+(ySc4(y)+4)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+y+'%</text>';
+  });
+  // zero real EFFR line
+  svg4+='<line x1="'+P4.l+'" y1="'+ySc4(0)+'" x2="'+(P4.l+cw4)+'" y2="'+ySc4(0)+'" stroke="var(--c-neutral-floor)" stroke-width="1" stroke-dasharray="4,3"/>';
+  // neutral floor vertical
+  svg4+='<line x1="'+xSc4(neutralX)+'" y1="'+P4.t+'" x2="'+xSc4(neutralX)+'" y2="'+(P4.t+ch4)+'" stroke="var(--c-neutral-floor)" stroke-width="1.2" stroke-dasharray="6,4"/>';
+  svg4+='<text x="'+(xSc4(neutralX)+3)+'" y="'+(P4.t+14)+'" font-size="9" fill="var(--c-neutral-floor)">Floor</text>';
+  // episodes
+  episodes.forEach(ep=>{
+    const ex=xSc4(ep.x), ey=ySc4(ep.y);
+    svg4+='<circle cx="'+ex+'" cy="'+ey+'" r="3.5" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
+    svg4+='<text x="'+(ex+6)+'" y="'+(ey+3)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+ep.lb+'</text>';
+  });
+  // current position
+  svg4+='<circle cx="'+xSc4(curX)+'" cy="'+ySc4(curY)+'" r="7" fill="var(--c-combined)" opacity=".9"/>';
+  svg4+='<text x="'+(xSc4(curX)+10)+'" y="'+(ySc4(curY)+4)+'" font-size="10" font-weight="bold" fill="var(--c-combined)">Now</text>';
+  // axis labels
+  svg4+='<text x="'+(P4.l+cw4/2)+'" y="'+(H4-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Fed Total Assets (% of GDP)</text>';
+  svg4+='<text x="14" y="'+(P4.t+ch4/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P4.t+ch4/2)+')">Real EFFR (%)</text>';
+  svg4+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3240,9 +3298,30 @@ function BalanceSheetTab({state, dispatch, finance}) {
           <div className="k-note">Sources: Fed H.4.1 (FRED: WALCL, WTREGEN, WMBSEC). Shadow rate via Krishnamurthy &amp; Vissing-Jorgensen (2011) channel decomposition. Neutral floor: Afonso-Giannone-LaRocca-Packer (2022) reserve demand model.</div>
         </div>
 
-        <div className="k-panel k-full">
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr"><span className="k-title">\u2461 Monthly Runoff: Pace vs. Cap</span></div>
           <div dangerouslySetInnerHTML={{__html:svg2}}/>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr"><span className="k-title">\u2462 Corridor Mechanics: Stein (2012) SVR &amp; DSS Liquidity Premium</span></div>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'8px',margin:'8px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">IORB</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{iorb.toFixed(2)}%</div><div className="fw-stat-s">Interest on reserve balances</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">EFFR</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{effr.toFixed(2)}%</div><div className="fw-stat-s">Effective fed funds rate</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:svrColor}}>Stein SVR</div><div className="fw-stat-v" style={{fontSize:'16px',color:svrColor}}>{svrBp>=0?'+':''}{svrBp.toFixed(1)} bp</div><div className="fw-stat-s">EFFR \u2212 IORB.{svrNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:lpColor}}>DSS Liquidity Prem.</div><div className="fw-stat-v" style={{fontSize:'16px',color:lpColor}}>{(lp*100).toFixed(1)} bp</div><div className="fw-stat-s">3M T-bill \u2212 IORB.{lpNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">RRP Outstanding</div><div className="fw-stat-v" style={{fontSize:'16px'}}>${(bsD.rrpUsage||400).toFixed(0)}bn</div><div className="fw-stat-s">RRP draining to zero signals reserve transition</div></div>
+          </div>
+          <div className="k-note">SVR framework: Stein (2012, QJE). Liquidity premium channel: Drechsler, Savov &amp; Schnabl (2018, JoF). Near-money proxy: Nagel (2016, QJE).</div>
+        </div>
+
+        <div className="k-panel k-full">
+          <div className="k-hdr">
+            <span className="k-title">\u2463 Two-Instrument Policy Space</span>
+            <span style={{fontSize:'10px',color:'var(--c-combined)'}}>Combined stance: {combinedStance.toFixed(2)}%</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg4}}/>
+          <div className="k-note">Combined stance = EFFR + KVJ (2011) shadow rate equivalent. Violet dot = current position. Historical episodes approximate. Neutral floor = Afonso et al. (2022). Framework: Stein (2012, QJE) two-instrument monetary policy.</div>
         </div>
       </div>
     </div>

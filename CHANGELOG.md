@@ -12,6 +12,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-A2b: Math Batch 1 -- qtShadowAdjChannels (KVJ 2011 4-channel decomposition), steinSVR (Stein 2012 shadow value of reserves), dssRiskChannel (DSS 2018 liquidity premium); all wired into useFinance with combinedStance
 - Session 6-A2c: Math Batch 2 -- nsSafetyPremium (KVJ 2012), finNeutralOutputGap (BDJ 2013), finCycleAdjustedRstar (Borio 2016 Pillar II), finNeutralRate (Borio NFCI-augmented JR), leaningPremium, gradualismGap (SS 2018), ssTermPremiumPutSignal; sepLongRunDot added to trD; all wired into useFinance
 - Session 6-A3: Tab 10 (Balance Sheet) Panels 1+2 -- BalanceSheetTab component with composition stacked bar chart (current vs neutral floor), KVJ 4-channel breakdown, editable neutral floor/runoff inputs, runoff pace vs cap bar chart with MBS undershoot; Fetch H.4.1 button; tab routing wired
+- Session 6-A4: Tab 10 Panels 3+4 -- Corridor mechanics (IORB, EFFR, Stein SVR, DSS liquidity premium, RRP with regime color coding), two-instrument policy space scatter (9 historical episodes, current position, neutral floor reference, combined stance)
 
 ---
 
