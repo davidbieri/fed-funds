@@ -606,6 +606,8 @@ footer{
       <button class="ug-ntab" onclick="ugShow('yieldcurve',this)">Yield curve</button>
       <button class="ug-ntab" onclick="ugShow('taylor',this)">Taylor Rule</button>
       <button class="ug-ntab" onclick="ugShow('riding',this)">Riding</button>
+      <button class="ug-ntab" onclick="ugShow('bs',this)">Balance sheet</button>
+      <button class="ug-ntab" onclick="ugShow('fin',this)">Fin. stability</button>
       <button class="ug-ntab" onclick="ugShow('scenarios',this)">Scenarios</button>
       <button class="ug-ntab" onclick="ugShow('refresh',this)">Live data</button>
     </div>
@@ -700,11 +702,11 @@ footer{
         <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">10-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels plus PCI Signal/Noise decomposition. Kal−CME and Poly−Kal basis pills on each panel.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid #0ea5e9"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:#0369a1">Balance Sheet / QT Monitor</div><div class="ug-pdesc">KVJ (2011) 4-channel shadow rate, Stein (2012) SVR corridor, DSS (2018) liquidity premium, two-instrument policy space. Fed H.4.1 live fetch.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid #0d9488"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:#0f766e">Financial Stability</div><div class="ug-pdesc">BIS/Mehrling framework: finance-neutral r* (Borio 2016), McCauley dollar gauge, doom loop scatter, 6-axis phase clock. FRED live fetch.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber-text)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor-text)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding-text)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0ea5e9"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:var(--bs-text)">Balance Sheet / QT Monitor</div><div class="ug-pdesc">KVJ (2011) 4-channel shadow rate, Stein (2012) SVR corridor, DSS (2018) liquidity premium, two-instrument policy space. Fed H.4.1 live fetch.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0d9488"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:var(--fin-text)">Financial Stability</div><div class="ug-pdesc">BIS/Mehrling framework: finance-neutral r* (Borio 2016), McCauley dollar gauge, doom loop scatter, 6-axis phase clock. FRED live fetch.</div></div>
       </div>
     </div>
 
@@ -1028,6 +1030,72 @@ footer{
       <p class="ug-body" style="margin-top:6px">The Taylor−CME gap (prescriptive minus market) is the core signal: positive = market prices looser than the rule warrants; negative = market prices tighter. Five variants cover the range from the original Taylor (1993) specification through the Judd-Rudebusch ECM — the designated signal source for downstream tabs by virtue of its highest R² for FFTR prediction (Bieri-Chincarini 2005, Exhibit 7). A sixth finance-neutral variant (Borio 2016) embeds NFCI into the natural rate estimate.</p>
       <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Convergence across rule variants = robust prescription. Divergence = model-sensitive results, treat with caution. The JR ECM gap is the primary downstream signal. A positive JR gap (market below rule) is the necessary condition for the riding signal filter to activate.</p>
       <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> JR ECM signal → Riding filter #4. Finance-neutral gap → Dashboard leaning premium row.</p>
+      <div class="ug-head">Illustrative prescribed vs market path</div>
+      <div style="margin:12px 0;overflow-x:auto">
+<svg viewBox="0 0 560 210" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Taylor Rule illustration">
+  <rect width="560" height="210" fill="var(--surface)" rx="6"/>
+  <!-- Axes -->
+  <line x1="55" y1="20" x2="55" y2="155" stroke="var(--border)" stroke-width="1"/>
+  <line x1="55" y1="155" x2="545" y2="155" stroke="var(--border)" stroke-width="1"/>
+  <!-- Y labels -->
+  <text x="49" y="25" text-anchor="end" font-size="8" fill="var(--faint)">5.0%</text>
+  <text x="49" y="60" text-anchor="end" font-size="8" fill="var(--faint)">4.0%</text>
+  <text x="49" y="95" text-anchor="end" font-size="8" fill="var(--faint)">3.5%</text>
+  <text x="49" y="130" text-anchor="end" font-size="8" fill="var(--faint)">3.0%</text>
+  <!-- Grid -->
+  <line x1="55" y1="60" x2="545" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="95" x2="545" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="130" x2="545" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <!-- X axis — 8 meetings -->
+  <text x="90" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Apr</text>
+  <text x="150" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jun</text>
+  <text x="210" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jul</text>
+  <text x="270" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Sep</text>
+  <text x="330" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Oct</text>
+  <text x="390" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Dec</text>
+  <text x="450" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jan</text>
+  <text x="510" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Mar</text>
+  <!-- CME market path (blue dashed — lower, easing) -->
+  <polyline points="90,97 150,103 210,110 270,117 330,121 390,125 450,128 510,130"
+    fill="none" stroke="var(--cme)" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <!-- Taylor 1993 (high, above market) -->
+  <polyline points="90,55 150,58 210,61 270,63 330,65 390,67 450,68 510,69"
+    fill="none" stroke="rgba(220,38,38,.6)" stroke-width="1.5"/>
+  <!-- Balanced/Yellen -->
+  <polyline points="90,68 150,72 210,76 270,79 330,82 390,84 450,86 510,87"
+    fill="none" stroke="rgba(220,38,38,.45)" stroke-width="1.5"/>
+  <!-- Yellen Alt1 -->
+  <polyline points="90,78 150,82 210,86 270,89 330,91 390,93 450,94 510,95"
+    fill="none" stroke="rgba(220,38,38,.35)" stroke-width="1.5"/>
+  <!-- CGG inertial (closer to market) -->
+  <polyline points="90,88 150,91 210,95 270,98 330,101 390,103 450,105 510,106"
+    fill="none" stroke="rgba(220,38,38,.25)" stroke-width="1.5"/>
+  <!-- JR ECM designated signal (rose, prominent) -->
+  <polyline points="90,75 150,79 210,83 270,87 330,90 390,92 450,94 510,95"
+    fill="none" stroke="var(--taylor)" stroke-width="2.5"/>
+  <!-- Taylor-CME gap shading between JR ECM and CME -->
+  <polygon points="90,75 150,79 210,83 270,87 330,90 390,92 450,94 510,95 510,130 450,128 390,125 330,121 270,117 210,110 150,103 90,97"
+    fill="rgba(225,29,72,.08)"/>
+  <!-- Finance-neutral 6th variant (teal) -->
+  <polyline points="90,92 150,95 210,99 270,102 330,104 390,106 450,107 510,108"
+    fill="none" stroke="var(--fin)" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <!-- Gap annotation -->
+  <line x1="270" y1="87" x2="270" y2="117" stroke="rgba(225,29,72,.5)" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="275" y="104" font-size="8" fill="var(--taylor)">+30bp gap</text>
+  <!-- Legend row 1 -->
+  <line x1="58" y1="183" x2="78" y2="183" stroke="var(--cme)" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <text x="82" y="187" font-size="8" fill="var(--muted)">CME market</text>
+  <line x1="160" y1="183" x2="180" y2="183" stroke="var(--taylor)" stroke-width="2.5"/>
+  <text x="184" y="187" font-size="8" fill="var(--muted)">JR ECM ★</text>
+  <line x1="254" y1="183" x2="274" y2="183" stroke="rgba(220,38,38,.5)" stroke-width="1.5"/>
+  <text x="278" y="187" font-size="8" fill="var(--muted)">Other variants</text>
+  <line x1="370" y1="183" x2="390" y2="183" stroke="var(--fin)" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="394" y="187" font-size="8" fill="var(--muted)">Fin-neutral (v4.1)</text>
+  <!-- Gap shading label -->
+  <rect x="450" y="178" width="80" height="12" rx="2" fill="rgba(225,29,72,.1)"/>
+  <text x="490" y="187" text-anchor="middle" font-size="8" fill="var(--taylor)">Taylor−CME gap</text>
+</svg>
+      </div>
       <div class="ug-head">Atlanta Fed generalized form (base)</div>
       <div class="ug-formula">
         \[\hat{i}_t = \rho \cdot i_{t-1} + (1-\rho)\left[r^* + \pi^* + 1.5(\pi_t - \pi^*) + \beta \cdot \text{gap}_t\right]\]
@@ -1041,11 +1109,11 @@ footer{
       </div>
       <div class="ug-head">Five rule variants</div>
       <div class="ug-grid">
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor)">Taylor 1993</div><div class="ug-pdesc">α=1.5, β=0.5, GDP output gap. The original specification from Taylor (1993, Carnegie-Rochester).</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Taylor 1993</div><div class="ug-pdesc">α=1.5, β=0.5, GDP output gap. The original specification from Taylor (1993, Carnegie-Rochester).</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Balanced / Yellen 2012</div><div class="ug-pdesc">α=β=1.0. The "balanced approach" rule highlighted in Yellen's 2012 speech and Fed Tealbook.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Yellen Alt1</div><div class="ug-pdesc">Unemployment gap via Okun's Law (gap ≈ −2×(u − u*)). Uses FOMC SEP median longer-run r*.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
     </div>
 
@@ -1073,6 +1141,22 @@ footer{
         <div class="ug-pcard"><div class="ug-ptitle">④ Taylor rule signal</div><div class="ug-pdesc">JR ECM signal = −1 (cut mode). Riding is most attractive when the Taylor Rule prescribes easing.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">⑤ CME expectations</div><div class="ug-pdesc">CME 12M path must have negative slope (cuts priced). Market expectations of easing enhance carry.</div></div>
       </div>
+    </div>
+
+    <!-- BALANCE SHEET -->
+    <div class="ug-page" id="pg-bs">
+      <p class="ug-body"><strong>Purpose:</strong> Decompose the Federal Reserve's balance sheet into its four distinct yield curve channels and track how Quantitative Tightening affects rates independently of the policy rate level.</p>
+      <p class="ug-body" style="margin-top:6px">The KVJ (2011) four-channel framework shows that QT operates through duration (all fixed income), safety (Treasuries only), signaling (forward guidance confirmation), and MBS prepayment channels simultaneously. The Stein (2012) shadow value of reserves — EFFR minus IORB — measures when reserve scarcity begins to tighten conditions independently of the policy rate. The DSS (2018) liquidity premium (T-bill minus IORB) is the near-money convenience yield: lower LP means cheaper leverage and higher risk appetite.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> SVR rising above zero signals the approach of reserve scarcity — a second tightening instrument activating alongside the policy rate. Widening LP signals improving financial conditions (lower risk premia). The two-instrument scatter shows where the current policy mix sits relative to nine historical episodes from Pre-GFC through 2023.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Shadow rate channels → NS β₀ decomposition (Tab 07). Stein SVR + DSS LP → Dashboard regime rows.</p>
+    </div>
+
+    <!-- FINANCIAL STABILITY -->
+    <div class="ug-page" id="pg-fin">
+      <p class="ug-body"><strong>Purpose:</strong> Embed the BIS/Mehrling financial cycle framework into the policy analytics suite — measuring how far the standard Taylor Rule prescription diverges from what financial stability conditions warrant.</p>
+      <p class="ug-body" style="margin-top:6px">The finance-neutral natural rate (Borio 2016) augments the standard r* with NFCI: r*_finance = r*_standard + λ_fc × NFCI × 100bp. The λ_fc slider controls how aggressively the user believes financial conditions should enter the rate-setting calculus. The BDJ (2013) finance-neutral output gap corrects the standard HP-filter gap for the credit cycle — preventing the standard gap from overstating potential output during financial booms.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The leaning premium (finance-neutral r* minus JR ECM prescription) measures additional tightening that financial stability considerations warrant. The doom loop scatter (term premium vs HY OAS) identifies when elevated credit spreads and compressed term premia coexist — a historically precarious combination. The 6-axis phase clock synthesizes the full financial cycle state into a single radar reading.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Finance-neutral gap → Dashboard leaning premium row. Phase clock composite → riding filter context.</p>
     </div>
 
     <!-- SCENARIOS -->

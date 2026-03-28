@@ -16,6 +16,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-I)
+- Session INDEX-I: Taylor Rule SVG illustration added (5 variants + CME path
+  + JR ECM designated signal + finance-neutral 6th variant + gap shading);
+  light mode color consistency fixed (--*-text tokens on pcard titles);
+  Balance Sheet ug-page added (KVJ channels, Stein SVR, DSS LP, two-instrument
+  scatter); Financial Stability ug-page added (Borio finance-neutral r*, BDJ
+  gap, doom loop, phase clock); two tab buttons added to how-it-works bar
+
 ### Changed — Landing Page (Session INDEX-H)
 - Session INDEX-H: SOFR strip illustrative SVG added (3-curve chart with
   SR3/ZQ/forward + basis bars + trough marker + legend); yield curve
