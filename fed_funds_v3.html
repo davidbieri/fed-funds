@@ -19,6 +19,9 @@
   --font-mono:"SF Mono","Fira Code","Roboto Mono",monospace;
   --c-cme:#3b82f6;--c-kal:#f97316;--c-poly:#06b6d4;--c-dots:#8b5cf6;--c-sofr:#10b981;--c-sofr-fwd:#34d399;--c-taylor:#e11d48;--c-taylor-mod:#f43f5e;
   --c-cme-a:rgba(59,130,246,0.15);--c-kal-a:rgba(249,115,22,0.15);--c-poly-a:rgba(6,182,212,0.15);
+  /* --- Phase 6: Balance Sheet & Financial Stability --- */
+  --c-bs:#0ea5e9;--c-bs-mbs:#0369a1;--c-neutral-floor:#64748b;--c-combined:#7c3aed;
+  --c-fin-neutral:#0d9488;--c-stress-hi:#dc2626;--c-stress-lo:#16a34a;--c-leaning:#f97316;--c-lp:#8b5cf6;
 }
 @media(prefers-color-scheme:dark){
   :root{
@@ -29,12 +32,15 @@
     --color-border-secondary:#3f3f46;--color-border-tertiary:#3f3f46;--color-border-info:#2563eb;
     --c-cme:#60a5fa;--c-kal:#fb923c;--c-poly:#22d3ee;--c-dots:#a78bfa;--c-sofr:#34d399;--c-sofr-fwd:#6ee7b7;--c-taylor:#fb7185;--c-taylor-mod:#fda4af;
     --c-cme-a:rgba(96,165,250,0.15);--c-kal-a:rgba(251,146,60,0.15);--c-poly-a:rgba(34,211,238,0.15);
+    --c-bs:#38bdf8;--c-bs-mbs:#0284c7;--c-neutral-floor:#94a3b8;--c-combined:#a78bfa;
+    --c-fin-neutral:#2dd4bf;--c-stress-hi:#ef4444;--c-stress-lo:#22c55e;--c-leaning:#fb923c;--c-lp:#a78bfa;
   }
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto}
 .fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
 .fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
+.tab-group-divider{display:inline-block;width:1px;height:1.2em;background:var(--color-border-secondary);margin:0 6px;vertical-align:middle;opacity:0.5}
 .fwt{width:100%;border-collapse:collapse}
 .fwt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
 .fwt td{padding:5px 8px;border-bottom:.5px solid var(--color-border-tertiary);font-size:12px;vertical-align:middle}
@@ -2902,6 +2908,9 @@ function App() {
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
     {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
     {id:'riding',     label:'\ud83d\udcca Riding'},
+    {id:'_divider'},
+    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet'},
+    {id:'fs',         label:'\ud83d\udee1 Fin. Stability'},
   ];
 
   return (
@@ -2928,18 +2937,20 @@ function App() {
         </div>
       </div>
 
-      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (ZQ futures chain) · Kalshi &amp; Polymarket prediction markets · SOFR strip · Dashboard · Nelson-Siegel yield curve · Taylor Rule suite · Bieri-Chincarini riding calculator. 12 months forward, 9 tabs.</p>
+      <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (ZQ futures chain) · Kalshi &amp; Polymarket prediction markets · SOFR strip · Dashboard · Nelson-Siegel yield curve · Taylor Rule suite · Bieri-Chincarini riding calculator. 12 months forward, 11 tabs.</p>
       <div className="api-note">
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
 
       <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
-        {TABS.map(t=>(
-          <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
-            onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
-            {t.label}
-          </div>
-        ))}
+        {TABS.map(t=>
+          t.id==='_divider'
+            ? <span key="_div" className="tab-group-divider" title="Analytics tabs">|</span>
+            : <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
+                onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
+                {t.label}
+              </div>
+        )}
       </div>
 
       {state.fwActive==='inputs' && <FuturesInputsTab state={state} dispatch={dispatch} finance={finance}/>}

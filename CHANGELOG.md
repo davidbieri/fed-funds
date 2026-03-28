@@ -6,7 +6,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
-No sessions in progress.
+- Session 6-A0: Phase 6 CSS tokens (9 new custom properties for balance sheet and financial stability), dark-mode variants, `.tab-group-divider` style, tab nav restructured with divider between Dashboard and Yield Curve groups, `bs` and `fs` tab entries added to TABS array
 
 ---
 
