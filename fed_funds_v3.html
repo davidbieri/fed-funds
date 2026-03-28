@@ -3647,6 +3647,81 @@ function FinStabTab({state, dispatch, finance}) {
   });
   svg6+='</svg>';
 
+  // --- Panel 5: Financial Cycle Phase Clock (6-axis radar) ---
+  const tpBpClock=(finance.termPremium||0)*100;
+  const lpAbsClock=Math.abs(dss?dss.liquidityPremium:0);
+  // 6 axes normalized to 0-100 percentile
+  const axes=[
+    {lb:'NFCI',       val:Math.min(100,Math.max(0,(nfci/(fsD.nfciP75||0.5))*50+50)),      raw:(nfci>=0?'+':'')+nfci.toFixed(2)},
+    {lb:'Swap lines', val:Math.min(100,(swapLn/(fsD.swapLinesP75||10))*100),                raw:'$'+swapLn.toFixed(1)+'bn'},
+    {lb:'|Xccy basis|',val:Math.min(100,(Math.abs(xccyBp)/Math.abs(fsD.xccyBasisP75||-20))*100), raw:xccyBp.toFixed(0)+' bp'},
+    {lb:'Term prem',  val:Math.min(100,Math.max(0,(tpBpClock/60)*100)),                     raw:tpBpClock.toFixed(0)+' bp'},
+    {lb:'HY OAS',     val:Math.min(100,(hyOAS/(fsD.hyOASP75||500))*100),                    raw:hyOAS.toFixed(0)+' bp'},
+    {lb:'|DSS LP|',   val:Math.min(100,(lpAbsClock/(fsD.lpP75||0.20))*100),                 raw:(lpAbsClock*100).toFixed(0)+' bp'},
+  ];
+  const nAxes=axes.length;
+  const cx7=200, cy7=170, R7=120;
+  const angleStep=2*Math.PI/nAxes;
+  const ptOnAxis=(ai,r)=>{
+    const a=-Math.PI/2+ai*angleStep;
+    return {x:cx7+Math.cos(a)*r, y:cy7+Math.sin(a)*r};
+  };
+
+  let svg7='<svg viewBox="0 0 400 340" style="width:100%;max-width:420px;display:block;margin:0 auto">';
+  // concentric rings at 25,50,75,100%
+  [0.25,0.5,0.75,1.0].forEach(pct=>{
+    const r=R7*pct;
+    let ring='';
+    for(let i=0;i<nAxes;i++){
+      const p=ptOnAxis(i,r);
+      ring+=(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);
+    }
+    ring+='Z';
+    svg7+='<path d="'+ring+'" fill="none" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    if(pct===1.0) svg7+='<path d="'+ring+'" fill="none" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  });
+  // axis lines + labels
+  axes.forEach((a,i)=>{
+    const outer=ptOnAxis(i,R7+8);
+    const labelPt=ptOnAxis(i,R7+28);
+    svg7+='<line x1="'+cx7+'" y1="'+cy7+'" x2="'+outer.x.toFixed(1)+'" y2="'+outer.y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg7+='<text x="'+labelPt.x.toFixed(1)+'" y="'+labelPt.y.toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="9" fill="var(--color-text-secondary)">'+a.lb+'</text>';
+    // raw value below label
+    svg7+='<text x="'+labelPt.x.toFixed(1)+'" y="'+(labelPt.y+12).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+a.raw+'</text>';
+  });
+  // filled polygon
+  let polyPath='';
+  axes.forEach((a,i)=>{
+    const r=R7*(a.val/100);
+    const p=ptOnAxis(i,r);
+    polyPath+=(i===0?'M':'L')+p.x.toFixed(1)+','+p.y.toFixed(1);
+  });
+  polyPath+='Z';
+  svg7+='<path d="'+polyPath+'" fill="var(--c-fin-neutral)" opacity=".2" stroke="var(--c-fin-neutral)" stroke-width="2"/>';
+  // vertex dots
+  axes.forEach((a,i)=>{
+    const r=R7*(a.val/100);
+    const p=ptOnAxis(i,r);
+    const dotCol=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
+    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+dotCol+'"/>';
+  });
+  // Phase clock index = polygon area / hexagon area * 100
+  // Shoelace formula for polygon area
+  let polyArea=0;
+  axes.forEach((a,i)=>{
+    const r1=R7*(a.val/100), r2=R7*(axes[(i+1)%nAxes].val/100);
+    const p1=ptOnAxis(i,r1), p2=ptOnAxis((i+1)%nAxes,r2);
+    polyArea+=p1.x*p2.y-p2.x*p1.y;
+  });
+  polyArea=Math.abs(polyArea)/2;
+  const hexArea=nAxes*0.5*R7*R7*Math.sin(angleStep); // area of regular hexagon at r=R7
+  const phaseIdx=Math.min(100,(polyArea/hexArea)*100);
+  const phaseCol=phaseIdx>66?'var(--c-stress-hi)':phaseIdx>33?'var(--c-leaning)':'var(--c-stress-lo)';
+  // center label
+  svg7+='<text x="'+cx7+'" y="'+(cy7-4)+'" text-anchor="middle" font-size="22" font-weight="600" fill="'+phaseCol+'">'+phaseIdx.toFixed(0)+'</text>';
+  svg7+='<text x="'+cx7+'" y="'+(cy7+12)+'" text-anchor="middle" font-size="9" fill="var(--color-text-tertiary)">Phase Clock Index</text>';
+  svg7+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3775,6 +3850,21 @@ function FinStabTab({state, dispatch, finance}) {
           </div>
           <div dangerouslySetInnerHTML={{__html:svg6}}/>
           <div className="k-note">The Mehrling-BIS feedback circuit: EFFR \u2192 DSS liquidity premium \u2192 risk premia (HY OAS) \u2192 NFCI \u2192 finance-neutral rate \u2192 policy prescription \u2192 EFFR. The Stein-Sunderam (2018) term premium put provides an additional stabilizing channel: when TP rises above the 75th percentile, the Fed cuts to mitigate bond-market volatility. When the loop reinforces (all arrows tightening simultaneously), the Mehrling doom loop is active.</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2464 Financial Cycle Phase Clock</span>
+            <span style={{fontSize:'10px',color:phaseCol}}>Phase index: {phaseIdx.toFixed(0)}/100</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg7}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(90px,1fr))',gap:'8px',margin:'10px 0'}}>
+            {axes.map(a=>{
+              const col=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
+              return <div key={a.lb} className="fw-stat"><div className="fw-stat-l">{a.lb}</div><div className="fw-stat-v" style={{fontSize:'14px',color:col}}>{a.val.toFixed(0)}%</div><div className="fw-stat-s">{a.raw}</div></div>;
+            })}
+          </div>
+          <div className="k-note">6-axis radar normalized to historical 75th percentile thresholds. Phase clock index = polygon area / full hexagon area \u00d7 100. Green (&lt;33): benign. Amber (33\u201366): monitor. Red (&gt;66): stress regime. Axes: NFCI (Chicago Fed), swap lines (FRED: SWPT), |xccy basis| (manual), term premium (\u03b2\u2080\u2212EFFR), HY OAS (FRED: BAMLH0A0HYM2), |DSS liquidity premium| (Nagel 2016 proxy). Framework synthesis: Borio (2012/2016), McCauley (2019), Stein-Sunderam (2018), DSS (2018).</div>
         </div>
       </div>
     </div>
