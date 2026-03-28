@@ -3452,6 +3452,40 @@ function FinStabTab({state, dispatch, finance}) {
   svg2+='<text x="'+leanMidX+'" y="'+(P2.t+ch2+18)+'" text-anchor="middle" font-size="9" font-weight="500" fill="var(--c-leaning)">Leaning premium: '+(leanBp>=0?'+':'')+leanBp.toFixed(0)+' bp</text>';
   svg2+='</svg>';
 
+  // --- Panel 2b: Gap decomposition stacked bar ---
+  const jrGapBp=(jrRate-termRate)*100;
+  const rstarDiffBp=((finance.rstarAdj||0.5)-(state.trD?.naturalRate||0.5))*100;
+  const W3=640, H3=155;
+  const cx3=W3/2, barY3=42;
+  const pxBp=Math.min(2.0, (cx3-60)/Math.max(Math.abs(jrGapBp)+Math.abs(rstarDiffBp),1));
+  const jrDir=jrGapBp>=0?1:-1;
+  const jrW3=Math.abs(jrGapBp)*pxBp;
+  const rsW3=Math.abs(rstarDiffBp)*pxBp;
+
+  let svg3='<svg viewBox="0 0 '+W3+' '+H3+'" style="width:100%;display:block">';
+  svg3+='<defs><marker id="arr-lean" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--c-leaning)"/></marker></defs>';
+  // zero line
+  svg3+='<line x1="'+cx3+'" y1="16" x2="'+cx3+'" y2="'+(H3-28)+'" stroke="var(--color-text-primary)" stroke-width="1.2"/>';
+  svg3+='<text x="'+cx3+'" y="12" text-anchor="middle" font-size="9" fill="var(--color-text-secondary)">Market-implied terminal</text>';
+  // JR gap bar
+  const jrX3=jrDir>0?cx3:cx3-jrW3;
+  svg3+='<rect x="'+jrX3+'" y="'+barY3+'" width="'+Math.max(1,jrW3)+'" height="26" fill="var(--c-taylor)" opacity=".7" rx="2"/>';
+  const jrLblX3=jrDir>0?cx3+jrW3+5:cx3-jrW3-5;
+  svg3+='<text x="'+jrLblX3+'" y="'+(barY3+17)+'" text-anchor="'+(jrDir>0?'start':'end')+'" font-size="10" fill="var(--c-taylor)">JR ECM: '+(jrGapBp>=0?'+':'')+jrGapBp.toFixed(0)+' bp</text>';
+  // r* correction bar (stacked)
+  const rsX3=jrDir>0?cx3+jrW3:cx3-jrW3-rsW3;
+  svg3+='<rect x="'+rsX3+'" y="'+barY3+'" width="'+Math.max(1,rsW3)+'" height="26" fill="var(--c-fin-neutral)" opacity=".7" rx="2"/>';
+  const rsLblX3=jrDir>0?rsX3+rsW3+5:rsX3-5;
+  svg3+='<text x="'+rsLblX3+'" y="'+(barY3+17)+'" text-anchor="'+(jrDir>0?'start':'end')+'" font-size="10" fill="var(--c-fin-neutral)">r* corr: '+(rstarDiffBp>=0?'+':'')+rstarDiffBp.toFixed(0)+' bp</text>';
+  // total leaning premium arrow
+  const arrEnd=cx3+Math.min(Math.max(leanBp*pxBp,-250),250);
+  svg3+='<line x1="'+cx3+'" y1="'+(barY3+44)+'" x2="'+arrEnd+'" y2="'+(barY3+44)+'" stroke="var(--c-leaning)" stroke-width="2.5" marker-end="url(#arr-lean)"/>';
+  svg3+='<text x="'+(arrEnd+(leanBp>=0?6:-6))+'" y="'+(barY3+48)+'" text-anchor="'+(leanBp>=0?'start':'end')+'" font-size="10" font-weight="500" fill="var(--c-leaning)">Total leaning: '+(leanBp>=0?'+':'')+leanBp.toFixed(0)+' bp</text>';
+  // axis labels
+  svg3+='<text x="20" y="'+(H3-6)+'" font-size="9" fill="var(--color-text-tertiary)">Too accommodative (leaning with wind)</text>';
+  svg3+='<text x="'+(W3-20)+'" y="'+(H3-6)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)">Too restrictive (leaning against wind)</text>';
+  svg3+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3505,6 +3539,33 @@ function FinStabTab({state, dispatch, finance}) {
             <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot \u2212 ZQ terminal (SS 2018)</div></div>
           </div>
           <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (\u03bb_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2461b Gap Decomposition: JR + r* Endogeneity</span>
+            <span style={{fontSize:'10px',color:leanBp>50?'var(--c-stress-hi)':leanBp<-50?'var(--c-stress-lo)':'var(--c-leaning)'}}>
+              Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp
+            </span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg3}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l">CME terminal</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termRate.toFixed(2)}%</div><div className="fw-stat-s">Market-implied 12M</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Gap: {jrGapBp>=0?'+':''}{jrGapBp.toFixed(0)} bp</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Borio r* adj.</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{(finance.rstarAdj||0.5).toFixed(3)}%</div><div className="fw-stat-s">Corr: {rstarDiffBp>=0?'+':''}{rstarDiffBp.toFixed(0)} bp vs LW</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI + r* corr</div></div>
+          </div>
+          <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
+            <label style={{color:'var(--color-text-secondary)'}}>Credit-GDP gap (\u03c3):
+              <input className="fw-in" type="number" value={fsD.creditGDPGap} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setFsd('creditGDPGap',e.target.value)} step="0.1" min="-3" max="3"/>
+            </label>
+            <label style={{color:'var(--color-text-secondary)'}}>Productivity drag (pp/yr):
+              <input className="fw-in" type="number" value={fsD.productivityDrag} style={{width:'60px',marginLeft:'4px'}}
+                onChange={e=>setFsd('productivityDrag',e.target.value)} step="0.05" min="-2" max="0"/>
+            </label>
+          </div>
+          <div className="k-note">Finance-neutral rule: JR ECM + \u03bb_fc \u00d7 NFCI (Borio 2012/2014). r* endogeneity correction: Borio (2016, Cato J, Pillar II) productivity drag ({fsD.productivityDrag} pp/yr \u00d7 {fsD.cycleHorizonYrs} yr). Finance-neutral output gap: Borio, Disyatat &amp; Juselius (2013, BIS WP404).</div>
         </div>
       </div>
     </div>

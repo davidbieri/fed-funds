@@ -16,6 +16,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Session 6-A5: Tab 07 NS beta0 decomposition -- 4-component breakdown (r*+pi*, psi_safety KVJ 2012, psi_leverage DSS 2018, residual) added to Yield Curve factor cards panel; seed badge when bsD not fetched
 - Session 6-B1: Tab 11 (Financial Stability) shell + Panel 1 -- FinStabTab component with NFCI regime detection (loose/neutral/tight), colored regime band, NFCI horizontal gauge SVG with 3 zones and needle, stat cards (NFCI, HY OAS, xccy basis, editable lambda_fc); Fetch FRED button; tab routing wired
 - Session 6-B2: Tab 11 Panel 2 -- Finance-neutral Taylor Rule gap visualization; horizontal rate comparison SVG (EFFR, JR ECM, finance-neutral, ZQ terminal, SEP dot); leaning premium shaded region + annotation; stat cards (finance-neutral rate, JR prescribed, leaning premium, gradualism gap SS 2018)
+- Session 6-B2b: Tab 11 Panel 2b -- Gap decomposition stacked bar (JR gap + Borio r* endogeneity correction); leaning premium arrow with marker; editable credit-GDP gap and productivity drag inputs; Borio (2016 Pillar II) r* adjustment displayed
 
 ---
 
