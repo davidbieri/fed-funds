@@ -3531,6 +3531,43 @@ function FinStabTab({state, dispatch, finance}) {
   svg3+='<text x="'+(W3-20)+'" y="'+(H3-6)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)">Too restrictive (leaning against wind)</text>';
   svg3+='</svg>';
 
+  // --- Panel 3: McCauley (2019) dollar safe asset gauge ---
+  const reserves=bsD.reserves||3200, gdp=bsD.gdpNominal||28500;
+  const reservesPctGdp=reserves/gdp*100;
+  const swapLn=fsD.swapLines||0, xccyBp=fsD.xccyBasis||-8;
+  // Layer thresholds
+  const resThreshLo=8, resThreshHi=14; // % of GDP
+  const swapThresh=fsD.swapLinesP75||10; // $bn
+  const xccyThresh=fsD.xccyBasisP75||-20; // bp
+
+  const resColor=reservesPctGdp>=resThreshHi?'var(--c-stress-lo)':reservesPctGdp>=resThreshLo?'var(--c-leaning)':'var(--c-stress-hi)';
+  const swapColor=swapLn<1?'var(--c-stress-lo)':swapLn<swapThresh?'var(--c-leaning)':'var(--c-stress-hi)';
+  const xccyColor=xccyBp>-5?'var(--c-stress-lo)':xccyBp>xccyThresh?'var(--c-leaning)':'var(--c-stress-hi)';
+
+  // Horizontal gauge for each layer
+  const W4=580, H4=130;
+  const gY=[22,58,94], gH=18;
+  const gL=100, gR=W4-20, gW=gR-gL;
+  function gaugeBar(yi, val, min, max, col, label, unit){
+    const clamped=Math.max(min,Math.min(max,val));
+    const x=gL+((clamped-min)/(max-min))*gW;
+    let s='';
+    s+='<text x="'+(gL-4)+'" y="'+(gY[yi]+gH/2+4)+'" text-anchor="end" font-size="9" fill="var(--color-text-secondary)">'+label+'</text>';
+    s+='<rect x="'+gL+'" y="'+gY[yi]+'" width="'+gW+'" height="'+gH+'" fill="var(--color-background-secondary)" rx="3"/>';
+    s+='<rect x="'+gL+'" y="'+gY[yi]+'" width="'+(x-gL)+'" height="'+gH+'" fill="'+col+'" opacity=".6" rx="3"/>';
+    s+='<rect x="'+(x-2)+'" y="'+(gY[yi]-3)+'" width="4" height="'+(gH+6)+'" fill="'+col+'" rx="2"/>';
+    s+='<text x="'+(x+6)+'" y="'+(gY[yi]+gH/2+4)+'" font-size="10" font-weight="500" fill="'+col+'" font-family="var(--font-mono)">'+val.toFixed(1)+unit+'</text>';
+    // min/max labels
+    s+='<text x="'+gL+'" y="'+(gY[yi]+gH+12)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+min+unit+'</text>';
+    s+='<text x="'+gR+'" y="'+(gY[yi]+gH+12)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)">'+max+unit+'</text>';
+    return s;
+  }
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  svg4+=gaugeBar(0, reservesPctGdp, 0, 20, resColor, 'Reserves/GDP', '%');
+  svg4+=gaugeBar(1, swapLn, 0, 50, swapColor, 'Swap lines', 'bn');
+  svg4+=gaugeBar(2, xccyBp, -50, 10, xccyColor, 'Xccy basis', 'bp');
+  svg4+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3611,6 +3648,27 @@ function FinStabTab({state, dispatch, finance}) {
             </label>
           </div>
           <div className="k-note">Finance-neutral rule: JR ECM + \u03bb_fc \u00d7 NFCI (Borio 2012/2014). r* endogeneity correction: Borio (2016, Cato J, Pillar II) productivity drag ({fsD.productivityDrag} pp/yr \u00d7 {fsD.cycleHorizonYrs} yr). Finance-neutral output gap: Borio, Disyatat &amp; Juselius (2013, BIS WP404).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2462 Dollar Safe Asset Gauge (McCauley 2019)</span>
+            <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>3-layer assessment</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg4}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:resColor}}>Reserves / GDP</div><div className="fw-stat-v" style={{fontSize:'16px',color:resColor}}>{reservesPctGdp.toFixed(1)}%</div><div className="fw-stat-s">${reserves.toFixed(0)}bn / ${(gdp/1000).toFixed(1)}T</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:swapColor}}>Swap line drawdowns</div><div className="fw-stat-v" style={{fontSize:'16px',color:swapColor}}>${swapLn.toFixed(1)}bn</div><div className="fw-stat-s">{swapLn<1?'No emergency demand':'CB dollar demand active'}</div></div>
+            <div className="fw-stat">
+              <div className="fw-stat-l" style={{color:xccyColor}}>EUR/USD xccy basis</div>
+              <div className="fw-stat-v" style={{fontSize:'16px',color:xccyColor}}>{xccyBp.toFixed(0)} bp</div>
+              <div className="fw-stat-s">
+                <span className="data-badge" style={{background:'var(--color-background-info)',color:'var(--color-text-warning)',fontSize:'9px'}}>\u26a0 manual</span>
+                {' '}<input className="fw-in" type="number" value={fsD.xccyBasis} style={{width:'55px'}} onChange={e=>setFsd('xccyBasis',e.target.value)} step="1"/>
+              </div>
+            </div>
+          </div>
+          <div className="k-note">McCauley (2019, BIS WP 782): the dollar functions as the global safe asset. Layer 1 (structural): Fed reserve balances relative to GDP measure the supply of ultimate dollar safe assets. Layer 2 (institutional): CB swap line drawdowns signal emergency offshore dollar demand. Layer 3 (market): EUR/USD cross-currency basis prices the marginal cost of dollar funding \u2014 deeply negative = acute scarcity. Xccy basis requires manual entry (no free public API).</div>
         </div>
       </div>
     </div>
