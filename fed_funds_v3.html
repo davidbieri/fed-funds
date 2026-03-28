@@ -3400,6 +3400,58 @@ function FinStabTab({state, dispatch, finance}) {
   svg1+='<text x="'+needleX+'" y="'+(barY-9)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="'+nfciColor+'">'+(nfci>=0?'+':'')+nfci.toFixed(2)+'</text>';
   svg1+='</svg>';
 
+  // --- Panel 2: Finance-neutral Taylor Rule gap ---
+  const effrNow=finance.effrStart||3.64;
+  const jrRate=finance.taylorJRRate||3.5;
+  const fnRateVal=fnRate||jrRate;
+  const termRate=finance.terminalRate||3.0;
+  const sepDot=state.trD?.sepLongRunDot||2.875;
+  const leanBp=leanPrem||0;
+  const leanColor=leanBp>0?'var(--c-leaning)':leanBp<-25?'var(--c-stress-lo)':'var(--color-text-secondary)';
+
+  // Horizontal rate comparison chart
+  const W2=660, H2=170;
+  const P2={t:24,r:30,b:30,l:50};
+  const cw2=W2-P2.l-P2.r, ch2=H2-P2.t-P2.b;
+  const rates=[effrNow, jrRate, fnRateVal, termRate, sepDot];
+  const rMin=Math.floor(Math.min(...rates)*2)/2-0.5;
+  const rMax=Math.ceil(Math.max(...rates)*2)/2+0.5;
+  const xSc2=v=>P2.l+((v-rMin)/(rMax-rMin))*cw2;
+  const rowH=ch2/5;
+
+  const rateRows=[
+    {lb:'EFFR (current)',       val:effrNow,   col:'var(--c-cme)'},
+    {lb:'JR ECM prescribed',    val:jrRate,    col:'var(--c-taylor)'},
+    {lb:'Finance-neutral (Borio)', val:fnRateVal, col:'var(--c-fin-neutral)'},
+    {lb:'ZQ terminal (12M)',    val:termRate,  col:'var(--c-dots)'},
+    {lb:'SEP long-run dot',     val:sepDot,    col:'var(--color-text-tertiary)'},
+  ];
+
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  // x-axis grid
+  for(let r=Math.ceil(rMin*2)/2;r<=rMax;r+=0.5){
+    const x=xSc2(r);
+    svg2+='<line x1="'+x+'" y1="'+P2.t+'" x2="'+x+'" y2="'+(P2.t+ch2)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
+    svg2+='<text x="'+x+'" y="'+(H2-8)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+r.toFixed(1)+'%</text>';
+  }
+  // leaning premium shaded region between fnRate and termRate
+  const leanX1=Math.min(xSc2(fnRateVal),xSc2(termRate));
+  const leanX2=Math.max(xSc2(fnRateVal),xSc2(termRate));
+  svg2+='<rect x="'+leanX1+'" y="'+P2.t+'" width="'+(leanX2-leanX1)+'" height="'+ch2+'" fill="var(--c-leaning)" opacity=".08"/>';
+  // rate rows
+  rateRows.forEach((r,i)=>{
+    const y=P2.t+i*rowH+rowH/2;
+    const x=xSc2(r.val);
+    svg2+='<line x1="'+P2.l+'" y1="'+y+'" x2="'+(P2.l+cw2)+'" y2="'+y+'" stroke="var(--color-border-tertiary)" stroke-width=".3"/>';
+    svg2+='<circle cx="'+x+'" cy="'+y+'" r="5" fill="'+r.col+'"/>';
+    svg2+='<text x="'+(x+8)+'" y="'+(y+3)+'" font-size="9" fill="'+r.col+'" font-family="var(--font-mono)">'+r.val.toFixed(2)+'%</text>';
+    svg2+='<text x="'+(P2.l-4)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" fill="var(--color-text-secondary)">'+r.lb+'</text>';
+  });
+  // leaning premium annotation
+  const leanMidX=(xSc2(fnRateVal)+xSc2(termRate))/2;
+  svg2+='<text x="'+leanMidX+'" y="'+(P2.t+ch2+18)+'" text-anchor="middle" font-size="9" font-weight="500" fill="var(--c-leaning)">Leaning premium: '+(leanBp>=0?'+':'')+leanBp.toFixed(0)+' bp</text>';
+  svg2+='</svg>';
+
   return (
     <div>
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:'8px',marginBottom:'10px'}}>
@@ -3438,6 +3490,21 @@ function FinStabTab({state, dispatch, finance}) {
             </div>
           </div>
           <div className="k-note">NFCI: Chicago Fed National Financial Conditions Index. Positive = tighter than average. Regime fills per Borio (2014, JBF): financial cycle affects optimal policy stance. \u03bb_fc weights NFCI in finance-neutral Taylor Rule (Panel 2).</div>
+        </div>
+
+        <div className="k-panel k-full" style={{marginBottom:'12px'}}>
+          <div className="k-hdr">
+            <span className="k-title">\u2461 Finance-Neutral Taylor Rule Gap</span>
+            <span style={{fontSize:'10px',color:leanColor}}>Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</span>
+          </div>
+          <div dangerouslySetInnerHTML={{__html:svg2}}/>
+          <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px',margin:'10px 0'}}>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral rate</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Inflation-neutral only</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>Leaning premium</div><div className="fw-stat-v" style={{fontSize:'16px',color:leanColor}}>{leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</div><div className="fw-stat-s">{leanBp>0?'Market below fin-neutral':'Market at/above fin-neutral'}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot \u2212 ZQ terminal (SS 2018)</div></div>
+          </div>
+          <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (\u03bb_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
         </div>
       </div>
     </div>
