@@ -2067,6 +2067,7 @@ function taylorGapSvg(meetings, cmeRates, classic, balanced) {
   gapsC.forEach((g,i)=>{
     const col=g>0.05?'var(--color-text-danger)':g<-0.05?'var(--color-text-info)':'var(--color-text-tertiary)';
     svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(g).toFixed(1)+'" r="3" fill="'+col+'" opacity=".8"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(g)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Taylor−CME gap · '+meetings[i].lb+'" data-val="Classic: '+(g>0?'+':'')+g.toFixed(2)+'% / Balanced: '+(gapsB[i]>0?'+':'')+gapsB[i].toFixed(2)+'%" data-sub="Positive = rule prescribes more tightening than market"/>';
     if(i%2===0||i===n-1) svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(g)+(g>=0?-7:11)).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="'+col+'" font-family="var(--font-mono)">'+(g>0?'+':'')+g.toFixed(2)+'</text>';
   });
 
@@ -3075,6 +3076,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
     syncedYcD.forEach(function(d){
       var col = d.src==='zq' ? 'var(--c-cme)' : 'var(--c-sofr)';
       svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+      svg+='<rect class="mse-hover" x="'+(xs(d.mat)-10).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" width="20" height="20" fill="transparent" data-label="'+d.label+' · '+(d.ticker||'')+'" data-val="'+d.rate.toFixed(3)+'%" data-sub="Source: '+(d.src==='zq'?'ZQ chain':'H.15 manual')+'"/>';
       svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
     });
 
@@ -3503,13 +3505,14 @@ function BalanceSheetTab({state, dispatch, finance}) {
   const runway=bsD.monthlyRunoff>0?Math.round((current-neutral)/bsD.monthlyRunoff):999;
   const shadowBp=qtChannels?qtChannels.total.toFixed(1):'—';
 
-  function stackBar(x, vals, colors){
+  function stackBar(x, vals, colors, labels, tag){
     let svg='';
     let cumul=0;
     vals.forEach((v,i)=>{
       const h=(v/maxVal)*ch;
       const y=yS(cumul+v);
       svg+='<rect x="'+x+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+Math.max(0,h).toFixed(1)+'" fill="'+colors[i]+'" opacity=".85" rx="1.5"/>';
+      svg+='<rect class="mse-hover" x="'+x+'" y="'+y.toFixed(1)+'" width="'+barW+'" height="'+Math.max(4,h).toFixed(1)+'" fill="transparent" data-label="'+labels[i]+' · '+tag+'" data-val="$'+(v/1000).toFixed(1)+'T" data-sub="'+(v/current*100).toFixed(1)+'% of total assets"/>';
       cumul+=v;
     });
     return svg;
@@ -3523,8 +3526,9 @@ function BalanceSheetTab({state, dispatch, finance}) {
     svg1+='<line x1="'+PD.l+'" y1="'+y.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
     if(v>0) svg1+='<text x="'+(PD.l-6)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="9" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">$'+(v/1000)+'T</text>';
   });
-  svg1+=stackBar(x1,[treasury,mbs,other],cols);
-  svg1+=stackBar(x2,[nT,nM,nO],cols);
+  const segLabels=['Treasuries','MBS','Other'];
+  svg1+=stackBar(x1,[treasury,mbs,other],cols,segLabels,'Current');
+  svg1+=stackBar(x2,[nT,nM,nO],cols,segLabels,'Neutral Floor');
   // neutral floor dashed line
   const nY=yS(neutral);
   svg1+='<line x1="'+PD.l+'" y1="'+nY.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+nY.toFixed(1)+'" stroke="var(--c-neutral-floor)" stroke-width="1.5" stroke-dasharray="6,4"/>';
@@ -3739,6 +3743,7 @@ function FinStabTab({state, dispatch, finance}) {
   });
   // needle
   svg1+='<rect x="'+(needleX-2)+'" y="'+(barY-6)+'" width="4" height="'+(barH+12)+'" fill="'+nfciColor+'" rx="2"/>';
+  svg1+='<rect class="mse-hover" x="'+(needleX-12)+'" y="'+(barY-10)+'" width="24" height="'+(barH+20)+'" fill="transparent" data-label="NFCI · Chicago Fed" data-val="'+(nfci>=0?'+':'')+nfci.toFixed(2)+' σ" data-sub="Regime: '+nfciRegime.toUpperCase()+'"/>';
   svg1+='<text x="'+needleX+'" y="'+(barY-9)+'" text-anchor="middle" font-size="11" font-weight="bold" fill="'+nfciColor+'">'+(nfci>=0?'+':'')+nfci.toFixed(2)+'</text>';
   svg1+='</svg>';
 
@@ -3786,6 +3791,7 @@ function FinStabTab({state, dispatch, finance}) {
     const x=xSc2(r.val);
     svg2+='<line x1="'+P2.l+'" y1="'+y+'" x2="'+(P2.l+cw2)+'" y2="'+y+'" stroke="var(--color-border-tertiary)" stroke-width=".3"/>';
     svg2+='<circle cx="'+x+'" cy="'+y+'" r="5" fill="'+r.col+'"/>';
+    svg2+='<rect class="mse-hover" x="'+(x-10)+'" y="'+(y-10)+'" width="20" height="20" fill="transparent" data-label="'+r.lb+'" data-val="'+r.val.toFixed(3)+'%" data-sub="Finance-neutral Taylor Rule decomposition"/>';
     svg2+='<text x="'+(x+8)+'" y="'+(y+3)+'" font-size="9" fill="'+r.col+'" font-family="var(--font-mono)">'+r.val.toFixed(2)+'%</text>';
     svg2+='<text x="'+(P2.l-4)+'" y="'+(y+3)+'" text-anchor="end" font-size="9" fill="var(--color-text-secondary)">'+r.lb+'</text>';
   });
