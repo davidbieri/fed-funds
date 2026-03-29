@@ -7,9 +7,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 ## [Unreleased]
 
 ### Added — PWA manifest and Apple meta tags
-- `manifest.json`: name, short_name, start_url, scope, display standalone, orientation portrait-primary, theme/background #f8f7f4, icon entries (180/192/512)
+- `manifest.json`: name (em-dash, no colon), short_name "MSE", start_url, scope, display standalone, orientation portrait-primary, theme/background #f8f7f4, icon entries (180/192/512)
 - `fed_funds_v3.html` `<head>`: `<link rel="manifest">`, apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style, apple-mobile-web-app-title (MSE), apple-touch-icon (icon-180.png), theme-color meta
-- Placeholder icons: icon-180.png, icon-192.png, icon-512.png (CME blue square + white "MSE" text, DejaVu Sans Bold)
+- Placeholder icons: icon-180.png, icon-192.png, icon-512.png (node-canvas, CME blue rounded square + white "MSE" text)
 
 ---
 

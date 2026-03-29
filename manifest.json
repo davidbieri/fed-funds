@@ -1,5 +1,5 @@
 {
-  "name": "MSE: Multi-Market Framework for Federal Reserve Policy Analytics",
+  "name": "MSE — Federal Reserve Policy Analytics",
   "short_name": "MSE",
   "description": "CME FedWatch methodology, prediction markets, SOFR strip, Taylor Rule, yield curve, and riding calculator.",
   "start_url": "/fed-funds/fed_funds_v3.html",
