@@ -11,6 +11,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 - App useEffect: removed broken `querySelectorAll('[dangerouslySetInnerHTML]')` scan; kept `document.body` fallback only
 - CSS: added `.mse-hover` cursor/hover rules and `circle:has(+ .mse-hover:hover)` highlight for SVG dot hover feedback
 
+### Added — Tooltip hover rects on four chart builders (Iteration 2)
+- `dashUnifiedSvg`: mse-hover rects on CME, Kalshi, SOFR, and Fed SEP dots with data-label/val/sub
+- `sofrMainChart`: mse-hover rects on SR3 SOFR rates, ZQ avg dots, instantaneous forward dots, Fed SEP dots
+- `ycCurveChart`: mse-hover rects on Nelson-Siegel input dots (ZQ chain + H.15 manual sources)
+- `taylorChartSvg`: mse-hover rects on Classic Taylor, Balanced, Judd-Rudebusch, Finance-neutral, and CME implied dots
+
 ### Added — Tab group identity colors and two dividers
 - CSS: `.tc-market` (CME blue), `.tc-analytics` (overlay amber), `.tc-macro` (fin-neutral teal) applied to `.fw-tab` and `.fw-tab.act`
 - TABS array: `tc` field on each tab; removed `_divider` sentinel row

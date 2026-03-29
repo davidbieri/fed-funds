@@ -1783,19 +1783,21 @@ function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
   }
   if(validZQ.length>1){
     for(let k=0;k<validZQ.length-1;k++){const a=validZQ[k],b=validZQ[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-cme)" stroke-width="2" opacity=".8"/>';}
-    validZQ.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="4" fill="var(--c-cme)" opacity=".85"/>';});
+    validZQ.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="4" fill="var(--c-cme)" opacity=".85"/>';svg+='<rect class="mse-hover" x="'+(xs(d.i)-8).toFixed(1)+'" y="'+(ys(d.v)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="ZQ avg · '+srD[d.i].qLabel+'" data-val="'+d.v.toFixed(3)+'%" data-sub="EFFR implied from ZQ chain"/>';});
   }
   if(validFwd.length>1){
     for(let k=0;k<validFwd.length-1;k++){const a=validFwd[k],b=validFwd[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.v).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.v).toFixed(1)+'" stroke="var(--c-sofr-fwd)" stroke-width="1.5" stroke-dasharray="6,3" opacity=".85"/>';}
-    validFwd.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="3" fill="var(--c-sofr-fwd)" opacity=".8"/>';});
+    validFwd.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.v).toFixed(1)+'" r="3" fill="var(--c-sofr-fwd)" opacity=".8"/>';svg+='<rect class="mse-hover" x="'+(xs(d.i)-8).toFixed(1)+'" y="'+(ys(d.v)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Fwd SOFR · '+srD[d.i].qLabel+'" data-val="'+d.v.toFixed(3)+'%" data-sub="Instantaneous forward rate"/>';});
   }
   for(let i=0;i<sofrRates.length-1;i++){svg+='<line x1="'+xs(i).toFixed(1)+'" y1="'+ys(sofrRates[i]).toFixed(1)+'" x2="'+xs(i+1).toFixed(1)+'" y2="'+ys(sofrRates[i+1]).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".9"/>';}
   sofrRates.forEach((r,i)=>{
     svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="SR3 · '+srD[i].ticker+'" data-val="'+r.toFixed(3)+'%" data-sub="3M SOFR futures implied rate"/>';
     svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(ys(r)-9).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-sofr)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';
   });
   fedDots.forEach(d=>{
     svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(d.i)-10).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" width="20" height="20" fill="transparent" data-label="Fed SEP · '+d.label+'" data-val="'+d.rate.toFixed(2)+'%" data-sub="FOMC Summary of Economic Projections"/>';
     svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">'+d.label+'</text>';
   });
   srD.forEach((s,i)=>{svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+s.qLabel+'</text>';});
@@ -1877,20 +1879,22 @@ function dashUnifiedSvg(chain,meetings,states,lb,compareSeries,zqAvgs,fwD,kalshi
   }
   if(sofrPts.length>1){
     for(let k=0;k<sofrPts.length-1;k++){const a=sofrPts[k],b=sofrPts[k+1];svg+='<line x1="'+xs(a.i).toFixed(1)+'" y1="'+ys(a.r).toFixed(1)+'" x2="'+xs(b.i).toFixed(1)+'" y2="'+ys(b.r).toFixed(1)+'" stroke="var(--c-sofr)" stroke-width="2.5" opacity=".85"/>';}
-    sofrPts.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.r)-9).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-sofr)" font-family="var(--font-mono)">'+d.r.toFixed(2)+'</text>';});
+    sofrPts.forEach(d=>{svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.r).toFixed(1)+'" r="5" fill="var(--c-sofr)" opacity=".9"/>';svg+='<rect class="mse-hover" x="'+(xs(d.i)-8).toFixed(1)+'" y="'+(ys(d.r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="SR3 SOFR · '+srD[sofrPts.indexOf(d)].lb+'" data-val="'+d.r.toFixed(3)+'%" data-sub="3M SOFR futures implied rate"/>';svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.r)-9).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-sofr)" font-family="var(--font-mono)">'+d.r.toFixed(2)+'</text>';});
   }
   const cPts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".9"/>';
-  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';});
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-cme)" opacity=".8"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="CME · '+months[i]+'" data-val="'+r.toFixed(3)+'%" data-sub="Expected EFFR (ZQ futures chain)"/>';});
   let kPrev=null;
   months.forEach((lb2,i)=>{
     const r=kalRates[i];if(r===null)return;
     if(kPrev)svg+='<line x1="'+xs(kPrev.i).toFixed(1)+'" y1="'+ys(kPrev.r).toFixed(1)+'" x2="'+xs(i).toFixed(1)+'" y2="'+ys(r).toFixed(1)+'" stroke="var(--c-kal)" stroke-width="1.5" stroke-dasharray="4,3" opacity=".75"/>';
     svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-kal)" opacity=".85"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Kalshi · '+lb2+'" data-val="'+r.toFixed(3)+'%" data-sub="Kalshi implied rate (kxfed contract)"/>';
     kPrev={i:i,r:r};
   });
   fedDots.forEach(d=>{
     svg+='<circle cx="'+xs(d.i).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="var(--c-dots)" opacity=".85"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(d.i)-10).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" width="20" height="20" fill="transparent" data-label="Fed SEP median · '+months[d.i]+'" data-val="'+d.rate.toFixed(2)+'%" data-sub="Dec 2025 SEP projection"/>';
     svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)+14).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-sans)">SEP</text>';
   });
   months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
@@ -1923,6 +1927,7 @@ function ycCurveChart(ycD){
   ycD.forEach(d=>{
     const col=d.src==='zq'?'var(--c-cme)':'var(--c-sofr)';
     svg+='<circle cx="'+xs(d.mat).toFixed(1)+'" cy="'+ys(d.rate).toFixed(1)+'" r="6" fill="'+col+'" opacity=".9"/>';
+    svg+='<rect class="mse-hover" x="'+(xs(d.mat)-10).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" width="20" height="20" fill="transparent" data-label="'+d.label+' · '+(d.ticker||'')+'" data-val="'+d.rate.toFixed(3)+'%" data-sub="Source: '+(d.src==='zq'?'ZQ chain':'H.15 manual')+'"/>';
     svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
     svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)+18).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.label+'</text>';
   });
@@ -1973,12 +1978,12 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
   // Classic Taylor (thinner rose — JR takes the heavy line)
   const cPts=classic.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+cPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="1.5" stroke-dasharray="10,4" opacity=".65"/>';
-  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-taylor)" opacity=".65"/>';});
+  classic.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="2.5" fill="var(--c-taylor)" opacity=".65"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Classic Taylor · '+allMonths[i]+'" data-val="'+r.toFixed(2)+'%" data-sub="Original Taylor (1993) rule"/>';});
 
   // Balanced approach (dashed rose lighter)
   const bPts=balanced.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+bPts+'" fill="none" stroke="var(--c-taylor-mod)" stroke-width="2" stroke-dasharray="7,4" opacity=".85"/>';
-  balanced.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-taylor-mod)" opacity=".8"/>';});
+  balanced.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-taylor-mod)" opacity=".8"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Balanced · '+allMonths[i]+'" data-val="'+r.toFixed(2)+'%" data-sub="Yellen balanced-approach rule"/>';});
 
   // Inertial classic (thin dotted)
   const icPts=inertialC.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
@@ -1988,20 +1993,20 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
   if(jrV.length){
     const jrPts=jrV.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
     svg+='<polyline points="'+jrPts+'" fill="none" stroke="var(--c-taylor)" stroke-width="2.5" opacity=".95"/>';
-    jrV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-taylor)" stroke="var(--color-background-primary)" stroke-width="1" opacity=".95"/>';});
+    jrV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="4" fill="var(--c-taylor)" stroke="var(--color-background-primary)" stroke-width="1" opacity=".95"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Judd-Rudebusch · '+allMonths[i]+'" data-val="'+r.toFixed(2)+'%" data-sub="ECM error-correction path"/>';});
   }
 
   // Finance-neutral path (teal dashed)
   if(fnV.length){
     const fnPts=fnV.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
     svg+='<polyline points="'+fnPts+'" fill="none" stroke="var(--c-fin-neutral)" stroke-width="2" stroke-dasharray="8,4" opacity=".85"/>';
-    fnV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-fin-neutral)" opacity=".85"/>';});
+    fnV.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3" fill="var(--c-fin-neutral)" opacity=".85"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="Fin-neutral · '+allMonths[i]+'" data-val="'+r.toFixed(2)+'%" data-sub="Finance-neutral Taylor variant"/>';});
   }
 
   // CME implied path (blue)
   const cmePts=cmeRates.map((r,i)=>xs(i).toFixed(1)+','+ys(r).toFixed(1)).join(' ');
   svg+='<polyline points="'+cmePts+'" fill="none" stroke="var(--c-cme)" stroke-width="2.5" opacity=".85"/>';
-  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-cme)" opacity=".85"/>';});
+  cmeRates.forEach((r,i)=>{svg+='<circle cx="'+xs(i).toFixed(1)+'" cy="'+ys(r).toFixed(1)+'" r="3.5" fill="var(--c-cme)" opacity=".85"/>';svg+='<rect class="mse-hover" x="'+(xs(i)-8).toFixed(1)+'" y="'+(ys(r)-8).toFixed(1)+'" width="16" height="16" fill="transparent" data-label="CME implied · '+allMonths[i]+'" data-val="'+r.toFixed(2)+'%" data-sub="Market-implied EFFR path"/>';});
 
   // Current EFFR marker
   svg+='<circle cx="'+ml+'" cy="'+ys(effrStart).toFixed(1)+'" r="5" fill="var(--color-text-primary)" opacity=".6"/>';
