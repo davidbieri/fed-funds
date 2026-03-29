@@ -130,6 +130,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   margin-bottom:20px;letter-spacing:-.01em;
 }
 .hero-title em{font-style:italic;color:rgba(232,237,245,0.65)}
+[data-theme="light"] .hero-title em{color:rgba(26,24,20,0.50)}
 .hero-sub{
   font-size:16px;line-height:1.7;color:var(--muted);
   max-width:600px;margin-bottom:36px;font-weight:300;
@@ -462,7 +463,7 @@ footer{
       <div class="tab-card tc-bs">
         <span class="tab-new">New v4.1</span>
         <div class="tab-num">10 — BALANCE SHEET</div>
-        <div class="tab-name">QT Monitor &amp; Shadow Rate</div>
+        <div class="tab-name">Balance Sheet: QE · QT Monitor</div>
         <div class="tab-desc">4-panel layout: composition stacked bars with KVJ (2011) shadow rate decomposition, monthly runoff pace vs cap with MBS undershoot, corridor mechanics (IORB/EFFR/SVR/RRP), and two-instrument policy space scatter with 9 historical episodes.</div>
       </div>
       <div class="tab-card tc-fin">
@@ -611,15 +612,17 @@ footer{
         <div class="ug-stat"><div class="ug-stat-l">Live refreshes</div><div class="ug-stat-v" style="font-size:14px">5 buttons</div><div class="ug-stat-s">ZQ · Kalshi · Poly · SR3 · H.15</div></div>
       </div>
       <div class="ug-grid">
-        <div class="ug-pcard"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle" style="color:var(--cme-text)">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle" style="color:var(--cme-text)">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle" style="color:var(--cme-text)">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle" style="color:var(--kal-text)">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--sofr)"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle" style="color:var(--sofr-text)">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--faint-accent)"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber-text)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor-text)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding-text)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--bs)"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:var(--bs-text)">Balance Sheet: QE · QT Monitor</div><div class="ug-pdesc">4-panel layout: composition stacked bars with KVJ shadow rate, monthly runoff pace vs cap, corridor mechanics (IORB/EFFR/SVR/RRP), two-instrument policy space scatter.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--fin)"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:var(--fin-text)">BIS/Mehrling Framework</div><div class="ug-pdesc">NFCI vs EFFR path chart, finance-neutral Taylor Rule, global dollar stress gauge, doom loop scatter, five-axis financial cycle phase clock.</div></div>
       </div>
     </div>
 

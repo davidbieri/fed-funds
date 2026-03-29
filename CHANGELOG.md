@@ -6,6 +6,13 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Landing Page Fixes (Session INDEX-J)
+- Session INDEX-J: hero title em light-mode contrast fix (dark opacity token);
+  all 11 overview mini-cards now have identity-colored left borders + --*-text
+  title tokens (cards 01-06 were missing borders); Tab 10 renamed to
+  "Balance Sheet: QE · QT Monitor" across index.html, README.md,
+  CLAUDE.md, CHANGELOG.md
+
 ### Changed — Landing Page CSS (Session INDEX-A)
 - CSS theme system: light/dark toggle via `data-theme` attribute on `<html>`
 - Sticky nav with backdrop blur, `.active` link state, `.scrolled` shadow, `.nav-theme` toggle button
@@ -31,7 +38,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [4.1] — March 2026
 
-### Added — Balance Sheet & QT Monitor (Tab 10)
+### Added — Balance Sheet: QE · QT Monitor (Tab 10)
 
 - **BalanceSheetTab**: 4-panel layout with Fetch H.4.1 button (8 FRED series)
 - Panel 1: Composition stacked bars (current vs neutral floor), KVJ (2011) 4-channel shadow rate decomposition (duration, safety, signaling, MBS), editable neutral floor + monthly runoff
