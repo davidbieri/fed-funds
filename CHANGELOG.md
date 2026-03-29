@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Head cleanup + external assets
+- Load Google Fonts (Spectral, JetBrains Mono, DM Sans), KaTeX 0.16.9 CSS, Font Awesome 6.5.1 CSS in `<head>`
+- Add favicon.svg link
+- Shorten `<title>` to "MSE: Multi-Market Framework for Federal Reserve Policy Analytics"
+- Replace `\u2461` → ②, `\u03bb` → λ, `\u00b7` → · across finance-neutral panels and formula labels
+
 ---
 
 ## [4.2] — March 2026
