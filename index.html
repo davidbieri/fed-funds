@@ -891,8 +891,8 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       </div>
       <div class="ug-head">Illustrative forward rate chart</div>
       <div style="margin:12px 0;overflow-x:auto">
-<svg viewBox="0 0 560 190" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="SOFR strip illustration">
-  
+<svg viewBox="0 0 560 230" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="SOFR strip illustration">
+  <!-- ── Main chart area: y=20–150 ── -->
   <!-- Axes -->
   <line x1="55" y1="20" x2="55" y2="150" stroke="var(--border)" stroke-width="1"/>
   <line x1="55" y1="150" x2="540" y2="150" stroke="var(--border)" stroke-width="1"/>
@@ -906,7 +906,19 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   <line x1="55" y1="60" x2="540" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
   <line x1="55" y1="95" x2="540" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
   <line x1="55" y1="130" x2="540" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
-  <!-- X-axis labels (quarters) -->
+  <!-- SR3 SOFR curve (green solid) -->
+  <polyline points="90,62 157,72 224,85 291,98 358,107 425,113 492,116"
+    fill="none" stroke="var(--sofr)" stroke-width="2.5"/>
+  <!-- ZQ quarterly avg EFFR (blue dotted) -->
+  <polyline points="90,70 157,80 224,93 291,106 358,115 425,121 492,124"
+    fill="none" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
+  <!-- Instantaneous forward (cyan dashed) -->
+  <polyline points="90,50 157,60 224,78 291,97 358,113 425,122 492,126"
+    fill="none" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <!-- Trough marker -->
+  <circle cx="425" cy="122" r="4" fill="var(--poly)" opacity=".8"/>
+  <text x="430" y="118" font-size="8" fill="var(--poly)">trough</text>
+  <!-- X-axis date labels -->
   <text x="90" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Jun26</text>
   <text x="157" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Sep26</text>
   <text x="224" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Dec26</text>
@@ -914,49 +926,53 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   <text x="358" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Jun27</text>
   <text x="425" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Sep27</text>
   <text x="492" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Dec27</text>
-  <!-- SR3 SOFR curve (green solid) — points: easing gently -->
-  <polyline points="90,62 157,72 224,85 291,98 358,107 425,113 492,116"
-    fill="none" stroke="var(--sofr)" stroke-width="2.5"/>
-  <!-- ZQ quarterly avg EFFR (blue dotted) — slightly below SOFR -->
-  <polyline points="90,70 157,80 224,93 291,106 358,115 425,121 492,124"
-    fill="none" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
-  <!-- Instantaneous forward (cyan dashed) — leads the trough -->
-  <polyline points="90,50 157,60 224,78 291,97 358,113 425,122 492,126"
-    fill="none" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
-  <!-- Hover targets — 7 quarterly columns -->
-  <rect class="ug-hover" x="57" y="20" width="64" height="130" fill="transparent"
+  <!-- Hover targets spanning main chart + basis panel -->
+  <rect class="ug-hover" x="57" y="20" width="64" height="195" fill="transparent"
     data-label="Jun 2026" data-val="SR3: 3.48% · ZQ: 3.40%" data-sub="SOFR−EFFR basis: +8bp"/>
-  <rect class="ug-hover" x="124" y="20" width="64" height="130" fill="transparent"
+  <rect class="ug-hover" x="124" y="20" width="64" height="195" fill="transparent"
     data-label="Sep 2026" data-val="SR3: 3.38% · ZQ: 3.30%" data-sub="SOFR−EFFR basis: +8bp"/>
-  <rect class="ug-hover" x="191" y="20" width="64" height="130" fill="transparent"
+  <rect class="ug-hover" x="191" y="20" width="64" height="195" fill="transparent"
     data-label="Dec 2026" data-val="SR3: 3.25% · ZQ: 3.17%" data-sub="SOFR−EFFR basis: +8bp"/>
-  <rect class="ug-hover" x="258" y="20" width="64" height="130" fill="transparent"
+  <rect class="ug-hover" x="258" y="20" width="64" height="195" fill="transparent"
     data-label="Mar 2027" data-val="SR3: 3.14% · ZQ: 3.06%" data-sub="SOFR−EFFR basis: +8bp"/>
-  <rect class="ug-hover" x="325" y="20" width="64" height="130" fill="transparent"
+  <rect class="ug-hover" x="325" y="20" width="64" height="195" fill="transparent"
     data-label="Jun 2027" data-val="SR3: 3.07% · ZQ: 2.99%" data-sub="Inst. fwd trough near"/>
-  <rect class="ug-hover" x="392" y="20" width="64" height="130" fill="transparent"
+  <rect class="ug-hover" x="392" y="20" width="64" height="195" fill="transparent"
     data-label="Sep 2027" data-val="SR3: 3.03% · ZQ: 2.96%" data-sub="SOFR−EFFR basis: +7bp"/>
-  <rect class="ug-hover" x="459" y="20" width="75" height="130" fill="transparent"
+  <rect class="ug-hover" x="459" y="20" width="75" height="195" fill="transparent"
     data-label="Dec 2027" data-val="SR3: 3.01% · ZQ: 2.95%" data-sub="Terminal quarter — strip endpoint"/>
-  <!-- Trough marker on instantaneous forward -->
-  <circle cx="425" cy="122" r="4" fill="var(--poly)" opacity=".8"/>
-  <text x="430" y="118" font-size="8" fill="var(--poly)">trough</text>
-  <!-- Basis bars (bottom area) -->
-  <text x="44" y="183" text-anchor="end" font-size="7.5" fill="var(--faint)">basis</text>
-  <rect x="76" y="172" width="28" height="6" rx="1" fill="rgba(16,185,129,.4)"/>
-  <rect x="143" y="171" width="28" height="7" rx="1" fill="rgba(16,185,129,.4)"/>
-  <rect x="210" y="170" width="28" height="8" rx="1" fill="rgba(16,185,129,.4)"/>
-  <rect x="277" y="170" width="28" height="8" rx="1" fill="rgba(16,185,129,.4)"/>
-  <rect x="344" y="171" width="28" height="7" rx="1" fill="rgba(16,185,129,.35)"/>
-  <rect x="411" y="172" width="28" height="6" rx="1" fill="rgba(16,185,129,.3)"/>
-  <rect x="478" y="173" width="28" height="5" rx="1" fill="rgba(16,185,129,.3)"/>
-  <!-- Legend -->
-  <line x1="60" y1="177" x2="80" y2="177" stroke="var(--sofr)" stroke-width="2.5"/>
-  <text x="84" y="181" font-size="8" fill="var(--muted)">SR3 SOFR</text>
-  <line x1="160" y1="177" x2="180" y2="177" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
-  <text x="184" y="181" font-size="8" fill="var(--muted)">ZQ EFFR avg</text>
-  <line x1="270" y1="177" x2="290" y2="177" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
-  <text x="294" y="181" font-size="8" fill="var(--muted)">Inst. forward</text>
+  <!-- ── Basis sub-panel: y=172–215 ── -->
+  <!-- Separator -->
+  <line x1="55" y1="172" x2="540" y2="172" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,3"/>
+  <!-- Sub-panel label -->
+  <text x="44" y="196" text-anchor="end" font-size="7.5" fill="var(--sofr)">basis</text>
+  <text x="44" y="206" text-anchor="end" font-size="7.5" fill="var(--faint)">(bp)</text>
+  <!-- Baseline at y=215 — bars grow upward, scale 3px per bp -->
+  <line x1="55" y1="215" x2="540" y2="215" stroke="var(--border)" stroke-width=".5"/>
+  <!-- Basis bars: 8bp→24px, 8bp→24px, 8bp→24px, 8bp→24px, 7bp→21px, 7bp→21px, 6bp→18px -->
+  <rect x="63" y="191" width="54" height="24" rx="2" fill="rgba(16,185,129,.55)"/>
+  <text x="90" y="189" text-anchor="middle" font-size="7.5" fill="var(--sofr)">8bp</text>
+  <rect x="130" y="191" width="54" height="24" rx="2" fill="rgba(16,185,129,.5)"/>
+  <text x="157" y="189" text-anchor="middle" font-size="7.5" fill="var(--sofr)">8bp</text>
+  <rect x="197" y="191" width="54" height="24" rx="2" fill="rgba(16,185,129,.45)"/>
+  <text x="224" y="189" text-anchor="middle" font-size="7.5" fill="var(--sofr)">8bp</text>
+  <rect x="264" y="191" width="54" height="24" rx="2" fill="rgba(16,185,129,.4)"/>
+  <text x="291" y="189" text-anchor="middle" font-size="7.5" fill="var(--sofr)">8bp</text>
+  <rect x="331" y="194" width="54" height="21" rx="2" fill="rgba(16,185,129,.35)"/>
+  <text x="358" y="192" text-anchor="middle" font-size="7.5" fill="var(--sofr)">7bp</text>
+  <rect x="398" y="194" width="54" height="21" rx="2" fill="rgba(16,185,129,.3)"/>
+  <text x="425" y="192" text-anchor="middle" font-size="7.5" fill="var(--sofr)">7bp</text>
+  <rect x="465" y="197" width="54" height="18" rx="2" fill="rgba(16,185,129,.25)"/>
+  <text x="492" y="195" text-anchor="middle" font-size="7.5" fill="var(--sofr)">6bp</text>
+  <!-- ── Legend ── -->
+  <line x1="60" y1="222" x2="80" y2="222" stroke="var(--sofr)" stroke-width="2.5"/>
+  <text x="84" y="226" font-size="8" fill="var(--muted)">SR3 SOFR</text>
+  <line x1="165" y1="222" x2="185" y2="222" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="189" y="226" font-size="8" fill="var(--muted)">ZQ EFFR avg</text>
+  <line x1="278" y1="222" x2="298" y2="222" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <text x="302" y="226" font-size="8" fill="var(--muted)">Inst. forward</text>
+  <rect x="388" y="217" width="14" height="8" rx="1" fill="rgba(16,185,129,.45)"/>
+  <text x="406" y="226" font-size="8" fill="var(--muted)">SOFR−EFFR basis</text>
 </svg>
       </div>
       <div class="ug-head">The three curves</div>
