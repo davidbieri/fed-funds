@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Added — Session TOOL-C: probability tree dynamic hover rects
+- Probability tree: .mse-hover rect generated for every node (p >= 0.005) in the states.forEach loop; rect size hr=NR+4=22 units centered on node; tooltip shows rate level, probability percentage, confidence label (Dominant path/Likely/Possible/Tail), move description (cuts/hikes/Hold from start)
+
 ### Added — Session TOOL-B: tooltip infrastructure + scatter/clock hover targets
 - Tooltip infrastructure (Option C): initTooltips() vanilla JS function with .mse-hover class, useEffect re-runs after every render (50ms debounce), tooltip g element uses var(--color-background-secondary) background
 - Policy space scatter: hover rects on all 9 historical episode dots + "Now" dot (live curX/curY/combinedStance values)

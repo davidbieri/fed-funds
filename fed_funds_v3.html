@@ -2162,13 +2162,29 @@ function TreeTab({state, finance}) {
     });
   }
   states.forEach((st,li)=>{
-    const x=gx(li),lbl=li===0?'Now':meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'';
-    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    const x=gx(li);
+    const colLabel=li===0?'Now':(meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'');
+    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+colLabel+'</text>';
     Object.entries(st).forEach(([k,p])=>{
-      if(p<0.005)return;const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
+      if(p<0.005)return;
+      const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
       svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+NR+'" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".8"/>';
       svg+='<text x="'+x.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="500" fill="var(--color-text-primary)" font-family="var(--font-mono)">'+(p*100).toFixed(0)+'%</text>';
       svg+='<text x="'+x.toFixed(1)+'" y="'+(y+6).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-secondary)" font-family="var(--font-mono)">'+rate+'%</text>';
+      // Dynamic hover rect
+      const hr=NR+4;
+      const moveDesc=ki<0?Math.abs(ki)+' cut'+(Math.abs(ki)>1?'s':''):ki>0?ki+' hike'+(ki>1?'s':''):'Hold';
+      const confDesc=p>0.50?'Dominant path':p>0.20?'Likely':p>0.05?'Possible':'Tail';
+      const tipLabel=rate+'% \u00b7 '+(li===0?'Current':colLabel);
+      const tipVal='P = '+(p*100).toFixed(1)+'%';
+      const tipSub=confDesc+' \u00b7 '+moveDesc+(ki!==0?' from start':'');
+      svg+='<rect class="mse-hover"'
+        +' x="'+(x-hr).toFixed(1)+'" y="'+(y-hr).toFixed(1)+'"'
+        +' width="'+(hr*2)+'" height="'+(hr*2)+'"'
+        +' fill="transparent"'
+        +' data-label="'+tipLabel+'"'
+        +' data-val="'+tipVal+'"'
+        +' data-sub="'+tipSub+'"/>';
     });
   });
   for(let k=0;k>=minK;k--){const y=gyf(k);svg+='<text x="0" y="'+y.toFixed(1)+'" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';}
