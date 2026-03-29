@@ -6,6 +6,38 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+No sessions in progress.
+
+---
+
+## [4.2] — March 2026
+
+### Changed — Landing Page Design Refresh (Sessions INDEX-A through INDEX-N)
+
+- Light/dark theme toggle (`data-theme` on `<html>`, localStorage persistence)
+- Sticky nav with backdrop blur, scroll shadow, 4 anchor links, active state
+- Personal academic brand: nav logo → *david bieri* (Spectral italic) + MSE (mono)
+- Eccles epigraph added to hero section
+- Tab card identity color system (`tc-*` classes, persistent `border-left`)
+- Typography scale increase across all elements
+- All 11 overview mini-cards: identity-colored borders + `--*-text` tokens
+- Hero title em contrast fix for light mode
+- Hero stats updated: 11 tabs / 7 sources / 10 scenarios / 25 actions
+- Signal chain extended to 11 nodes (Balance Sheet + Financial Stability)
+- How it works: standardized PURPOSE / MECHANICS / WHAT TO LOOK FOR / KEY OUTPUT template across 12 tabs
+- Scenarios tab fully rewritten (purpose, mechanics, calibration, compare overlay)
+- 6 illustrative SVG figures with shared tooltip infrastructure (full column width)
+- Probability tree 3-meeting lattice, SOFR strip 3-curve, yield curve NS fit,
+  Taylor Rule 5-variant + gap, Balance Sheet policy scatter + KVJ bars,
+  Financial Stability phase clock + r* gap bar
+- Consolidated sticky footer: full viewport width, social icons (GitHub/YouTube/LinkedIn/X),
+  ecosystem links (david-bieri.com, circular-flows.org, august-loesch.org), SVG favicon
+- Tab 10 renamed: Balance Sheet: QE · QT Monitor
+
+### Fixed
+- Footer: removed duplicate `.sticky-foot` block (merge conflict artifact);
+  version string corrected to v4.2; padding and font sizes increased
+
 ### Fixed — Footer Cleanup (Session INDEX-N)
 - Session INDEX-N: remove duplicate .sticky-foot footer (old block left
   from merge conflict); bump footer version v4.1 -> v4.2; increase footer
