@@ -37,6 +37,17 @@
   --modal-backdrop:rgba(240,238,233,0.92);
   --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
   --nav-blur:rgba(248,247,244,0.92);
+
+  /* Accent text variants — darker for light mode legibility */
+  --cme-text:#1d4ed8;
+  --kal-text:#c2410c;
+  --sofr-text:#047857;
+  --amber-text:#92400e;
+  --taylor-text:#9f1239;
+  --riding-text:#5b21b6;
+  --bs-text:#0369a1;
+  --fin-text:#0f766e;
+  --poly-text:#0e7490;
 }
 
 [data-theme="dark"]{
@@ -52,6 +63,16 @@
   --modal-backdrop:rgba(9,18,31,0.92);
   --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.4);
   --nav-blur:rgba(13,25,41,0.92);
+
+  --cme-text:#3b82f6;
+  --kal-text:#f97316;
+  --sofr-text:#10b981;
+  --amber-text:#f59e0b;
+  --taylor-text:#e11d48;
+  --riding-text:#8b5cf6;
+  --bs-text:#0ea5e9;
+  --fin-text:#0d9488;
+  --poly-text:#06b6d4;
 }
 
 body{
@@ -75,13 +96,13 @@ body::before{
   z-index:0;
 }
 
-.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px}
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 32px;padding-bottom:44px}
 
 /* NAV */
 nav{
   position:sticky;top:0;z-index:50;
   display:flex;align-items:center;justify-content:space-between;
-  padding:14px 0;
+  padding:14px 20px;
   background:var(--nav-blur);
   backdrop-filter:blur(8px);
   -webkit-backdrop-filter:blur(8px);
@@ -90,9 +111,15 @@ nav{
 }
 nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .nav-logo{
+  font-family:'Spectral',serif;font-size:16px;font-weight:300;
+  font-style:italic;color:var(--text);text-decoration:none;
+  letter-spacing:.02em;transition:color .2s;
+}
+.nav-logo:hover{color:var(--cme-text)}
+.nav-sep{color:var(--faint);font-size:12px;margin:0 10px}
+.nav-tool{
   font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:500;
-  color:var(--cme);letter-spacing:.08em;text-transform:uppercase;
-  text-decoration:none;
+  color:var(--cme-text);letter-spacing:.1em;text-transform:uppercase;
 }
 .nav-links{display:flex;gap:16px;align-items:center}
 .nav-link{
@@ -130,6 +157,12 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   margin-bottom:20px;letter-spacing:-.01em;
 }
 .hero-title em{font-style:italic;color:rgba(232,237,245,0.65)}
+.eccles{
+  font-family:'Spectral',serif;font-size:13px;font-style:italic;
+  color:var(--faint);border-left:2px solid var(--border);
+  padding:4px 0 4px 14px;margin-bottom:20px;line-height:1.6;
+  max-width:560px;
+}
 .hero-sub{
   font-size:16px;line-height:1.7;color:var(--muted);
   max-width:600px;margin-bottom:36px;font-weight:300;
@@ -165,8 +198,8 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 /* SECTIONS */
 .section{padding:48px 0;border-bottom:1px solid var(--border)}
 .section-label{
-  font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:.14em;
-  color:var(--faint);text-transform:uppercase;margin-bottom:24px;
+  font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.14em;
+  color:var(--faint);text-transform:uppercase;margin-bottom:24px;font-weight:600;
 }
 
 /* TABS GRID */
@@ -194,12 +227,30 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .tab-card.tc-riding{--card-accent:var(--riding)}
 .tab-card.tc-bs   {--card-accent:var(--bs)}
 .tab-card.tc-fin  {--card-accent:var(--fin)}
+/* Tab name text — uses high-contrast text variants */
+.tab-card.tc-cme  .tab-name{color:var(--cme-text)}
+.tab-card.tc-kal  .tab-name{color:var(--kal-text)}
+.tab-card.tc-sofr .tab-name{color:var(--sofr-text)}
+.tab-card.tc-yc   .tab-name{color:var(--amber-text)}
+.tab-card.tc-taylor .tab-name{color:var(--taylor-text)}
+.tab-card.tc-riding .tab-name{color:var(--riding-text)}
+.tab-card.tc-bs   .tab-name{color:var(--bs-text)}
+.tab-card.tc-fin  .tab-name{color:var(--fin-text)}
+.tab-card.tc-dash .tab-name{color:var(--text)}
 /* Tab number inherits accent color */
 .tab-num{
   font-family:'JetBrains Mono',monospace;font-size:11px;
   color:var(--card-accent,var(--faint));
   margin-bottom:8px;letter-spacing:.1em;font-weight:500;
 }
+.tab-card.tc-cme  .tab-num{color:var(--cme-text)}
+.tab-card.tc-kal  .tab-num{color:var(--kal-text)}
+.tab-card.tc-sofr .tab-num{color:var(--sofr-text)}
+.tab-card.tc-yc   .tab-num{color:var(--amber-text)}
+.tab-card.tc-taylor .tab-num{color:var(--taylor-text)}
+.tab-card.tc-riding .tab-num{color:var(--riding-text)}
+.tab-card.tc-bs   .tab-num{color:var(--bs-text)}
+.tab-card.tc-fin  .tab-num{color:var(--fin-text)}
 .tab-name{font-size:15px;font-weight:500;color:var(--text);margin-bottom:8px}
 .tab-desc{font-size:13px;color:var(--muted);line-height:1.6}
 /* NEW badge for recently added tabs */
@@ -291,6 +342,27 @@ footer{
 }
 .foot-link:hover{color:var(--cme)}
 
+/* STICKY FOOTER */
+.sticky-foot{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--nav-blur);backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+  border-top:1px solid var(--border);
+  padding:7px 32px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:8px;
+}
+.sticky-foot-left{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--faint);line-height:1.4;
+}
+.sticky-foot-right{display:flex;gap:16px}
+.sticky-foot-link{
+  font-family:'JetBrains Mono',monospace;font-size:10px;
+  color:var(--faint);text-decoration:none;transition:color .15s;
+}
+.sticky-foot-link:hover{color:var(--cme-text)}
+
 /* MODAL */
 .modal-backdrop{
   display:none;position:fixed;inset:0;
@@ -373,7 +445,9 @@ footer{
 <div class="wrap">
 
   <nav id="site-nav">
-    <a class="nav-logo" href="#">SPIA · VT | davidbieri / fed-funds</a>
+    <a class="nav-logo" href="https://www.david-bieri.com" target="_blank">david bieri</a>
+    <span class="nav-sep">|</span>
+    <span class="nav-tool">MSE</span>
     <div class="nav-links">
       <a class="nav-link" href="#tabs">Tabs</a>
       <a class="nav-link" href="#sources">Sources</a>
@@ -388,12 +462,15 @@ footer{
   <div class="hero">
     <div class="hero-eyebrow">CME FedWatch · Prediction Markets · SOFR Strip · Taylor Rule · Balance Sheet · Financial Stability</div>
     <h1 class="hero-title">MSE:<br><em>A Multi-Market Framework<br>for Federal Reserve Policy Analytics</em></h1>
+    <blockquote class="eccles">
+      <em>MSE — after Marriner S. Eccles (1890–1977), principal economic philosopher of the New Deal, architect of the modern Federal Reserve.</em>
+    </blockquote>
     <p class="hero-sub">A browser-native implementation of the CME FedWatch methodology extended into a full monetary policy analytics suite: unconditional probability lattice from 30-day ZQ futures, three-way prediction market comparison, SOFR term structure, Nelson-Siegel yield curve fitting, Taylor Rule suite with Judd-Rudebusch ECM, and a Bieri-Chincarini riding-the-yield-curve calculator. No build step. No server. No dependencies.</p>
     <div class="hero-stats">
       <div class="stat"><span class="stat-n">11</span><span class="stat-l">analytical tabs</span></div>
-      <div class="stat"><span class="stat-n">3</span><span class="stat-l">market sources</span></div>
+      <div class="stat"><span class="stat-n">7</span><span class="stat-l">live data sources</span></div>
       <div class="stat"><span class="stat-n">10</span><span class="stat-l">historical scenarios</span></div>
-      <div class="stat"><span class="stat-n">5</span><span class="stat-l">Taylor variants</span></div>
+      <div class="stat"><span class="stat-n">25</span><span class="stat-l">reducer actions</span></div>
     </div>
     <div class="hero-actions">
       <button class="btn-launch" onclick="openModal()">⟶ Launch Tool</button>
@@ -529,19 +606,21 @@ footer{
       <button class="ug-ntab" onclick="ugShow('yieldcurve',this)">Yield curve</button>
       <button class="ug-ntab" onclick="ugShow('taylor',this)">Taylor Rule</button>
       <button class="ug-ntab" onclick="ugShow('riding',this)">Riding</button>
+      <button class="ug-ntab" onclick="ugShow('bs',this)">Balance sheet</button>
+      <button class="ug-ntab" onclick="ugShow('fin',this)">Fin. stability</button>
       <button class="ug-ntab" onclick="ugShow('scenarios',this)">Scenarios</button>
       <button class="ug-ntab" onclick="ugShow('refresh',this)">Live data</button>
     </div>
 
     <style>
-    .ug-ntab{font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.06em;color:var(--faint);padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;transition:color .15s,border-color .15s}
+    .ug-ntab{font-family:'JetBrains Mono',monospace;font-size:13px;letter-spacing:.06em;color:var(--faint);padding:12px 16px;cursor:pointer;border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;transition:color .15s,border-color .15s}
     .ug-ntab:hover{color:var(--text)}
     .ug-ntab.on{color:var(--cme);border-bottom-color:var(--cme)}
     .ug-page{display:none}.ug-page.on{display:block}
     .ug-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:16px 18px;margin-bottom:10px}
     .ug-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:12px 0}
-    .ug-body{font-size:13px;color:var(--muted);line-height:1.65;margin-bottom:12px}
-    .ug-head{font-size:13px;font-weight:500;color:var(--text);margin:16px 0 6px}
+    .ug-body{font-size:14px;color:var(--muted);line-height:1.65;margin-bottom:12px}
+    .ug-head{font-size:15px;font-weight:500;color:var(--text);margin:16px 0 6px}
     .ug-formula{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:16px 18px;margin:10px 0;line-height:1.9;overflow-x:auto}
     .ug-formula .katex-display{margin:.4em 0}
     .ug-steps{counter-reset:step;list-style:none;padding:0;margin:10px 0}
@@ -549,8 +628,8 @@ footer{
     .ug-steps li::before{content:counter(step);min-width:20px;height:20px;background:rgba(59,130,246,.15);color:var(--cme);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;flex-shrink:0;margin-top:2px}
     .ug-pcard{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:14px}
     .ug-pnum{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);margin-bottom:4px}
-    .ug-ptitle{font-size:12px;font-weight:500;color:var(--text);margin-bottom:6px}
-    .ug-pdesc{font-size:11px;color:var(--muted);line-height:1.55}
+    .ug-ptitle{font-size:14px;font-weight:500;color:var(--text);margin-bottom:6px}
+    .ug-pdesc{font-size:12px;color:var(--muted);line-height:1.55}
     .ug-pills{display:flex;gap:4px;flex-wrap:wrap;margin-top:8px}
     .ug-pill{font-size:9px;padding:2px 7px;border-radius:10px;font-family:'JetBrains Mono',monospace;font-weight:500}
     .ug-pill-b{background:rgba(59,130,246,.15);color:var(--cme)}
@@ -584,7 +663,8 @@ footer{
 
     <!-- OVERVIEW -->
     <div class="ug-page on" id="pg-overview">
-      <p class="ug-body">Ten tabs all driven from the same 12-month ZQ futures price table, connected through a single memoized signal chain. Change any ZQ price, checkbox, or day count and every tab updates instantly — probability tree, prediction market overlays, NS yield curve shocks, Taylor prescriptions, riding HPR matrix, Dashboard, and Financial Stability indicators.</p>
+      <p class="ug-body"><strong>MSE is a signal chain, not a dashboard.</strong> Each of the eleven tabs adds one analytical layer to a single shared state, so every upstream change — a ZQ price adjustment, a macro input, a scenario activation — propagates instantly through the entire suite. The chain runs from raw futures prices to financial stability, answering a single question at each stage: <em>what does this source tell us about the true distribution of future Fed policy that no other source alone can reveal?</em></p>
+      <p class="ug-body" style="margin-top:8px">The key insight is that futures, prediction markets, the yield curve, policy rules, and financial conditions are not redundant — they represent genuinely different agent types, time horizons, and loss functions pricing the same underlying uncertainty. MSE reads all of them simultaneously and makes their agreement and disagreement explicit.</p>
       <div class="ug-nd" style="flex-wrap:wrap;row-gap:6px">
         <div class="ug-nd-node">ZQ prices<br><span style="font-size:9px;opacity:.7">12 months</span></div>
         <div class="ug-nd-arrow">→</div>
@@ -592,40 +672,49 @@ footer{
         <div class="ug-nd-arrow">→</div>
         <div class="ug-nd-node">Prob. tree<br><span style="font-size:9px;opacity:.7">lattice</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">overlay</span></div>
+        <div class="ug-nd-node dim">Pred. markets<br><span style="font-size:9px;opacity:.7">PCI synthesis</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">independent</span></div>
+        <div class="ug-nd-node grn">SOFR strip<br><span style="font-size:9px;opacity:.7">transmission</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node dim">Dashboard<br><span style="font-size:9px;opacity:.7">unified</span></div>
+        <div class="ug-nd-node dim">Dashboard<br><span style="font-size:9px;opacity:.7">unified + PCI</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node amb">Yield curve<br><span style="font-size:9px;opacity:.7">NS + shocks</span></div>
+        <div class="ug-nd-node amb">Yield curve<br><span style="font-size:9px;opacity:.7">NS + QT shock</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node red">Taylor Rule<br><span style="font-size:9px;opacity:.7">JR ECM signal</span></div>
+        <div class="ug-nd-node red">Taylor Rule<br><span style="font-size:9px;opacity:.7">JR ECM + fin-neutral</span></div>
         <div class="ug-nd-arrow">→</div>
-        <div class="ug-nd-node vio">Riding<br><span style="font-size:9px;opacity:.7">HPR + filters</span></div>
+        <div class="ug-nd-node vio">Riding<br><span style="font-size:9px;opacity:.7">HPR + 6 filters</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(14,165,233,.12);color:#0369a1;border-color:rgba(14,165,233,.25)">Balance sheet<br><span style="font-size:9px;opacity:.7">KVJ + Stein SVR</span></div>
+        <div class="ug-nd-arrow">→</div>
+        <div class="ug-nd-node" style="background:rgba(13,148,136,.12);color:#0f766e;border-color:rgba(13,148,136,.25)">Fin. stability<br><span style="font-size:9px;opacity:.7">Borio + phase clock</span></div>
       </div>
       <div class="ug-stat-row">
-        <div class="ug-stat"><div class="ug-stat-l">Source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">ZQ source</div><div class="ug-stat-v" style="font-size:14px">CME ZQ</div><div class="ug-stat-s">30-day Fed Funds futures</div></div>
         <div class="ug-stat"><div class="ug-stat-l">Horizon</div><div class="ug-stat-v" style="font-size:14px">12 months</div><div class="ug-stat-s">Apr 2026 – Mar 2027</div></div>
         <div class="ug-stat"><div class="ug-stat-l">FOMC meetings</div><div class="ug-stat-v" style="font-size:14px">8 meetings</div><div class="ug-stat-s">4 anchor months</div></div>
-        <div class="ug-stat"><div class="ug-stat-l">Live refreshes</div><div class="ug-stat-v" style="font-size:14px">5 buttons</div><div class="ug-stat-s">ZQ · Kalshi · Poly · SR3 · H.15</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Live data sources</div><div class="ug-stat-v" style="font-size:14px">7 sources</div><div class="ug-stat-s">ZQ · SR3 · Kal · Poly · H.15 · MPT · FRED</div></div>
+        <div class="ug-stat"><div class="ug-stat-l">Refresh buttons</div><div class="ug-stat-v" style="font-size:14px">7 buttons</div><div class="ug-stat-s">Independent per source</div></div>
       </div>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
+        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">10-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels plus PCI Signal/Noise decomposition. Kal−CME and Poly−Kal basis pills on each panel.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
         <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber-text)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor-text)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding-text)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0ea5e9"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:var(--bs-text)">Balance Sheet / QT Monitor</div><div class="ug-pdesc">KVJ (2011) 4-channel shadow rate, Stein (2012) SVR corridor, DSS (2018) liquidity premium, two-instrument policy space. Fed H.4.1 live fetch.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid #0d9488"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:var(--fin-text)">Financial Stability</div><div class="ug-pdesc">BIS/Mehrling framework: finance-neutral r* (Borio 2016), McCauley dollar gauge, doom loop scatter, 6-axis phase clock. FRED live fetch.</div></div>
       </div>
     </div>
 
     <!-- EFFR CHAIN -->
     <div class="ug-page" id="pg-chain">
-      <p class="ug-body">The EFFR chain converts each month's ZQ futures price into start-of-month and end-of-month rates, isolating the exact point where the Fed changes rates. Non-meeting months serve as anchors that propagate the rate between meeting months.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Convert raw ZQ futures prices into a per-meeting EFFR path — the overnight rate the Fed will hold after each decision.</p>
+      <p class="ug-body" style="margin-top:6px">The CME FedWatch methodology uses N/M day-weighting to isolate the pre- and post-meeting EFFR levels within a contract month. Non-meeting months are anchors that propagate the rate between decisions. A fractional move count near 0.5 means maximum uncertainty between two adjacent outcomes; near 0 or 1 means near-certainty of a specific move size.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Per-meeting base/additional move probabilities → Probability Tree.</p>
       <div class="ug-head">Anchor rule — non-meeting months</div>
       <div class="ug-formula">
         \[\text{EFFR}(\text{End})_{T-1} \;=\; \text{EFFR}(\text{Avg})_{T} \;=\; \text{EFFR}(\text{Start})_{T+1}\]
@@ -657,10 +746,77 @@ footer{
 
     <!-- PROBABILITY TREE -->
     <div class="ug-page" id="pg-tree">
-      <p class="ug-body">The probability tree compounds the per-meeting binary splits into unconditional cumulative probabilities. Each node shows the probability of being at that rate level at that point in time, accounting for all paths to get there.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Compound per-meeting binary splits into an unconditional lattice showing the full joint distribution of possible rate paths over 12 months.</p>
+      <p class="ug-body" style="margin-top:6px">At each FOMC meeting, prior probability mass splits into hold/cut/hike branches. Nodes accumulate probability multiplicatively. The result is the market's complete probability distribution over where rates end up in 12 months — not just the central scenario.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Bright nodes = most likely paths. Horizontal spread at each meeting = policy uncertainty. A single dominant column means high conviction. The amber compare overlay renders a second scenario's distribution in parallel. The final distribution (rightmost) is the key output.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Terminal rate distribution, P(≥1 cut), expected cuts → anchors all prediction market comparison.</p>
       <div class="ug-formula">
         \[P(\text{node at meeting } M,\; \text{rate } R) = \sum_{R'} P(\text{prior node at } R') \;\times\; P(R' \to R \mid M)\]
         <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
+      </div>
+      <div class="ug-head">Illustrative lattice — 3 meetings</div>
+      <div style="margin:12px 0;overflow-x:auto">
+<svg viewBox="0 0 520 220" style="width:100%;max-width:520px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Probability tree illustration">
+  <!-- Background -->
+  <rect width="520" height="220" fill="var(--surface)" rx="6"/>
+  <!-- Column labels -->
+  <text x="60" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">START</text>
+  <text x="200" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">MTG 1 · APR</text>
+  <text x="340" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">MTG 2 · JUN</text>
+  <text x="460" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">TERMINAL</text>
+  <!-- Vertical guides -->
+  <line x1="60" y1="26" x2="60" y2="205" stroke="var(--border)" stroke-width=".5"/>
+  <line x1="200" y1="26" x2="200" y2="205" stroke="var(--border)" stroke-width=".5"/>
+  <line x1="340" y1="26" x2="340" y2="205" stroke="var(--border)" stroke-width=".5"/>
+  <line x1="460" y1="26" x2="460" y2="205" stroke="var(--border)" stroke-width=".5"/>
+  <!-- Start node: 3.50% (100%) -->
+  <circle cx="60" cy="110" r="22" fill="rgba(59,130,246,.85)" stroke="none"/>
+  <text x="60" y="107" text-anchor="middle" font-size="9" fill="white" font-weight="500">3.50%</text>
+  <text x="60" y="119" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.8)">100%</text>
+  <!-- Edges from start: hold 25% = 3.50, cut 75% = 3.25 -->
+  <line x1="82" y1="100" x2="178" y2="70" stroke="var(--border)" stroke-width="1.5" opacity=".5"/>
+  <line x1="82" y1="120" x2="178" y2="150" stroke="var(--cme)" stroke-width="3" opacity=".8"/>
+  <!-- MTG1 hold node: 3.50% (25%) - dim -->
+  <circle cx="200" cy="65" r="14" fill="rgba(59,130,246,.22)" stroke="rgba(59,130,246,.35)"/>
+  <text x="200" y="62" text-anchor="middle" font-size="8" fill="var(--cme)">3.50%</text>
+  <text x="200" y="73" text-anchor="middle" font-size="7.5" fill="var(--faint)">25%</text>
+  <!-- MTG1 cut node: 3.25% (75%) - bright -->
+  <circle cx="200" cy="150" r="20" fill="rgba(59,130,246,.8)" stroke="none"/>
+  <text x="200" y="147" text-anchor="middle" font-size="8.5" fill="white" font-weight="500">3.25%</text>
+  <text x="200" y="159" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.85)">75%</text>
+  <!-- Edges from MTG1 hold (25%): hold 30% = 3.50, cut 70% = 3.25 -->
+  <line x1="214" y1="57" x2="326" y2="42" stroke="var(--border)" stroke-width=".8" opacity=".4"/>
+  <line x1="214" y1="73" x2="326" y2="88" stroke="var(--border)" stroke-width="1.5" opacity=".4"/>
+  <!-- Edges from MTG1 cut (75%): hold 40% = 3.25, cut 60% = 3.00 -->
+  <line x1="220" y1="143" x2="320" y2="120" stroke="rgba(59,130,246,.5)" stroke-width="2.5" opacity=".7"/>
+  <line x1="220" y1="157" x2="320" y2="175" stroke="rgba(59,130,246,.8)" stroke-width="3.5" opacity=".8"/>
+  <!-- MTG2 nodes: 3.50% (7.5%), 3.25% (47.5%), 3.00% (45%) -->
+  <circle cx="340" cy="38" r="10" fill="rgba(59,130,246,.12)" stroke="rgba(59,130,246,.2)"/>
+  <text x="340" y="35" text-anchor="middle" font-size="7.5" fill="var(--faint)">3.50%</text>
+  <text x="340" y="46" text-anchor="middle" font-size="7" fill="var(--faint)">7.5%</text>
+  <circle cx="340" cy="107" r="17" fill="rgba(59,130,246,.55)" stroke="none"/>
+  <text x="340" y="104" text-anchor="middle" font-size="8.5" fill="white">3.25%</text>
+  <text x="340" y="116" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.85)">47.5%</text>
+  <circle cx="340" cy="175" r="19" fill="rgba(59,130,246,.72)" stroke="none"/>
+  <text x="340" y="172" text-anchor="middle" font-size="8.5" fill="white" font-weight="500">3.00%</text>
+  <text x="340" y="184" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.9)">45%</text>
+  <!-- Terminal bars (simplified distribution) -->
+  <rect x="448" y="30" width="24" height="8" rx="2" fill="rgba(59,130,246,.15)"/>
+  <text x="476" y="38" font-size="7.5" fill="var(--faint)">7.5%</text>
+  <rect x="436" y="98" width="48" height="14" rx="2" fill="rgba(59,130,246,.55)"/>
+  <text x="488" y="109" font-size="7.5" fill="var(--muted)">47.5%</text>
+  <rect x="432" y="165" width="56" height="16" rx="2" fill="rgba(59,130,246,.75)"/>
+  <text x="492" y="177" font-size="7.5" fill="var(--muted)" font-weight="500">45%</text>
+  <!-- Legend -->
+  <circle cx="30" cy="196" r="5" fill="rgba(59,130,246,.8)"/>
+  <text x="38" y="200" font-size="8" fill="var(--muted)">High prob.</text>
+  <circle cx="110" cy="196" r="5" fill="rgba(59,130,246,.2)" stroke="rgba(59,130,246,.4)"/>
+  <text x="118" y="200" font-size="8" fill="var(--muted)">Low prob.</text>
+  <line x1="185" y1="196" x2="205" y2="196" stroke="var(--cme)" stroke-width="3"/>
+  <text x="210" y="200" font-size="8" fill="var(--muted)">Dominant path</text>
+  <line x1="295" y1="196" x2="315" y2="196" stroke="var(--border)" stroke-width="1.5"/>
+  <text x="320" y="200" font-size="8" fill="var(--faint)">Low-prob. path</text>
+</svg>
       </div>
       <div class="ug-head">Reading the lattice</div>
       <div class="ug-grid">
@@ -679,32 +835,94 @@ footer{
 
     <!-- PREDICTION MARKETS -->
     <div class="ug-page" id="pg-prediction">
-      <p class="ug-body">Nine panels compare CME-derived probabilities against Kalshi and Polymarket. The key signal is the <em>basis</em> — the spread between markets — not the absolute level. Kal−CME captures the regulated vs futures spread; Poly−Kal captures the information gap between institutional/domestic and global/retail sentiment.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Benchmark the CME-derived probability distribution against two prediction market platforms to surface where different market types agree, diverge, and carry unique information.</p>
+      <p class="ug-body" style="margin-top:6px">The Kal−CME basis measures the regulated prediction market vs futures spread. The Poly−Kal basis captures the structural disagreement between Kalshi's institutionally-weighted domestic participants and Polymarket's global, retail, crypto-native base. Persistent divergence is analytically informative — it reflects genuine model disagreement across agent types (Kurz 1994), not noise.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Persistent Kal−CME divergence signals narrative momentum overriding fundamentals. Poly−Kal divergence above 5pp typically signals a tail risk narrative that institutional markets have not yet priced. Panel ⑩ synthesizes all four signal layers into the Policy Confidence Index regime label.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> PCI score + regime label → Dashboard. Platform divergence → Riding filter #5.</p>
       <div class="ug-src-leg">
         <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--cme)"></div>CME (institutional, futures-anchored)</div>
         <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--kal)"></div>Kalshi (regulated, domestic/institutional)</div>
         <div class="ug-src-item"><div class="ug-src-dot" style="background:var(--poly)"></div>Polymarket (global, retail/crypto-native)</div>
       </div>
       <div class="ug-grid">
-        <div class="ug-pcard"><div class="ug-pnum">①</div><div class="ug-ptitle">Meeting divergence</div><div class="ug-pdesc">3 bars per meeting with Kal−CME and Poly−Kal basis pills in percentage points.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">②</div><div class="ug-ptitle">Cut count distribution</div><div class="ug-pdesc">P(0–5+ cuts) from all three sources. Polymarket has 13 discrete strikes vs Kalshi's 5.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">③</div><div class="ug-ptitle">Combo path decomposer</div><div class="ug-pdesc">Top 8 hold/cut sequences vs Kalshi kxfedcombo prices and basis.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">④</div><div class="ug-ptitle">Market-implied dot plot</div><div class="ug-pdesc">CME chain + Kalshi implied rates + Fed Dec 2025 SEP dots — three paths on one chart.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill" style="background:rgba(139,92,246,.15);color:#8b5cf6">SEP</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">⑤</div><div class="ug-ptitle">Hike risk monitor</div><div class="ug-pdesc">Semicircular gauge with three arcs. Polymarket typically implies meaningfully more hike risk than CME.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">⑥</div><div class="ug-ptitle">First-cut timing</div><div class="ug-pdesc">CME step curve + Kalshi year-end circles + Polymarket per-meeting diamonds.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">⑦</div><div class="ug-ptitle">Terminal rate distribution</div><div class="ug-pdesc">CME final distribution vs Polymarket end-2026 market (−0.25% adjustment for upper bound convention).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">⑧</div><div class="ug-ptitle">Fed Chair regime risk</div><div class="ug-pdesc">Polymarket $230M nominee market — a second-order shift in the policy function entirely absent from CME futures.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
-        <div class="ug-pcard"><div class="ug-pnum">⑨</div><div class="ug-ptitle">Emergency cut gauge</div><div class="ug-pdesc">P(unscheduled FOMC cut before end-2026). Absent from Kalshi and CME — they only price scheduled outcomes.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">①</div><div class="ug-ptitle">Meeting divergence</div><div class="ug-pdesc">3 bars per meeting with Kal−CME and Poly−Kal basis pills in percentage points.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">②</div><div class="ug-ptitle">Cut count distribution</div><div class="ug-pdesc">P(0–5+ cuts) from all three sources. Polymarket has 13 discrete strikes vs Kalshi's 5.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">③</div><div class="ug-ptitle">Combo path decomposer</div><div class="ug-pdesc">Top 8 hold/cut sequences vs Kalshi kxfedcombo prices and basis.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">④</div><div class="ug-ptitle">Market-implied dot plot</div><div class="ug-pdesc">CME chain + Kalshi implied rates + Fed Dec 2025 SEP dots — three paths on one chart.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill" style="background:rgba(139,92,246,.15);color:#8b5cf6">SEP</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">⑤</div><div class="ug-ptitle">Hike risk monitor</div><div class="ug-pdesc">Semicircular gauge with three arcs. Polymarket typically implies meaningfully more hike risk than CME.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">⑥</div><div class="ug-ptitle">First-cut timing</div><div class="ug-pdesc">CME step curve + Kalshi year-end circles + Polymarket per-meeting diamonds.</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑦</div><div class="ug-ptitle">Terminal rate distribution</div><div class="ug-pdesc">CME final distribution vs Polymarket end-2026 market (−0.25% adjustment for upper bound convention).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑧</div><div class="ug-ptitle">Fed Chair regime risk</div><div class="ug-pdesc">Polymarket $230M nominee market — a second-order shift in the policy function entirely absent from CME futures.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑨</div><div class="ug-ptitle">Emergency cut gauge</div><div class="ug-pdesc">P(unscheduled FOMC cut before end-2026). Absent from Kalshi and CME — they only price scheduled outcomes.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">⑩</div><div class="ug-ptitle">Signal/Noise decomposition</div><div class="ug-pdesc">PCI component breakdown (4 bars), platform divergence tracker (Poly−Kal spread over time), conviction spread (MPT IQR vs crowd SentimentGap).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">PCI</span><span class="ug-pill ug-pill-a">MPT</span><span class="ug-pill ug-pill-c">Poly−Kal</span></div></div>
       </div>
     </div>
 
     <!-- SOFR STRIP -->
     <div class="ug-page" id="pg-sofr">
-      <p class="ug-body">The SOFR strip tab is independent of the ZQ chain. It uses CME 3-month SOFR futures (SR3) across 7 quarterly contracts from Jun 2026 to Dec 2027.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Map the transmission of overnight rate expectations into the 3-month term structure, revealing how markets price the Fed's path through the quarterly SOFR forward curve.</p>
+      <p class="ug-body" style="margin-top:6px">The SR3 SOFR strip is independent of the ZQ chain — it prices the secured overnight lending market, not the Fed Funds target. The SOFR–EFFR basis (SR3 minus ZQ quarterly average) measures transmission quality. A basis near zero means clean transmission; widening signals reserve scarcity or credit/liquidity risk premia entering the term structure. The instantaneous 3M forward strips out the quarterly-averaging effect to expose the marginal rate for each quarter.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The forward trough marks peak easing intensity — distinct from the terminal rate level. A rising basis as the curve eases is an early warning of transmission breakdown. Basis above 15bp warrants cross-checking against the NFCI and swap line readings in Tab 11.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> SOFR–EFFR basis → PCI transmission quality component (weight: 0.25).</p>
       <div class="ug-stat-row">
         <div class="ug-stat"><div class="ug-stat-l">SR3 contracts</div><div class="ug-stat-v" style="font-size:14px">SR3M6–SR3Z7</div><div class="ug-stat-s">7 quarterly</div></div>
         <div class="ug-stat"><div class="ug-stat-l">Typical basis</div><div class="ug-stat-v" style="font-size:14px">5–15 bp</div><div class="ug-stat-s">SOFR above EFFR</div></div>
         <div class="ug-stat"><div class="ug-stat-l">Convention</div><div class="ug-stat-v" style="font-size:14px">100 − rate</div><div class="ug-stat-s">Same as ZQ</div></div>
+      </div>
+      <div class="ug-head">Illustrative forward rate chart</div>
+      <div style="margin:12px 0;overflow-x:auto">
+<svg viewBox="0 0 560 190" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="SOFR strip illustration">
+  <rect width="560" height="190" fill="var(--surface)" rx="6"/>
+  <!-- Axes -->
+  <line x1="50" y1="20" x2="50" y2="150" stroke="var(--border)" stroke-width="1"/>
+  <line x1="50" y1="150" x2="540" y2="150" stroke="var(--border)" stroke-width="1"/>
+  <!-- Y-axis labels (rates) -->
+  <text x="44" y="25" text-anchor="end" font-size="8" fill="var(--faint)">4.0%</text>
+  <text x="44" y="60" text-anchor="end" font-size="8" fill="var(--faint)">3.5%</text>
+  <text x="44" y="95" text-anchor="end" font-size="8" fill="var(--faint)">3.0%</text>
+  <text x="44" y="130" text-anchor="end" font-size="8" fill="var(--faint)">2.5%</text>
+  <!-- Grid lines -->
+  <line x1="50" y1="25" x2="540" y2="25" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="50" y1="60" x2="540" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="50" y1="95" x2="540" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="50" y1="130" x2="540" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <!-- X-axis labels (quarters) -->
+  <text x="90" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Jun26</text>
+  <text x="157" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Sep26</text>
+  <text x="224" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Dec26</text>
+  <text x="291" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Mar27</text>
+  <text x="358" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Jun27</text>
+  <text x="425" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Sep27</text>
+  <text x="492" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Dec27</text>
+  <!-- SR3 SOFR curve (green solid) — points: easing gently -->
+  <polyline points="90,62 157,72 224,85 291,98 358,107 425,113 492,116"
+    fill="none" stroke="var(--sofr)" stroke-width="2.5"/>
+  <!-- ZQ quarterly avg EFFR (blue dotted) — slightly below SOFR -->
+  <polyline points="90,70 157,80 224,93 291,106 358,115 425,121 492,124"
+    fill="none" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
+  <!-- Instantaneous forward (cyan dashed) — leads the trough -->
+  <polyline points="90,50 157,60 224,78 291,97 358,113 425,122 492,126"
+    fill="none" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <!-- Trough marker on instantaneous forward -->
+  <circle cx="425" cy="122" r="4" fill="var(--poly)" opacity=".8"/>
+  <text x="430" y="118" font-size="8" fill="var(--poly)">trough</text>
+  <!-- Basis bars (bottom area) -->
+  <text x="44" y="183" text-anchor="end" font-size="7.5" fill="var(--faint)">basis</text>
+  <rect x="76" y="172" width="28" height="6" rx="1" fill="rgba(16,185,129,.4)"/>
+  <rect x="143" y="171" width="28" height="7" rx="1" fill="rgba(16,185,129,.4)"/>
+  <rect x="210" y="170" width="28" height="8" rx="1" fill="rgba(16,185,129,.4)"/>
+  <rect x="277" y="170" width="28" height="8" rx="1" fill="rgba(16,185,129,.4)"/>
+  <rect x="344" y="171" width="28" height="7" rx="1" fill="rgba(16,185,129,.35)"/>
+  <rect x="411" y="172" width="28" height="6" rx="1" fill="rgba(16,185,129,.3)"/>
+  <rect x="478" y="173" width="28" height="5" rx="1" fill="rgba(16,185,129,.3)"/>
+  <!-- Legend -->
+  <line x1="60" y1="177" x2="80" y2="177" stroke="var(--sofr)" stroke-width="2.5"/>
+  <text x="84" y="181" font-size="8" fill="var(--muted)">SR3 SOFR</text>
+  <line x1="160" y1="177" x2="180" y2="177" stroke="var(--cme)" stroke-width="2" stroke-dasharray="5,3"/>
+  <text x="184" y="181" font-size="8" fill="var(--muted)">ZQ EFFR avg</text>
+  <line x1="270" y1="177" x2="290" y2="177" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <text x="294" y="181" font-size="8" fill="var(--muted)">Inst. forward</text>
+</svg>
       </div>
       <div class="ug-head">The three curves</div>
       <div class="ug-grid">
@@ -720,7 +938,73 @@ footer{
 
     <!-- YIELD CURVE -->
     <div class="ug-page" id="pg-yieldcurve">
-      <p class="ug-body">The yield curve tab fits a Nelson-Siegel parametric model to 7 Treasury CMT maturities using 2,000-iteration Nelder-Mead optimization. It then propagates FOMC meeting rate shocks into yield curve scenarios using Bieri-Chincarini (2005) empirical factor loadings.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Fit the full Treasury term structure to a four-parameter Nelson-Siegel model and propagate FOMC rate shocks into curve scenarios across all maturities.</p>
+      <p class="ug-body" style="margin-top:6px">NS fitting over 7 CMT maturities via 2,000-iteration Nelder-Mead gives four factors: β₀ (level, long-run rate), β₁ (slope, short-end loading), β₂ (curvature, medium-maturity hump), and τ (decay). The term premium — β₀ minus EFFR — is the compensation for duration risk. Negative term premium means the curve has inverted beyond what rate expectations alone justify. Scenario shocks use Bieri-Chincarini (2005) empirical factor loadings applied cumulatively at each FOMC meeting.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> RMSE above 10bp signals the current curve regime may be poorly captured by the NS form — common at extreme inversions. The scenario fan shows how each meeting's expected move shifts the entire curve. The β₀ decomposition (KVJ safety premium + leverage channel) appears in Tab 10.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> NS factors + scenario shocks → Riding HPR matrix. β₀ decomposition → Balance Sheet Tab 10.</p>
+      <div class="ug-head">Illustrative curve chart</div>
+      <div style="margin:12px 0;overflow-x:auto">
+<svg viewBox="0 0 560 200" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Yield curve NS illustration">
+  <rect width="560" height="200" fill="var(--surface)" rx="6"/>
+  <!-- Axes -->
+  <line x1="55" y1="20" x2="55" y2="160" stroke="var(--border)" stroke-width="1"/>
+  <line x1="55" y1="160" x2="540" y2="160" stroke="var(--border)" stroke-width="1"/>
+  <!-- Y labels -->
+  <text x="49" y="25" text-anchor="end" font-size="8" fill="var(--faint)">5.0%</text>
+  <text x="49" y="62" text-anchor="end" font-size="8" fill="var(--faint)">4.0%</text>
+  <text x="49" y="99" text-anchor="end" font-size="8" fill="var(--faint)">3.5%</text>
+  <text x="49" y="136" text-anchor="end" font-size="8" fill="var(--faint)">3.0%</text>
+  <!-- Grid -->
+  <line x1="55" y1="62" x2="540" y2="62" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="99" x2="540" y2="99" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="136" x2="540" y2="136" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <!-- X log-scale labels -->
+  <text x="80" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">3mo</text>
+  <text x="130" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">6mo</text>
+  <text x="185" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">1yr</text>
+  <text x="255" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">2yr</text>
+  <text x="335" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">5yr</text>
+  <text x="415" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">10yr</text>
+  <text x="505" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">30yr</text>
+  <!-- CMT data points (circles) -->
+  <circle cx="80" cy="110" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="130" cy="104" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="185" cy="100" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="255" cy="96" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="335" cy="89" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="415" cy="80" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <circle cx="505" cy="72" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <!-- NS spot fit (amber solid) -->
+  <polyline points="80,112 130,105 185,100 255,95 335,88 415,80 505,71"
+    fill="none" stroke="var(--amber)" stroke-width="2.5"/>
+  <!-- NS instantaneous forward (amber dashed) -->
+  <polyline points="80,118 130,108 185,99 255,91 335,82 415,74 505,68"
+    fill="none" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <!-- Scenario fan curves (amber dotted, lighter) -->
+  <polyline points="80,104 130,98 185,93 255,88 335,82 415,75 505,68"
+    fill="none" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2,3" opacity=".5"/>
+  <polyline points="80,96 130,91 185,87 255,82 335,77 415,71 505,65"
+    fill="none" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2,3" opacity=".35"/>
+  <polyline points="80,88 130,84 185,81 255,77 335,72 415,67 505,62"
+    fill="none" stroke="var(--amber)" stroke-width="1" stroke-dasharray="2,3" opacity=".2"/>
+  <!-- Factor cards -->
+  <rect x="58" y="182" width="220" height="14" rx="3" fill="var(--surface2)"/>
+  <text x="63" y="192" font-size="8" fill="var(--faint)">β₀=3.85%</text>
+  <text x="103" y="192" font-size="8" fill="var(--faint)">β₁=−0.42%</text>
+  <text x="155" y="192" font-size="8" fill="var(--faint)">β₂=0.18%</text>
+  <text x="207" y="192" font-size="8" fill="var(--faint)">τ=2.1</text>
+  <!-- RMSE badge -->
+  <rect x="288" y="182" width="60" height="14" rx="3" fill="rgba(16,185,129,.15)"/>
+  <text x="318" y="192" text-anchor="middle" font-size="8" fill="var(--sofr)" font-weight="500">RMSE 4.2bp</text>
+  <!-- Legend -->
+  <circle cx="360" cy="189" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
+  <text x="368" y="193" font-size="8" fill="var(--muted)">CMT data</text>
+  <line x1="420" y1="189" x2="440" y2="189" stroke="var(--amber)" stroke-width="2.5"/>
+  <text x="444" y="193" font-size="8" fill="var(--muted)">NS spot</text>
+  <line x1="490" y1="189" x2="510" y2="189" stroke="var(--amber)" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <text x="514" y="193" font-size="8" fill="var(--muted)">Fwd</text>
+</svg>
+      </div>
       <div class="ug-head">Nelson-Siegel spot rate</div>
       <div class="ug-formula">
         \[y(m) = \beta_0 + \beta_1 \cdot \frac{1-e^{-m/\tau}}{m/\tau} + \beta_2 \cdot \left[\frac{1-e^{-m/\tau}}{m/\tau} - e^{-m/\tau}\right]\]
@@ -742,7 +1026,76 @@ footer{
 
     <!-- TAYLOR RULE -->
     <div class="ug-page" id="pg-taylor">
-      <p class="ug-body">The Taylor Rule tab implements five distinct policy rule specifications and compares their prescriptions against the CME market-implied path. The Judd-Rudebusch ECM is designated the primary signal source for downstream filter cascades.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Benchmark the market-implied rate path against what five systematic policy rules prescribe — revealing whether the market is pricing above or below the rule-consistent rate.</p>
+      <p class="ug-body" style="margin-top:6px">The Taylor−CME gap (prescriptive minus market) is the core signal: positive = market prices looser than the rule warrants; negative = market prices tighter. Five variants cover the range from the original Taylor (1993) specification through the Judd-Rudebusch ECM — the designated signal source for downstream tabs by virtue of its highest R² for FFTR prediction (Bieri-Chincarini 2005, Exhibit 7). A sixth finance-neutral variant (Borio 2016) embeds NFCI into the natural rate estimate.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Convergence across rule variants = robust prescription. Divergence = model-sensitive results, treat with caution. The JR ECM gap is the primary downstream signal. A positive JR gap (market below rule) is the necessary condition for the riding signal filter to activate.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> JR ECM signal → Riding filter #4. Finance-neutral gap → Dashboard leaning premium row.</p>
+      <div class="ug-head">Illustrative prescribed vs market path</div>
+      <div style="margin:12px 0;overflow-x:auto">
+<svg viewBox="0 0 560 210" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Taylor Rule illustration">
+  <rect width="560" height="210" fill="var(--surface)" rx="6"/>
+  <!-- Axes -->
+  <line x1="55" y1="20" x2="55" y2="155" stroke="var(--border)" stroke-width="1"/>
+  <line x1="55" y1="155" x2="545" y2="155" stroke="var(--border)" stroke-width="1"/>
+  <!-- Y labels -->
+  <text x="49" y="25" text-anchor="end" font-size="8" fill="var(--faint)">5.0%</text>
+  <text x="49" y="60" text-anchor="end" font-size="8" fill="var(--faint)">4.0%</text>
+  <text x="49" y="95" text-anchor="end" font-size="8" fill="var(--faint)">3.5%</text>
+  <text x="49" y="130" text-anchor="end" font-size="8" fill="var(--faint)">3.0%</text>
+  <!-- Grid -->
+  <line x1="55" y1="60" x2="545" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="95" x2="545" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="130" x2="545" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <!-- X axis — 8 meetings -->
+  <text x="90" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Apr</text>
+  <text x="150" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jun</text>
+  <text x="210" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jul</text>
+  <text x="270" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Sep</text>
+  <text x="330" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Oct</text>
+  <text x="390" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Dec</text>
+  <text x="450" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jan</text>
+  <text x="510" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Mar</text>
+  <!-- CME market path (blue dashed — lower, easing) -->
+  <polyline points="90,97 150,103 210,110 270,117 330,121 390,125 450,128 510,130"
+    fill="none" stroke="var(--cme)" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <!-- Taylor 1993 (high, above market) -->
+  <polyline points="90,55 150,58 210,61 270,63 330,65 390,67 450,68 510,69"
+    fill="none" stroke="rgba(220,38,38,.6)" stroke-width="1.5"/>
+  <!-- Balanced/Yellen -->
+  <polyline points="90,68 150,72 210,76 270,79 330,82 390,84 450,86 510,87"
+    fill="none" stroke="rgba(220,38,38,.45)" stroke-width="1.5"/>
+  <!-- Yellen Alt1 -->
+  <polyline points="90,78 150,82 210,86 270,89 330,91 390,93 450,94 510,95"
+    fill="none" stroke="rgba(220,38,38,.35)" stroke-width="1.5"/>
+  <!-- CGG inertial (closer to market) -->
+  <polyline points="90,88 150,91 210,95 270,98 330,101 390,103 450,105 510,106"
+    fill="none" stroke="rgba(220,38,38,.25)" stroke-width="1.5"/>
+  <!-- JR ECM designated signal (rose, prominent) -->
+  <polyline points="90,75 150,79 210,83 270,87 330,90 390,92 450,94 510,95"
+    fill="none" stroke="var(--taylor)" stroke-width="2.5"/>
+  <!-- Taylor-CME gap shading between JR ECM and CME -->
+  <polygon points="90,75 150,79 210,83 270,87 330,90 390,92 450,94 510,95 510,130 450,128 390,125 330,121 270,117 210,110 150,103 90,97"
+    fill="rgba(225,29,72,.08)"/>
+  <!-- Finance-neutral 6th variant (teal) -->
+  <polyline points="90,92 150,95 210,99 270,102 330,104 390,106 450,107 510,108"
+    fill="none" stroke="var(--fin)" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <!-- Gap annotation -->
+  <line x1="270" y1="87" x2="270" y2="117" stroke="rgba(225,29,72,.5)" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="275" y="104" font-size="8" fill="var(--taylor)">+30bp gap</text>
+  <!-- Legend row 1 -->
+  <line x1="58" y1="183" x2="78" y2="183" stroke="var(--cme)" stroke-width="2.5" stroke-dasharray="6,3"/>
+  <text x="82" y="187" font-size="8" fill="var(--muted)">CME market</text>
+  <line x1="160" y1="183" x2="180" y2="183" stroke="var(--taylor)" stroke-width="2.5"/>
+  <text x="184" y="187" font-size="8" fill="var(--muted)">JR ECM ★</text>
+  <line x1="254" y1="183" x2="274" y2="183" stroke="rgba(220,38,38,.5)" stroke-width="1.5"/>
+  <text x="278" y="187" font-size="8" fill="var(--muted)">Other variants</text>
+  <line x1="370" y1="183" x2="390" y2="183" stroke="var(--fin)" stroke-width="1.5" stroke-dasharray="4,2"/>
+  <text x="394" y="187" font-size="8" fill="var(--muted)">Fin-neutral (v4.1)</text>
+  <!-- Gap shading label -->
+  <rect x="450" y="178" width="80" height="12" rx="2" fill="rgba(225,29,72,.1)"/>
+  <text x="490" y="187" text-anchor="middle" font-size="8" fill="var(--taylor)">Taylor−CME gap</text>
+</svg>
+      </div>
       <div class="ug-head">Atlanta Fed generalized form (base)</div>
       <div class="ug-formula">
         \[\hat{i}_t = \rho \cdot i_{t-1} + (1-\rho)\left[r^* + \pi^* + 1.5(\pi_t - \pi^*) + \beta \cdot \text{gap}_t\right]\]
@@ -756,17 +1109,20 @@ footer{
       </div>
       <div class="ug-head">Five rule variants</div>
       <div class="ug-grid">
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor)">Taylor 1993</div><div class="ug-pdesc">α=1.5, β=0.5, GDP output gap. The original specification from Taylor (1993, Carnegie-Rochester).</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Taylor 1993</div><div class="ug-pdesc">α=1.5, β=0.5, GDP output gap. The original specification from Taylor (1993, Carnegie-Rochester).</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Balanced / Yellen 2012</div><div class="ug-pdesc">α=β=1.0. The "balanced approach" rule highlighted in Yellen's 2012 speech and Fed Tealbook.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Yellen Alt1</div><div class="ug-pdesc">Unemployment gap via Okun's Law (gap ≈ −2×(u − u*)). Uses FOMC SEP median longer-run r*.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
     </div>
 
     <!-- RIDING -->
     <div class="ug-page" id="pg-riding">
-      <p class="ug-body">The Riding Calculator implements the Bieri-Chincarini (2005) riding-the-yield-curve framework across a 7×5 instrument-horizon matrix. Each cell shows annualized excess HPR and break-even cushion in basis points, with a 5-filter cascade determining the signal quality.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Apply the Bieri-Chincarini (2005) riding-the-yield-curve framework to identify whether the current curve shape generates positive excess returns for extending duration beyond the money-market horizon.</p>
+      <p class="ug-body" style="margin-top:6px">The 7×5 HPR matrix computes annualized excess holding-period returns and break-even cushions for every combination of instrument maturity (6mo–30yr) and holding horizon (1mo–18mo). Six filters gate the composite riding signal: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal (JR ECM), CME expectations signal, and SS term-premium put signal (Stein-Sunderam 2018). All six filters passing simultaneously is the strongest possible riding signal.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Green HPR cells = favorable riding. The cushion gauge shows how much the curve can flatten before the ride loses money. The barbell panel shows whether optimal duration extension concentrates at a specific maturity or spreads across the curve.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Composite riding signal → Dashboard stat card.</p>
       <div class="ug-head">Zero-coupon bond HPR (Bieri-Chincarini 2005, Eq. 12)</div>
       <div class="ug-formula">
         \[\text{HPR}_{m,h} = \frac{r_m \cdot m - r_{m-h} \cdot (m-h)}{h} - r_h\]
@@ -787,9 +1143,28 @@ footer{
       </div>
     </div>
 
+    <!-- BALANCE SHEET -->
+    <div class="ug-page" id="pg-bs">
+      <p class="ug-body"><strong>Purpose:</strong> Decompose the Federal Reserve's balance sheet into its four distinct yield curve channels and track how Quantitative Tightening affects rates independently of the policy rate level.</p>
+      <p class="ug-body" style="margin-top:6px">The KVJ (2011) four-channel framework shows that QT operates through duration (all fixed income), safety (Treasuries only), signaling (forward guidance confirmation), and MBS prepayment channels simultaneously. The Stein (2012) shadow value of reserves — EFFR minus IORB — measures when reserve scarcity begins to tighten conditions independently of the policy rate. The DSS (2018) liquidity premium (T-bill minus IORB) is the near-money convenience yield: lower LP means cheaper leverage and higher risk appetite.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> SVR rising above zero signals the approach of reserve scarcity — a second tightening instrument activating alongside the policy rate. Widening LP signals improving financial conditions (lower risk premia). The two-instrument scatter shows where the current policy mix sits relative to nine historical episodes from Pre-GFC through 2023.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Shadow rate channels → NS β₀ decomposition (Tab 07). Stein SVR + DSS LP → Dashboard regime rows.</p>
+    </div>
+
+    <!-- FINANCIAL STABILITY -->
+    <div class="ug-page" id="pg-fin">
+      <p class="ug-body"><strong>Purpose:</strong> Embed the BIS/Mehrling financial cycle framework into the policy analytics suite — measuring how far the standard Taylor Rule prescription diverges from what financial stability conditions warrant.</p>
+      <p class="ug-body" style="margin-top:6px">The finance-neutral natural rate (Borio 2016) augments the standard r* with NFCI: r*_finance = r*_standard + λ_fc × NFCI × 100bp. The λ_fc slider controls how aggressively the user believes financial conditions should enter the rate-setting calculus. The BDJ (2013) finance-neutral output gap corrects the standard HP-filter gap for the credit cycle — preventing the standard gap from overstating potential output during financial booms.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The leaning premium (finance-neutral r* minus JR ECM prescription) measures additional tightening that financial stability considerations warrant. The doom loop scatter (term premium vs HY OAS) identifies when elevated credit spreads and compressed term premia coexist — a historically precarious combination. The 6-axis phase clock synthesizes the full financial cycle state into a single radar reading.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Finance-neutral gap → Dashboard leaning premium row. Phase clock composite → riding filter context.</p>
+    </div>
+
     <!-- SCENARIOS -->
     <div class="ug-page" id="pg-scenarios">
-      <p class="ug-body">Ten named ZQ price configurations grouped by historical era. Activating a scenario reprices the entire chain — probability tree, prediction market overlays, yield curve shocks, Taylor prescriptions, riding HPR matrix, and Dashboard — in one click. A second click restores the previous prices. An amber compare overlay applies a second scenario alongside the active one.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Stress-test the entire signal chain against ten historically-calibrated rate path analogs — from the Greenspan soft landing of 1995 to the 2022 re-normalization cycle — enabling rapid exploration of how every downstream tab responds under different Fed policy regimes.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>How scenarios work:</strong> Activating a scenario reprices all 8 FOMC meeting ZQ contracts simultaneously using the CME N/M weighting formula. The entire chain recalculates instantly — probability lattice, prediction market overlays, NS yield curve scenario fan, Taylor prescriptions, and the riding HPR matrix. A second click restores your previous manual prices exactly. The amber compare overlay holds a second scenario alongside the active one for parallel analysis across all tabs simultaneously.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>How to read scenarios:</strong> The probability tree under a scenario shows how probability mass concentrates or disperses under that rate path. The Taylor−CME gap shows whether the historical path was rule-consistent or systematically off-prescription. The riding matrix shows which maturities generated positive excess returns in that regime. The compare overlay is most powerful when the active scenario probes a tail risk path while the compare holds the current market consensus.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Scenario calibration:</strong> Each scenario is calibrated to a specific historical episode. Easing scenarios range from the single-cut Soft Landing ('95) through the dot-com triple-50bp sequence ('01). Crisis scenarios use GFC ('08) and Volcker disinflation ('82) easing velocities. Tightening scenarios replay the Burns/Miller stagflation re-tightening ('70s) and the 2022 hiking cycle. The historical N/M day-weighting at each meeting is preserved so ZQ prices are internally consistent with the FOMC schedule.</p>
       <div class="ug-head">How activate / deactivate works</div>
       <ol class="ug-steps">
         <li>Before applying, current manual prices are saved automatically in state</li>
@@ -899,7 +1274,9 @@ footer{
 
     <!-- LIVE DATA -->
     <div class="ug-page" id="pg-refresh">
-      <p class="ug-body">Five independent refresh buttons fetch live market data. Each targets a different source — a Kalshi outage won't affect your ZQ prices, and vice versa. All fetches run through the Anthropic API with web search; the API key is injected automatically inside claude.ai.</p>
+      <p class="ug-body"><strong>Purpose:</strong> Keep the tool current across seven independent live data channels — each refreshable without affecting any other source so a Kalshi outage cannot corrupt your ZQ prices or H.15 rates.</p>
+      <p class="ug-body" style="margin-top:6px">All fetches use the Anthropic API with web search. Inside claude.ai the key is injected automatically; paste an <code>sk-ant-...</code> key in the top-right field for standalone use. After every refresh the regime bar updates with the current market consensus label. ZQ and SR3 should be refreshed together for a consistent futures snapshot; CMT and MPT are slower (H.15 is published once per business day; MPT updates at market close).</p>
+      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The regime bar after each ZQ refresh summarizes current market conviction in one line. Simultaneous changes to ZQ and SR3 that widen the SOFR−EFFR basis are an early warning of transmission risk visible in Tab 5. FRED data (NFCI, swap lines, HY OAS) changes slowly — weekly for NFCI, real-time for the others.</p>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-ptitle">Refresh ZQ</div><div class="ug-pdesc">CME 30-day Fed Funds futures settlement prices + FOMC meeting schedule (dates, N/M splits).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">ZQ · FOMC schedule</span></div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Fetch Kalshi</div><div class="ug-pdesc">Per-meeting decision probabilities, cut count, hike risk, jumbo-cut probability, implied rate levels.</div><div class="ug-pills"><span class="ug-pill ug-pill-o">kxfeddecision · kxfedhike</span></div></div>
@@ -992,16 +1369,16 @@ footer{
 
   <footer>
     <div class="footer-left">
-      David Bieri · SPIA · Virginia Tech<br>
+      David Bieri &nbsp;·&nbsp; School of Public and International Affairs &nbsp;·&nbsp; Virginia Tech<br>
       MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v4.1 · MIT License<br>
-      For educational and research purposes only. Not financial advice.
+      v4.1 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; For educational and research purposes only. Not financial advice.
     </div>
     <div class="footer-right">
+      <a class="foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+      <a class="foot-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
       <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
       <a class="foot-link" href="fed_funds_v3.html">Tool</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
+      <a class="foot-link" href="#cite">Cite</a>
     </div>
   </footer>
 
@@ -1067,5 +1444,17 @@ document.querySelectorAll('#tabs, #sources, #guide, #cite').forEach(el => {
   if (el) observer.observe(el);
 });
 </script>
+
+<div class="sticky-foot">
+  <div class="sticky-foot-left">
+    MSE v4.1 &nbsp;·&nbsp; David Bieri &nbsp;·&nbsp; SPIA · Virginia Tech &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
+    <em>For educational and research purposes only. Not financial advice.</em>
+  </div>
+  <div class="sticky-foot-right">
+    <a class="sticky-foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+    <a class="sticky-foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
+    <a class="sticky-foot-link" href="#cite">Cite</a>
+  </div>
+</div>
 </body>
 </html>

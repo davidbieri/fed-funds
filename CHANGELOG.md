@@ -16,6 +16,52 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Theme-aware modal backdrop (`--modal-bg`, `--modal-backdrop`)
 - Scenario table: `var(--surface2)` for hold pips and hover rows, `var(--border)` for cell borders
 
+### Changed — Landing Page (Session INDEX-I)
+- Session INDEX-I: Taylor Rule SVG illustration added (5 variants + CME path
+  + JR ECM designated signal + finance-neutral 6th variant + gap shading);
+  light mode color consistency fixed (--*-text tokens on pcard titles);
+  Balance Sheet ug-page added (KVJ channels, Stein SVR, DSS LP, two-instrument
+  scatter); Financial Stability ug-page added (Borio finance-neutral r*, BDJ
+  gap, doom loop, phase clock); two tab buttons added to how-it-works bar
+
+### Changed — Landing Page (Session INDEX-H)
+- Session INDEX-H: SOFR strip illustrative SVG added (3-curve chart with
+  SR3/ZQ/forward + basis bars + trough marker + legend); yield curve
+  illustrative SVG added (CMT data points + NS spot + forward + scenario
+  fan curves + factor cards + RMSE badge)
+
+### Changed — Landing Page (Session INDEX-G)
+- Session INDEX-G: probability tree SVG illustrative lattice added (3-meeting
+  example, opacity-encoded nodes, terminal distribution bars, legend);
+  prediction markets panel ⑩ Signal/Noise card added; all 10 panel cards
+  color-coded by primary source (CME blue / Kalshi orange / Polymarket cyan)
+
+### Changed — Landing Page (Session INDEX-F)
+- Session INDEX-F: How it works — standardized design language across all 10
+  tabs (PURPOSE / MECHANICS / WHAT TO LOOK FOR / KEY OUTPUT template);
+  Overview intro rewritten to frame signal chain as integrated system;
+  Scenarios tab fully rewritten to explain purpose, mechanics, calibration,
+  compare overlay usage; all tab intros updated for consistency and cumulative
+  analytical logic
+
+### Changed — Landing Page (Session INDEX-E)
+- Session INDEX-E: hero stats updated (11 tabs, 7 sources, 10 scenarios,
+  25 actions); signal chain extended to 11 nodes (Balance Sheet + Fin.
+  Stability with correct color tokens); overview stats bar updated;
+  tab 04 count corrected; tabs 10+11 mini-cards added to overview grid
+
+### Changed — Landing Page (Session INDEX-D)
+- Session INDEX-D: nav logo rebranded to personal academic brand (david bieri /
+  Spectral italic + MSE / JetBrains Mono); Eccles epigraph added to hero;
+  sticky footer added (fixed bottom, blur, version/institution/disclaimer/links);
+  footer updated with ecosystem links (david-bieri.com, circular-flows.org);
+  all citation version strings already at v4.1
+
+### Changed — Landing Page CSS (Session INDEX-C)
+- Session INDEX-C: light-mode accent contrast system (--*-text variants,
+  darker hues for white bg legibility); nav/wrap horizontal padding increase;
+  section-label, ug-ntab, ug-head, ug-body font-size increases
+
 ### Changed — Landing Page HTML (Session INDEX-B)
 - `data-theme="light"` default on `<html>`, sticky nav with 4 anchor links (#tabs #sources #guide #cite) + theme toggle button
 - Hero stat 10→11 tabs, hero eyebrow updated with Balance Sheet + Financial Stability
