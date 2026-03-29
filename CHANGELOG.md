@@ -6,6 +6,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Session TOOL-A: SVG design consistency
+- basisBarsSvg redesigned: taller bars H=100, wider bW=44, bp labels (font-size 9), SOFR-EFFR basis sub-panel header, opacity gradient (near-term darker), W=680 full width, clean positive-axis baseline
+- Phase clock SVG: removed max-width:420px constraint (now full column width)
+- All SVG opening tags normalized to include overflow:visible (9 occurrences in BalanceSheetTab/FinancialStabilityTab)
+
 ### Fixed — CR-21 visualization standards (direct fix)
 - Taylor Rule variant cards: add border-left to Balanced/Yellen (45% opacity), Yellen Alt1 (35%), Clarida-Gali-Gertler (25%) — opacity gradient communicates variant hierarchy while preserving identity color; Taylor Rule SVG background rect removed (transparent, strong-contrast lines only)
 - CR-21 tooltip completion: added ug-hover rects to SOFR strip (7 quarterly columns), yield curve (7 CMT maturities with residual + scenario shock data), Taylor Rule (8 meeting columns with JR ECM/CME/gap data); total hover targets now 71 across all figures
