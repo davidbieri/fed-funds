@@ -1,5 +1,11 @@
 # Claude Code Session Scripts
-## Fed Funds Probability Tree — Phases 1–4
+## MSE: A Multi-Market Framework for Federal Reserve Policy Analytics — Phases 1–4
+
+> **Status: Phases 1–4 complete and deployed (v3.0).** This file is the implementation
+> archive for the React migration (Phase 1), Taylor Rule tab (Phase 2), Yield Curve tab
+> (Phase 3), and Riding Calculator tab (Phase 4). Do not modify — kept as historical record.
+> Phase 5 (PCI + Financial Stability) and Phase 6 (Balance Sheet / QT + extended Financial
+> Stability) scripts are maintained separately in the Claude project knowledge base.
 
 ---
 
