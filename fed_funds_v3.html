@@ -192,6 +192,9 @@ nav#mse-nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .sf-icon:hover{color:var(--text)}
 /* padding so footer doesn't overlap content */
 body{padding-bottom:72px}
+.mse-hover{cursor:pointer}
+.mse-hover:hover ~ .mse-tip-g{visibility:visible}
+circle:has(+ .mse-hover:hover){stroke:var(--c-cme);stroke-width:2;filter:brightness(1.1)}
 </style>
 </head>
 <body>
@@ -2072,7 +2075,11 @@ function taylorGapSvg(meetings, cmeRates, classic, balanced) {
 }
 
 function SvgPanel({html}) {
-  return React.createElement('div', {dangerouslySetInnerHTML: {__html: html}});
+  const ref = React.useRef(null);
+  React.useEffect(() => {
+    if (ref.current) initTooltips(ref.current);
+  });
+  return React.createElement('div', {ref: ref, dangerouslySetInnerHTML: {__html: html}});
 }
 
 // ============================================================================
@@ -4178,15 +4185,8 @@ function App() {
     catch(e) {}
   }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
 
-  // Re-initialize tooltips after every render (dangerouslySetInnerHTML replaces DOM)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      document.querySelectorAll('[dangerouslySetInnerHTML]').forEach(el => {
-        initTooltips(el);
-      });
-      // Also scan the whole document for any .mse-hover not yet initialized
-      initTooltips(document.body);
-    }, 50);
+    const timer = setTimeout(() => initTooltips(document.body), 50);
     return () => clearTimeout(timer);
   });
 

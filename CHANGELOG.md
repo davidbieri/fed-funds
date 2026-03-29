@@ -6,6 +6,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Fixed — SvgPanel ref-based tooltip wiring
+- SvgPanel: added `useRef` + `useEffect` to call `initTooltips` directly on the panel's container DOM node after each render
+- App useEffect: removed broken `querySelectorAll('[dangerouslySetInnerHTML]')` scan; kept `document.body` fallback only
+- CSS: added `.mse-hover` cursor/hover rules and `circle:has(+ .mse-hover:hover)` highlight for SVG dot hover feedback
+
 ### Added — Tab group identity colors and two dividers
 - CSS: `.tc-market` (CME blue), `.tc-analytics` (overlay amber), `.tc-macro` (fin-neutral teal) applied to `.fw-tab` and `.fw-tab.act`
 - TABS array: `tc` field on each tab; removed `_divider` sentinel row
