@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
-## [Unreleased]
+## [4.3] — March 2026
 
 ### Fixed — Chrome: iframe detection + version bump
 - `fed_funds_v3.html`: hide `#mse-nav` and `.mse-footer` when loaded inside an iframe (`window.self !== window.top`)
