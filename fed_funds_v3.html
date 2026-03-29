@@ -161,6 +161,31 @@ nav#mse-nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   transition:border-color .2s,color .2s;line-height:1;margin-left:8px;
 }
 .nav-theme:hover{border-color:var(--muted);color:var(--text)}
+.mse-footer{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--nav-blur);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;
+}
+.sf-main{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 24px;flex-wrap:wrap;gap:8px;
+}
+.sf-disclaimer{
+  font-size:10px;color:var(--faint);text-align:center;
+  padding:3px 24px 6px;border-top:1px solid var(--border);opacity:.7;
+}
+.sf-brand{font-family:'Spectral',serif;font-style:italic;color:var(--text);font-size:13px}
+.sf-sep{color:var(--border);font-size:12px;margin:0 6px}
+.sf-left{display:flex;align-items:center;font-size:11px;color:var(--faint)}
+.sf-right{display:flex;align-items:center;gap:14px}
+.sf-link{font-size:11px;color:var(--faint);text-decoration:none;transition:color .15s}
+.sf-link:hover{color:var(--cme-text)}
+.sf-icon{font-size:16px;color:var(--faint);text-decoration:none;transition:color .2s}
+.sf-icon:hover{color:var(--text)}
+/* padding so footer doesn't overlap content */
+body{padding-bottom:72px}
 </style>
 </head>
 <body>
@@ -4249,6 +4274,42 @@ if(_navEl){
   new IntersectionObserver(([e])=>_navEl.classList.toggle('scrolled',!e.isIntersecting))
     .observe(_sentinel);
 }
+</script>
+<footer class="mse-footer">
+  <div class="sf-main">
+    <div class="sf-left">
+      <span class="sf-brand">David Bieri</span>
+      <span class="sf-sep">·</span>
+      <span>SPIA · Virginia Tech</span>
+      <span class="sf-sep">·</span>
+      <span>MSE v3.0 · MIT License</span>
+    </div>
+    <div class="sf-right">
+      <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
+      <a class="sf-link" href="https://www.david-bieri.com" target="_blank">SPIA</a>
+      <a class="sf-icon sf-li" href="https://linkedin.com/in/davidbieri" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+    </div>
+  </div>
+  <div class="sf-disclaimer">For educational and research purposes only. Not financial advice.</div>
+</footer>
+<script>
+(function(){
+  const KEY='mse-theme';
+  const saved=localStorage.getItem(KEY)||'light';
+  document.documentElement.setAttribute('data-theme',saved);
+  window.mseToggleTheme=function(){
+    const next=document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark';
+    document.documentElement.setAttribute('data-theme',next);
+    localStorage.setItem(KEY,next);
+    const btn=document.getElementById('theme-toggle');
+    if(btn)btn.textContent=next==='dark'?'○':'◐';
+  };
+  // Set initial button state after DOM ready
+  document.addEventListener('DOMContentLoaded',function(){
+    const btn=document.getElementById('theme-toggle');
+    if(btn)btn.textContent=saved==='dark'?'○':'◐';
+  });
+})();
 </script>
 </body>
 </html>

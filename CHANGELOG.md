@@ -17,6 +17,10 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Sticky nav bar (`nav#mse-nav`): Spectral italic logo, JetBrains Mono MSE badge, theme toggle button
 - IntersectionObserver scroll-shadow trigger on nav
 - Nav CSS: `.nav-logo`, `.nav-tool`, `.nav-link`, `.nav-badge`, `.nav-theme`, `.nav-sep`
+- Fixed footer (`.mse-footer`): brand, SPIA affiliation, GitHub/LinkedIn links, disclaimer
+- Footer CSS: `.sf-main`, `.sf-brand`, `.sf-left`, `.sf-right`, `.sf-link`, `.sf-icon`, `.sf-disclaimer`
+- `body{padding-bottom:72px}` to prevent footer overlap
+- localStorage theme toggle (`mse-theme` key): persists light/dark across reloads, button icon swap
 
 ---
 
