@@ -11,6 +11,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Add favicon.svg link
 - Shorten `<title>` to "MSE: Multi-Market Framework for Federal Reserve Policy Analytics"
 - Replace `\u2461` → ②, `\u03bb` → λ, `\u00b7` → · across finance-neutral panels and formula labels
+- Add bridge token layer (--bg, --surface, --text, --muted, --faint, --shadow, accent --*-text) aliasing existing color primitives
+- Add `[data-theme="dark"]` block with dark-mode bridge overrides (nav-blur, shadow, accent text)
+- Add `transition:background .25s,color .25s` to body for smooth theme switching
 
 ---
 

@@ -26,6 +26,24 @@
   /* --- Phase 6: Balance Sheet & Financial Stability --- */
   --c-bs:#0ea5e9;--c-bs-mbs:#0369a1;--c-neutral-floor:#64748b;--c-combined:#7c3aed;
   --c-fin-neutral:#0d9488;--c-stress-hi:#dc2626;--c-stress-lo:#16a34a;--c-leaning:#f97316;--c-lp:#8b5cf6;
+  /* --- Bridge: index.html palette aliases for nav/footer chrome --- */
+  --bg:var(--color-background-primary);
+  --surface:var(--color-background-secondary);
+  --border:var(--color-border-tertiary);
+  --text:var(--color-text-primary);
+  --muted:var(--color-text-secondary);
+  --faint:var(--color-text-tertiary);
+  --nav-blur:rgba(255,255,255,0.92);
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 16px rgba(0,0,0,.06);
+  /* Split accent text tokens for light-mode legibility */
+  --cme-text:#1d4ed8;
+  --kal-text:#c2410c;
+  --sofr-text:#047857;
+  --taylor-text:#9f1239;
+  --riding-text:#5b21b6;
+  --fin-text:#0f766e;
+  --poly-text:#0e7490;
+  --amber-text:#92400e;
 }
 @media(prefers-color-scheme:dark){
   :root{
@@ -40,8 +58,20 @@
     --c-fin-neutral:#2dd4bf;--c-stress-hi:#ef4444;--c-stress-lo:#22c55e;--c-leaning:#fb923c;--c-lp:#a78bfa;
   }
 }
+[data-theme="dark"]{
+  --nav-blur:rgba(24,24,27,0.92);
+  --shadow:0 1px 3px rgba(0,0,0,.3),0 4px 16px rgba(0,0,0,.4);
+  --cme-text:#60a5fa;
+  --kal-text:#fb923c;
+  --sofr-text:#34d399;
+  --taylor-text:#fb7185;
+  --riding-text:#a78bfa;
+  --fin-text:#2dd4bf;
+  --poly-text:#22d3ee;
+  --amber-text:#fbbf24;
+}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto}
+body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto;transition:background .25s,color .25s}
 .fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
 .fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
 .tab-group-divider{display:inline-block;width:1px;height:1.2em;background:var(--color-border-secondary);margin:0 6px;vertical-align:middle;opacity:0.5}
