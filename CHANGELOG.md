@@ -15,6 +15,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Replaced `\uXXXX` escapes with literal characters across 63 html+= lines in Kalshi, SOFR, Dashboard, Taylor Rule, Yield Curve, Riding, Balance Sheet, and Fin. Stability tabs
 - 25 unique codepoints: ①③④⑤⑥⑦⑧⑨ — – → − × ± ² Δ α β γ π ρ ω ≥ ◆ ● ★
 
+### Fixed — Full unicode escape sweep for Babel standalone compat
+- Replaced all remaining `\uXXXX` escapes with literal characters across entire file (data objects, SVG builders, refresh status strings, formula labels)
+- Additional codepoints: ⚖ ⚠ ✅ ✓ ✕ ✗ ❌ ⟳ ⸾ ■ □ ◆ ● ↑ ↓ ↔ ∝ … ' σ τ ψ ϕ ᵉ ₀ ₁ ₂ β ρ
+- Only surrogate pairs (emoji: 📈🗂📐🎯📊🏦🛡) retained as `\ud83x\udcxx` — required by JS engine
+
 ---
 
 ## [4.3] — March 2026
