@@ -2,7 +2,7 @@
 
 **A multi-market framework for Federal Reserve policy analytics.**
 
-[![Version](https://img.shields.io/badge/version-4.1-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-4.2-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Pages](https://img.shields.io/badge/deployed-GitHub%20Pages-brightgreen)](https://davidbieri.github.io/fed-funds/)
 
@@ -347,7 +347,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ## Citation
 
 **APA**
-> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v4.1) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
+> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v4.2) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
 
 **BibTeX**
 ```bibtex
@@ -355,7 +355,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {4.1},
+  version     = {4.2},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds}
@@ -363,7 +363,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ```
 
 **Chicago**
-> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.1. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
+> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.2. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
 
 ---
 
