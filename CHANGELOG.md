@@ -4,7 +4,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
+## [Unreleased]
+
 ## [4.3] — March 2026
+
+### Added — PWA manifest and Apple meta tags
+- `manifest.json`: name (em-dash, no colon), short_name "MSE", start_url, scope, display standalone, orientation portrait-primary, theme/background #f8f7f4, icon entries (180/192/512)
+- `fed_funds_v3.html` `<head>`: `<link rel="manifest">`, apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style, apple-mobile-web-app-title (MSE), apple-touch-icon (icon-180.png), theme-color meta
+- Placeholder icons: icon-180.png, icon-192.png, icon-512.png (node-canvas, CME blue rounded square + white "MSE" text)
 
 ### Fixed — Chrome: iframe detection + version bump
 - `fed_funds_v3.html`: hide `#mse-nav` and `.mse-footer` when loaded inside an iframe (`window.self !== window.top`)
