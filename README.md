@@ -38,7 +38,8 @@ No build step. No npm. Open directly in a browser or deploy as a static file.
 | 07 | **Yield Curve** | Nelson-Siegel fitting over 7 Treasury CMT maturities (3mo–30yr) via 2,000-iteration Nelder-Mead. Log-scale spot and instantaneous forward curves. Scenario-shocked paths per FOMC meeting using Bieri-Chincarini empirical factor loadings. |
 | 08 | **Taylor Rule** | Five rule variants: Taylor 1993, Balanced/Yellen 2012, Yellen Alt1 (Okun's Law), Clarida-Gali-Gertler inertial (ρ=0.85), Judd-Rudebusch ECM (Bieri-Chincarini 2005, Eqs. 23–25). Prescribed vs CME path chart, Taylor−CME gap, per-meeting rule matrix. |
 | 09 | **Riding** | Bieri-Chincarini (2005) riding-the-yield-curve calculator: 7×5 HPR matrix (6mo–30yr instruments × 1mo–18mo horizons), excess HPR and break-even cushion in bp, five-filter cascade, duration-neutral barbell decomposition. |
-| 10 | **Financial Stability** | BIS/Mehrling financial cycle framework: NFCI vs EFFR path chart, finance-neutral Taylor Rule (λ_fc slider), global dollar stress gauge (swap lines + basis), doom loop scatter (term premium vs HY OAS), five-axis financial cycle phase clock. |
+| 10 | **Balance Sheet: QE · QT Monitor** | 4-panel layout: composition stacked bars with KVJ (2011) shadow rate decomposition, monthly runoff pace vs cap (Treasury + MBS), corridor mechanics (IORB/EFFR/SVR/RRP), two-instrument policy space scatter with 9 historical episodes. |
+| 11 | **Financial Stability** | BIS/Mehrling financial cycle framework: NFCI vs EFFR path chart, finance-neutral Taylor Rule (λ_fc slider), global dollar stress gauge (swap lines + basis), doom loop scatter (term premium vs HY OAS), five-axis financial cycle phase clock. |
 
 ---
 
