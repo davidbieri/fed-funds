@@ -564,6 +564,8 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <button class="ug-ntab" onclick="ugShow('yieldcurve',this)">Yield curve</button>
       <button class="ug-ntab" onclick="ugShow('taylor',this)">Taylor Rule</button>
       <button class="ug-ntab" onclick="ugShow('riding',this)">Riding</button>
+      <button class="ug-ntab" onclick="ugShow('bs',this)">Balance sheet</button>
+      <button class="ug-ntab" onclick="ugShow('fin',this)">Fin. stability</button>
       <button class="ug-ntab" onclick="ugShow('scenarios',this)">Scenarios</button>
       <button class="ug-ntab" onclick="ugShow('refresh',this)">Live data</button>
     </div>
@@ -1096,6 +1098,196 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard"><div class="ug-ptitle">④ Taylor rule signal</div><div class="ug-pdesc">JR ECM signal = −1 (cut mode). Riding is most attractive when the Taylor Rule prescribes easing.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">⑤ CME expectations</div><div class="ug-pdesc">CME 12M path must have negative slope (cuts priced). Market expectations of easing enhance carry.</div></div>
       </div>
+    </div>
+
+    <!-- BALANCE SHEET -->
+    <div class="ug-page" id="pg-bs">
+      <p class="ug-body">The Balance Sheet tab tracks the Fed's two-instrument policy framework: the federal funds rate (EFFR) and the size/composition of the balance sheet. QE expands the balance sheet to ease financial conditions at the zero lower bound; QT shrinks it to normalize. The KVJ (2011) shadow rate decomposes the balance sheet's effect into four channels.</p>
+      <div class="ug-head">Illustrative: two-instrument policy space</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 260" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Two-instrument policy space scatter">
+        <rect width="620" height="260" fill="var(--surface)" rx="6"/>
+        <!-- Axes -->
+        <line x1="65" y1="20" x2="65" y2="200" stroke="var(--border)" stroke-width="1"/>
+        <line x1="65" y1="200" x2="590" y2="200" stroke="var(--border)" stroke-width="1"/>
+        <!-- Y axis: EFFR -->
+        <text x="58" y="25" text-anchor="end" font-size="8" fill="var(--faint)">6%</text>
+        <text x="58" y="65" text-anchor="end" font-size="8" fill="var(--faint)">4%</text>
+        <text x="58" y="110" text-anchor="end" font-size="8" fill="var(--faint)">2%</text>
+        <text x="58" y="155" text-anchor="end" font-size="8" fill="var(--faint)">1%</text>
+        <text x="58" y="200" text-anchor="end" font-size="8" fill="var(--faint)">0%</text>
+        <text x="20" y="115" text-anchor="middle" font-size="9" fill="var(--faint)" transform="rotate(-90,20,115)">EFFR</text>
+        <!-- X axis: BS size % GDP -->
+        <text x="65" y="215" font-size="8" fill="var(--faint)">15%</text>
+        <text x="185" y="215" font-size="8" fill="var(--faint)">20%</text>
+        <text x="305" y="215" font-size="8" fill="var(--faint)">25%</text>
+        <text x="425" y="215" font-size="8" fill="var(--faint)">30%</text>
+        <text x="545" y="215" font-size="8" fill="var(--faint)">35%</text>
+        <text x="327" y="228" text-anchor="middle" font-size="9" fill="var(--faint)">Fed Balance Sheet (% GDP)</text>
+        <!-- Grid -->
+        <line x1="65" y1="65" x2="590" y2="65" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="65" y1="110" x2="590" y2="110" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="65" y1="155" x2="590" y2="155" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <!-- IORB neutral floor (horizontal dashed) -->
+        <line x1="65" y1="128" x2="590" y2="128" stroke="var(--sofr)" stroke-width="1" stroke-dasharray="5,4" opacity=".6"/>
+        <text x="592" y="132" font-size="8" fill="var(--sofr)">IORB floor</text>
+        <!-- Historical episode dots -->
+        <!-- Pre-GFC: BS~15%GDP, EFFR~5.25% -->
+        <circle cx="90" cy="28" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="Pre-GFC (2006)" data-val="BS: 6% GDP · EFFR: 5.25%" data-sub="Ample reserves, no QE"/>
+        <text x="100" y="26" font-size="7.5" fill="var(--muted)">Pre-GFC</text>
+        <!-- QE1: BS~20%, EFFR~0.25% -->
+        <circle cx="190" cy="197" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="QE1 (2009)" data-val="BS: 20% GDP · EFFR: 0.25%" data-sub="Emergency asset purchases"/>
+        <text x="200" y="195" font-size="7.5" fill="var(--muted)">QE1</text>
+        <!-- QE3 peak: BS~26%, EFFR~0.25% -->
+        <circle cx="326" cy="197" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="QE3 Peak (2014)" data-val="BS: 26% GDP · EFFR: 0.25%" data-sub="$4.5T balance sheet"/>
+        <text x="336" y="195" font-size="7.5" fill="var(--muted)">QE3</text>
+        <!-- Taper: BS~24%, EFFR~0.5% -->
+        <circle cx="302" cy="190" r="7" fill="rgba(245,158,11,.5)" stroke="var(--amber)" stroke-width="1.5" class="ug-hover"
+          data-label="Taper (2015)" data-val="BS: 24% GDP · EFFR: 0.50%" data-sub="Taper tantrum, liftoff"/>
+        <text x="312" y="188" font-size="7.5" fill="var(--muted)">Taper</text>
+        <!-- QT18: BS~20%, EFFR~2.5% -->
+        <circle cx="190" cy="110" r="7" fill="rgba(225,29,72,.4)" stroke="var(--taylor)" stroke-width="1.5" class="ug-hover"
+          data-label="QT 2018" data-val="BS: 20% GDP · EFFR: 2.50%" data-sub="First QT cycle, runoff cap"/>
+        <text x="200" y="108" font-size="7.5" fill="var(--muted)">QT '18</text>
+        <!-- COVID QE: BS~36%, EFFR~0.25% -->
+        <circle cx="578" cy="197" r="7" fill="rgba(59,130,246,.6)" stroke="var(--cme)" stroke-width="2" class="ug-hover"
+          data-label="COVID QE (2021)" data-val="BS: 36% GDP · EFFR: 0.25%" data-sub="Peak balance sheet, $9T"/>
+        <text x="558" y="190" font-size="7.5" fill="var(--muted)">COVID</text>
+        <!-- QT22: BS~28%, EFFR~5.5% -->
+        <circle cx="398" cy="20" r="7" fill="rgba(225,29,72,.6)" stroke="var(--taylor)" stroke-width="2" class="ug-hover"
+          data-label="QT 2022-23" data-val="BS: 28% GDP · EFFR: 5.50%" data-sub="Fastest QT in history"/>
+        <text x="408" y="18" font-size="7.5" fill="var(--muted)">QT '22</text>
+        <!-- Now: BS~26%, EFFR~4.33% -->
+        <circle cx="326" cy="42" r="9" fill="var(--cme)" stroke="white" stroke-width="2" class="ug-hover"
+          data-label="Now (2026)" data-val="BS: 26% GDP · EFFR: 4.33%" data-sub="Ongoing QT, easing cycle"/>
+        <text x="337" y="40" font-size="8" fill="var(--cme)" font-weight="500">Now</text>
+        <!-- Legend -->
+        <circle cx="80" cy="240" r="5" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5"/>
+        <text x="90" y="244" font-size="8" fill="var(--muted)">QE episode</text>
+        <circle cx="180" cy="240" r="5" fill="rgba(225,29,72,.4)" stroke="var(--taylor)" stroke-width="1.5"/>
+        <text x="190" y="244" font-size="8" fill="var(--muted)">QT episode</text>
+        <circle cx="270" cy="240" r="7" fill="var(--cme)" stroke="white" stroke-width="1.5"/>
+        <text x="282" y="244" font-size="8" fill="var(--cme)">Current position</text>
+        <line x1="370" y1="240" x2="395" y2="240" stroke="var(--sofr)" stroke-width="1" stroke-dasharray="5,4" opacity=".6"/>
+        <text x="400" y="244" font-size="8" fill="var(--sofr)">IORB neutral floor</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">Two-instrument policy space: EFFR (rate) × balance sheet size (% GDP). QE episodes = blue; QT episodes = rose. Hover for episode details.</p>
+      <div class="ug-head">KVJ shadow rate channel decomposition</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 130" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="KVJ channel decomposition">
+        <rect width="620" height="130" fill="var(--surface)" rx="6"/>
+        <text x="16" y="28" font-size="9" fill="var(--faint)" letter-spacing=".06em">Shadow rate channel decomposition (KVJ 2011) — current balance sheet</text>
+        <!-- Channel bars -->
+        <!-- Duration channel (cme blue) -->
+        <rect x="16" y="38" width="220" height="16" rx="3" fill="rgba(59,130,246,.6)"
+          class="ug-hover" data-label="Duration channel"
+          data-val="-45bp shadow rate effect" data-sub="Reduces all fixed-income yields (KVJ 2011 BPEA)"/>
+        <text x="242" y="51" font-size="9" fill="var(--cme)">Duration: -45bp</text>
+        <!-- Safety channel (amber) -->
+        <rect x="16" y="62" width="140" height="16" rx="3" fill="rgba(245,158,11,.6)"
+          class="ug-hover" data-label="Safety channel"
+          data-val="-28bp shadow rate effect" data-sub="Treasury-specific safety premium (KVJ 2012 JPE)"/>
+        <text x="162" y="75" font-size="9" fill="var(--amber)">Safety: -28bp</text>
+        <!-- Signaling channel (faint) -->
+        <rect x="16" y="86" width="90" height="16" rx="3" fill="rgba(107,114,128,.4)"
+          class="ug-hover" data-label="Signaling channel"
+          data-val="-18bp shadow rate effect" data-sub="Forward guidance confirmation via purchases"/>
+        <text x="112" y="99" font-size="9" fill="var(--faint)">Signaling: -18bp</text>
+        <!-- MBS channel (orange) -->
+        <rect x="16" y="110" width="55" height="16" rx="3" fill="rgba(249,115,22,.5)"
+          class="ug-hover" data-label="MBS prepayment channel"
+          data-val="-11bp shadow rate effect" data-sub="MBS-specific prepayment option compression"/>
+        <text x="77" y="123" font-size="9" fill="var(--kal)">MBS: -11bp</text>
+        <!-- Total label -->
+        <text x="590" y="80" text-anchor="end" font-size="11" fill="var(--text)" font-weight="500">Total: -102bp</text>
+        <text x="590" y="93" text-anchor="end" font-size="8" fill="var(--faint)">shadow rate effect</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">KVJ (2011/2012) four-channel shadow rate decomposition at current balance sheet size. Bar width ∝ channel magnitude. Hover for channel details.</p>
+    </div>
+
+    <!-- FINANCIAL STABILITY -->
+    <div class="ug-page" id="pg-fin">
+      <p class="ug-body">The Financial Stability tab implements a BIS/Mehrling framework for assessing financial cycle conditions alongside monetary policy. Six stress axes feed a composite index; a finance-neutral r* gap quantifies how much the leaning premium shifts the natural rate above the standard Taylor estimate.</p>
+      <div class="ug-head">Illustrative: financial cycle phase clock</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 280" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Financial cycle phase clock">
+        <rect width="620" height="280" fill="var(--surface)" rx="6"/>
+        <!-- Axis lines from center 200,145 -->
+        <line x1="200" y1="145" x2="200" y2="55" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="278" y2="100" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="278" y2="190" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="200" y2="235" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="122" y2="190" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="122" y2="100" stroke="var(--border)" stroke-width="1"/>
+        <!-- Reference circles at 33% and 66% -->
+        <circle cx="200" cy="145" r="30" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,2"/>
+        <circle cx="200" cy="145" r="60" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,2"/>
+        <circle cx="200" cy="145" r="90" fill="none" stroke="var(--border)" stroke-width=".5"/>
+        <!-- Historical average polygon (faint, dashed) -->
+        <polygon points="200,109 231,127 231,163 200,181 169,163 169,127"
+          fill="rgba(107,114,128,.15)" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3,2"/>
+        <!-- Current reading polygon (teal) -->
+        <polygon points="200,86 243,120 231,163 200,208 155,172 153,118"
+          fill="rgba(13,148,136,.2)" stroke="var(--fin)" stroke-width="2"/>
+        <!-- Axis dots at current reading -->
+        <circle cx="200" cy="86" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="NFCI Stress" data-val="65th percentile" data-sub="Moderately tight financial conditions"/>
+        <circle cx="243" cy="120" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="HY OAS" data-val="55th percentile" data-sub="Credit spreads above median"/>
+        <circle cx="231" cy="163" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Term Premium" data-val="40th percentile" data-sub="Near historical average"/>
+        <circle cx="200" cy="208" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Xccy Basis" data-val="70th percentile" data-sub="Dollar funding stress elevated"/>
+        <circle cx="155" cy="172" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Credit-GDP Gap" data-val="50th percentile" data-sub="BDJ finance-neutral gap: moderate"/>
+        <circle cx="153" cy="118" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Leaning Premium" data-val="60th percentile" data-sub="Fin-neutral r* above standard r*"/>
+        <!-- Axis labels -->
+        <text x="200" y="48" text-anchor="middle" font-size="9" fill="var(--fin)" font-weight="500">NFCI</text>
+        <text x="292" y="98" font-size="9" fill="var(--muted)">HY OAS</text>
+        <text x="285" y="198" font-size="9" fill="var(--muted)">Term prem.</text>
+        <text x="200" y="252" text-anchor="middle" font-size="9" fill="var(--muted)">Xccy basis</text>
+        <text x="60" y="198" text-anchor="middle" font-size="9" fill="var(--muted)">Credit-GDP</text>
+        <text x="75" y="98" text-anchor="end" font-size="9" fill="var(--muted)">Leaning prem.</text>
+        <!-- Composite stress index -->
+        <text x="200" y="140" text-anchor="middle" font-size="18" fill="var(--fin)" font-weight="500">57</text>
+        <text x="200" y="153" text-anchor="middle" font-size="8" fill="var(--faint)">stress index</text>
+        <!-- r* gap bar chart (right side) -->
+        <text x="360" y="35" font-size="10" fill="var(--text)" font-weight="500">Finance-neutral r* gap</text>
+        <!-- Standard r* (JR ECM) bar -->
+        <rect x="360" y="50" width="140" height="18" rx="3" fill="rgba(225,29,72,.5)"
+          class="ug-hover" data-label="Standard r* (JR ECM)"
+          data-val="r* = 2.50%" data-sub="Inflation-neutral natural rate"/>
+        <text x="506" y="63" font-size="9" fill="var(--taylor)">JR ECM: 2.50%</text>
+        <!-- Finance-neutral r* bar -->
+        <rect x="360" y="76" width="196" height="18" rx="3" fill="rgba(13,148,136,.5)"
+          class="ug-hover" data-label="Finance-neutral r* (Borio 2016)"
+          data-val="r* = 3.06%" data-sub="lambda_fc x NFCI adds +56bp"/>
+        <text x="562" y="89" font-size="9" fill="var(--fin)">Fin-neutral: 3.06%</text>
+        <!-- Current EFFR bar -->
+        <rect x="360" y="102" width="108" height="18" rx="3" fill="rgba(59,130,246,.5)"
+          class="ug-hover" data-label="Current EFFR"
+          data-val="EFFR = 4.33%" data-sub="Above both r* estimates"/>
+        <text x="474" y="115" font-size="9" fill="var(--cme)">EFFR: 4.33%</text>
+        <!-- Gap annotation -->
+        <line x1="500" y1="59" x2="500" y2="94" stroke="var(--fin)" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="506" y="80" font-size="8" fill="var(--fin)">+56bp leaning</text>
+        <!-- Legend -->
+        <polygon points="370,170 390,170 390,165 400,175 390,185 390,180 370,180"
+          fill="rgba(13,148,136,.2)" stroke="var(--fin)" stroke-width="1.5"/>
+        <text x="408" y="178" font-size="8" fill="var(--muted)">Current reading</text>
+        <line x1="370" y1="200" x2="400" y2="200" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="408" y="204" font-size="8" fill="var(--faint)">Historical average</text>
+        <text x="370" y="230" font-size="8" fill="var(--faint)">Axes show percentile rank (0=low stress, 100=high)</text>
+        <text x="370" y="244" font-size="8" fill="var(--faint)">Composite index = area-weighted average of all 6 axes</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative phase clock. Teal = current reading; dashed = historical average. Composite stress index (0-100) in center. Hover each axis dot for details.</p>
     </div>
 
     <!-- SCENARIOS -->

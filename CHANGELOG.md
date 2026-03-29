@@ -6,6 +6,16 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Added — Balance Sheet & Fin. Stability Illustrations (Session INDEX-M)
+- Session INDEX-M: Balance Sheet pg-bs illustrations added — two-instrument
+  policy space scatter (8 historical episodes, QE/QT color coding, IORB floor,
+  Now marker) + KVJ 4-channel shadow rate decomposition bar (duration/safety/
+  signaling/MBS); Financial Stability pg-fin illustrations added — 6-axis
+  hexagonal phase clock radar (teal current + faint historical, composite
+  stress index 57) + finance-neutral r* gap bar chart (JR ECM vs Borio
+  fin-neutral vs EFFR + leaning premium annotation); all figures use shared
+  tooltip infrastructure from INDEX-L
+
 ### Changed — Visualization Standards (Session INDEX-L)
 - Session INDEX-L: shared SVG tooltip infrastructure (JS handler,
   CSS classes, .ug-hover rect pattern, edge-clamping); all 4 existing
