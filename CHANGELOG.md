@@ -4,6 +4,15 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
+## [Unreleased]
+
+### Added — Tab group identity colors and two dividers
+- CSS: `.tc-market` (CME blue), `.tc-analytics` (overlay amber), `.tc-macro` (fin-neutral teal) applied to `.fw-tab` and `.fw-tab.act`
+- TABS array: `tc` field on each tab; removed `_divider` sentinel row
+- Tab render: two `tab-group-divider` spans inserted before `dashboard` and `bs` via `React.Fragment`
+
+---
+
 ## [4.3] — March 2026
 
 ### Fixed — Chrome: iframe detection + version bump

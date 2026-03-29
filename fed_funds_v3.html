@@ -74,6 +74,12 @@
 body{font-family:var(--font-sans);background:var(--color-background-primary);color:var(--color-text-primary);padding:1.5rem;max-width:900px;margin:0 auto;transition:background .25s,color .25s}
 .fw-tab{display:inline-block;padding:5px 14px;font-size:13px;cursor:pointer;border-radius:var(--border-radius-md);color:var(--color-text-secondary)}
 .fw-tab.act{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);color:var(--color-text-primary);font-weight:500}
+.fw-tab.tc-market{color:var(--c-cme)}
+.fw-tab.tc-analytics{color:var(--c-overlay)}
+.fw-tab.tc-macro{color:var(--c-fin-neutral)}
+.fw-tab.act.tc-market{color:var(--c-cme);border-color:var(--c-cme)}
+.fw-tab.act.tc-analytics{color:var(--c-overlay);border-color:var(--c-overlay)}
+.fw-tab.act.tc-macro{color:var(--c-fin-neutral);border-color:var(--c-fin-neutral)}
 .tab-group-divider{display:inline-block;width:1px;height:1.2em;background:var(--color-border-secondary);margin:0 6px;vertical-align:middle;opacity:0.5}
 .fwt{width:100%;border-collapse:collapse}
 .fwt th{text-align:left;padding:5px 8px;font-size:10px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
@@ -4185,18 +4191,17 @@ function App() {
   });
 
   const TABS = [
-    {id:'inputs',     label:'Futures inputs'},
-    {id:'chain',      label:'EFFR chain'},
-    {id:'tree',       label:'Probability tree'},
-    {id:'kalshi',     label:'\u2696 Prediction markets'},
-    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
-    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
-    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
-    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
-    {id:'riding',     label:'\ud83d\udcca Riding'},
-    {id:'_divider'},
-    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet'},
-    {id:'fs',         label:'\ud83d\udee1 Fin. Stability'},
+    {id:'inputs',     label:'Futures inputs',       tc:'tc-market'},
+    {id:'chain',      label:'EFFR chain',            tc:'tc-market'},
+    {id:'tree',       label:'Probability tree',      tc:'tc-market'},
+    {id:'kalshi',     label:'\u2696 Prediction markets', tc:'tc-market'},
+    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip',   tc:'tc-market'},
+    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard',     tc:'tc-analytics'},
+    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve',   tc:'tc-analytics'},
+    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule',   tc:'tc-analytics'},
+    {id:'riding',     label:'\ud83d\udcca Riding',        tc:'tc-analytics'},
+    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet', tc:'tc-macro'},
+    {id:'fs',         label:'\ud83d\udee1 Fin. Stability',tc:'tc-macro'},
   ];
 
   return (
@@ -4230,12 +4235,14 @@ function App() {
 
       <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
         {TABS.map(t=>
-          t.id==='_divider'
-            ? <span key="_div" className="tab-group-divider" title="Analytics tabs">|</span>
-            : <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
+          <React.Fragment key={t.id}>
+            {t.id==='dashboard' && <span className="tab-group-divider"/>}
+            {t.id==='bs'        && <span className="tab-group-divider"/>}
+            <div className={'fw-tab '+t.tc+(state.fwActive===t.id?' act':'')}
                 onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
                 {t.label}
-              </div>
+            </div>
+          </React.Fragment>
         )}
       </div>
 
