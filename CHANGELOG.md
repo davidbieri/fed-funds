@@ -14,6 +14,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Add bridge token layer (--bg, --surface, --text, --muted, --faint, --shadow, accent --*-text) aliasing existing color primitives
 - Add `[data-theme="dark"]` block with dark-mode bridge overrides (nav-blur, shadow, accent text)
 - Add `transition:background .25s,color .25s` to body for smooth theme switching
+- Sticky nav bar (`nav#mse-nav`): Spectral italic logo, JetBrains Mono MSE badge, theme toggle button
+- IntersectionObserver scroll-shadow trigger on nav
+- Nav CSS: `.nav-logo`, `.nav-tool`, `.nav-link`, `.nav-badge`, `.nav-theme`, `.nav-sep`
 
 ---
 
