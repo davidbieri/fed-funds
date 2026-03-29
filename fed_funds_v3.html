@@ -245,6 +245,78 @@ const ycD=[
 // PURE FUNCTIONS --- math layer + helpers (no globals, explicit args only)
 // ============================================================================
 
+// === TOOLTIP INFRASTRUCTURE (Option C) ===
+function initTooltips(container) {
+  if (!container) return;
+  container.querySelectorAll('.mse-hover').forEach(rect => {
+    rect.addEventListener('mouseenter', function(e) {
+      const svg = this.closest('svg');
+      if (!svg) return;
+      let g = svg.querySelector('.mse-tip-g');
+      if (!g) {
+        g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('mse-tip-g');
+        g.style.pointerEvents = 'none';
+        g.style.visibility = 'hidden';
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('rx', '4');
+        bg.setAttribute('fill', 'var(--color-background-secondary)');
+        bg.setAttribute('stroke', 'var(--color-border-secondary)');
+        bg.setAttribute('stroke-width', '1');
+        bg.classList.add('mse-tip-bg');
+        const tl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tl.setAttribute('font-size', '8');
+        tl.setAttribute('fill', 'var(--color-text-tertiary)');
+        tl.setAttribute('font-family', 'var(--font-mono)');
+        tl.classList.add('mse-tip-label');
+        const tv = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tv.setAttribute('font-size', '11');
+        tv.setAttribute('font-weight', '500');
+        tv.setAttribute('fill', 'var(--color-text-primary)');
+        tv.setAttribute('font-family', 'var(--font-mono)');
+        tv.classList.add('mse-tip-val');
+        const ts = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        ts.setAttribute('font-size', '8.5');
+        ts.setAttribute('fill', 'var(--color-text-secondary)');
+        ts.setAttribute('font-family', 'var(--font-mono)');
+        ts.classList.add('mse-tip-sub');
+        g.appendChild(bg); g.appendChild(tl); g.appendChild(tv); g.appendChild(ts);
+        svg.appendChild(g);
+      }
+      const vb = svg.viewBox.baseVal;
+      const bb = svg.getBoundingClientRect();
+      const mx = (e.clientX - bb.left) / bb.width * vb.width;
+      const my = (e.clientY - bb.top) / bb.height * vb.height;
+      const label = this.dataset.label || '';
+      const val = this.dataset.val || '';
+      const sub = this.dataset.sub || '';
+      const tl = g.querySelector('.mse-tip-label');
+      const tv = g.querySelector('.mse-tip-val');
+      const ts = g.querySelector('.mse-tip-sub');
+      const bg = g.querySelector('.mse-tip-bg');
+      tl.textContent = label;
+      tv.textContent = val;
+      ts.textContent = sub;
+      const w = Math.max(label.length, val.length, sub.length) * 6.8 + 20;
+      const h = sub ? 54 : 38;
+      let tx = mx + 10;
+      let ty = my - h - 8;
+      if (tx + w > vb.width - 5) tx = mx - w - 10;
+      if (ty < 5) ty = my + 12;
+      bg.setAttribute('x', tx); bg.setAttribute('y', ty);
+      bg.setAttribute('width', w); bg.setAttribute('height', h);
+      tl.setAttribute('x', tx + 8); tl.setAttribute('y', ty + 13);
+      tv.setAttribute('x', tx + 8); tv.setAttribute('y', ty + 28);
+      ts.setAttribute('x', tx + 8); ts.setAttribute('y', ty + 42);
+      g.style.visibility = 'visible';
+    });
+    rect.addEventListener('mouseleave', function() {
+      const g = this.closest('svg') && this.closest('svg').querySelector('.mse-tip-g');
+      if (g) g.style.visibility = 'hidden';
+    });
+  });
+}
+
 function fwChain(months){
   const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
   for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
@@ -1607,27 +1679,36 @@ function sofrMainChart(zqAvgs,instFwd,lb,srD,kalshiD){
 }
 
 function basisBarsSvg(zqAvgs,srD){
-  const W=320,H=80,mt=18,mb=30,ml=26,mr=8;
+  const W=680,H=100,mt=24,mb=32,ml=26,mr=8;
   const bases=srD.map((s,i)=>zqAvgs[i]!==null?((100-s.price)-zqAvgs[i])*100:null).filter(v=>v!==null);
   const quarters=srD.filter((_,i)=>zqAvgs[i]!==null).map(s=>s.qLabel);
-  const maxB=Math.max(...bases.map(Math.abs),0.15);
-  const bW=Math.min(30,(W-ml-mr)/Math.max(bases.length,1)*0.65);
+  const maxB=Math.max(...bases.map(Math.abs),5);
+  const bW=Math.min(44,(W-ml-mr)/Math.max(bases.length,1)*0.7);
   const xs=i=>ml+(i+0.5)*((W-ml-mr)/Math.max(bases.length,1));
-  const yMid=mt+H/2;
-  const ys=v=>yMid-(v/maxB)*(H/2);
+  const baseline=mt+H;
+  const ys=v=>baseline-(v/maxB)*H;
   let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
-  svg+='<line x1="'+ml+'" y1="'+yMid.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+yMid.toFixed(1)+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
-  [maxB/2,maxB].forEach(v=>{
-    [v,-v].forEach(y2=>{svg+='<line x1="'+ml+'" y1="'+ys(y2).toFixed(1)+'" x2="'+(W-mr)+'" y2="'+ys(y2).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';});
-    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(v).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v.toFixed(1)+'</text>';
-    svg+='<text x="'+(ml-3).toFixed(1)+'" y="'+ys(0).toFixed(1)+'" text-anchor="end" dominant-baseline="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">0</text>';
+  // sub-panel label
+  svg+='<text x="'+ml+'" y="13" font-size="9" font-weight="500" fill="var(--c-sofr)" font-family="var(--font-mono)" letter-spacing=".04em">SOFR\u2212EFFR BASIS (bp)</text>';
+  // baseline
+  svg+='<line x1="'+ml+'" y1="'+baseline+'" x2="'+(W-mr)+'" y2="'+baseline+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
+  // reference grid at half and max
+  [maxB*0.5,maxB].forEach(v=>{
+    const y=ys(v);
+    svg+='<line x1="'+ml+'" y1="'+y.toFixed(1)+'" x2="'+(W-mr)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".4" stroke-dasharray="3,3"/>';
+    svg+='<text x="'+(ml-3)+'" y="'+(y+3).toFixed(1)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+v.toFixed(0)+'</text>';
   });
   bases.forEach((b,i)=>{
-    const x=xs(i)-bW/2,h=Math.abs(b/maxB)*(H/2),y=b>=0?ys(b):yMid;
+    const x=xs(i)-bW/2;
+    const h=Math.max(2,Math.abs(b/maxB)*H);
+    const y=b>=0?ys(b):baseline;
     const col=b>=0?'var(--c-sofr)':'var(--color-text-danger)';
-    svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="'+col+'" opacity=".8"/>';
-    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(b>=0?ys(b)-4:ys(b)+h+10).toFixed(1)+'" text-anchor="middle" font-size="8.5" fill="'+col+'" font-family="var(--font-mono)" font-weight="500">'+(b>0?'+':'')+b.toFixed(1)+'</text>';
-    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+mb-6).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+quarters[i]+'</text>';
+    const opacity=0.55+0.3*(1-i/Math.max(bases.length-1,1));
+    svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+h.toFixed(1)+'" rx="2" fill="'+col+'" opacity="'+opacity.toFixed(2)+'"/>';
+    // bp value label above bar
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="9" font-weight="500" fill="'+col+'" font-family="var(--font-mono)">'+(b>0?'+':'')+b.toFixed(1)+'</text>';
+    // quarter label below
+    svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(baseline+mt-6).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+quarters[i]+'</text>';
   });
   svg+='</svg>';
   return svg;
@@ -2081,13 +2162,29 @@ function TreeTab({state, finance}) {
     });
   }
   states.forEach((st,li)=>{
-    const x=gx(li),lbl=li===0?'Now':meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'';
-    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lbl+'</text>';
+    const x=gx(li);
+    const colLabel=li===0?'Now':(meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'');
+    svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+colLabel+'</text>';
     Object.entries(st).forEach(([k,p])=>{
-      if(p<0.005)return;const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
+      if(p<0.005)return;
+      const ki=parseInt(k),y=gyf(ki),rate=(lb+ki*.25).toFixed(2),fo=Math.min(.92,.12+p*.85);
       svg+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+NR+'" fill="var(--color-background-info)" fill-opacity="'+fo.toFixed(2)+'" stroke="var(--color-border-info)" stroke-width=".8"/>';
       svg+='<text x="'+x.toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="8.5" font-weight="500" fill="var(--color-text-primary)" font-family="var(--font-mono)">'+(p*100).toFixed(0)+'%</text>';
       svg+='<text x="'+x.toFixed(1)+'" y="'+(y+6).toFixed(1)+'" text-anchor="middle" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-secondary)" font-family="var(--font-mono)">'+rate+'%</text>';
+      // Dynamic hover rect
+      const hr=NR+4;
+      const moveDesc=ki<0?Math.abs(ki)+' cut'+(Math.abs(ki)>1?'s':''):ki>0?ki+' hike'+(ki>1?'s':''):'Hold';
+      const confDesc=p>0.50?'Dominant path':p>0.20?'Likely':p>0.05?'Possible':'Tail';
+      const tipLabel=rate+'% \u00b7 '+(li===0?'Current':colLabel);
+      const tipVal='P = '+(p*100).toFixed(1)+'%';
+      const tipSub=confDesc+' \u00b7 '+moveDesc+(ki!==0?' from start':'');
+      svg+='<rect class="mse-hover"'
+        +' x="'+(x-hr).toFixed(1)+'" y="'+(y-hr).toFixed(1)+'"'
+        +' width="'+(hr*2)+'" height="'+(hr*2)+'"'
+        +' fill="transparent"'
+        +' data-label="'+tipLabel+'"'
+        +' data-val="'+tipVal+'"'
+        +' data-sub="'+tipSub+'"/>';
     });
   });
   for(let k=0;k>=minK;k--){const y=gyf(k);svg+='<text x="0" y="'+y.toFixed(1)+'" dominant-baseline="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(lb+k*.25).toFixed(2)+'%</text>';}
@@ -3286,7 +3383,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
 
   const x1=PD.l+cw*0.18, x2=PD.l+cw*0.58;
   const cols=['var(--c-bs)','var(--c-bs-mbs)','var(--color-border-secondary)'];
-  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block;overflow:visible">';
   [0,2000,4000,6000,8000].forEach(v=>{
     const y=yS(v);
     svg1+='<line x1="'+PD.l+'" y1="'+y.toFixed(1)+'" x2="'+(PD.l+cw)+'" y2="'+y.toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
@@ -3313,7 +3410,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
   const cumUndershoot=Math.round(undershoot*20);
   const W2=420, H2=150, xMax=40;
   const xSc=v=>(v/xMax)*300;
-  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block;overflow:visible">';
   // Treasury row
   svg2+='<text x="88" y="32" text-anchor="end" font-size="10" fill="var(--color-text-primary)">Treasury</text>';
   svg2+='<rect x="95" y="18" width="'+xSc(capT).toFixed(1)+'" height="26" fill="var(--c-neutral-floor)" opacity=".25" rx="2"/>';
@@ -3360,7 +3457,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
     {x:32,y:1.0,lb:'QT + hike (2023)'},
   ];
 
-  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block;overflow:visible">';
   // grid
   [10,20,30].forEach(x=>{
     svg4+='<line x1="'+xSc4(x)+'" y1="'+P4.t+'" x2="'+xSc4(x)+'" y2="'+(P4.t+ch4)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
@@ -3380,10 +3477,19 @@ function BalanceSheetTab({state, dispatch, finance}) {
     const ex=xSc4(ep.x), ey=ySc4(ep.y);
     svg4+='<circle cx="'+ex+'" cy="'+ey+'" r="3.5" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
     svg4+='<text x="'+(ex+6)+'" y="'+(ey+3)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+ep.lb+'</text>';
+    // Hover target centered on episode dot
+    svg4+='<rect class="mse-hover" x="'+(ex-10).toFixed(1)+'" y="'+(ey-10).toFixed(1)+'" width="20" height="20" fill="transparent"'
+      +' data-label="'+ep.lb+'"'
+      +' data-val="BS: '+ep.x+'% GDP \u00b7 Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
+      +' data-sub="Hover for episode context"/>';
   });
   // current position
   svg4+='<circle cx="'+xSc4(curX)+'" cy="'+ySc4(curY)+'" r="7" fill="var(--c-combined)" opacity=".9"/>';
   svg4+='<text x="'+(xSc4(curX)+10)+'" y="'+(ySc4(curY)+4)+'" font-size="10" font-weight="bold" fill="var(--c-combined)">Now</text>';
+  svg4+='<rect class="mse-hover" x="'+(xSc4(curX)-12).toFixed(1)+'" y="'+(ySc4(curY)-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
+    +' data-label="Current position (2026)"'
+    +' data-val="BS: '+curX.toFixed(1)+'% GDP \u00b7 Real EFFR: '+(curY>0?'+':'')+curY.toFixed(2)+'%"'
+    +' data-sub="Ongoing QT + easing cycle \u00b7 Combined stance: '+combinedStance.toFixed(2)+'%"/>';
   // axis labels
   svg4+='<text x="'+(P4.l+cw4/2)+'" y="'+(H4-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Fed Total Assets (% of GDP)</text>';
   svg4+='<text x="14" y="'+(P4.t+ch4/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P4.t+ch4/2)+')">Real EFFR (%)</text>';
@@ -3480,7 +3586,7 @@ function FinStabTab({state, dispatch, finance}) {
   const xSc=v=>40+((v-xMin)/(xMax1-xMin))*520;
   const needleX=Math.max(40,Math.min(560,xSc(nfci)));
 
-  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block">';
+  let svg1='<svg viewBox="0 0 '+W1+' '+H1+'" style="width:100%;display:block;overflow:visible">';
   // background zones
   svg1+='<rect x="40" y="'+barY+'" width="'+(xSc(-0.5)-40)+'" height="'+barH+'" fill="var(--c-stress-lo)" opacity=".2"/>';
   svg1+='<rect x="'+xSc(-0.5)+'" y="'+barY+'" width="'+(xSc(0.5)-xSc(-0.5))+'" height="'+barH+'" fill="var(--c-neutral-floor)" opacity=".15"/>';
@@ -3529,7 +3635,7 @@ function FinStabTab({state, dispatch, finance}) {
     {lb:'SEP long-run dot',     val:sepDot,    col:'var(--color-text-tertiary)'},
   ];
 
-  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block">';
+  let svg2='<svg viewBox="0 0 '+W2+' '+H2+'" style="width:100%;display:block;overflow:visible">';
   // x-axis grid
   for(let r=Math.ceil(rMin*2)/2;r<=rMax;r+=0.5){
     const x=xSc2(r);
@@ -3564,7 +3670,7 @@ function FinStabTab({state, dispatch, finance}) {
   const jrW3=Math.abs(jrGapBp)*pxBp;
   const rsW3=Math.abs(rstarDiffBp)*pxBp;
 
-  let svg3='<svg viewBox="0 0 '+W3+' '+H3+'" style="width:100%;display:block">';
+  let svg3='<svg viewBox="0 0 '+W3+' '+H3+'" style="width:100%;display:block;overflow:visible">';
   svg3+='<defs><marker id="arr-lean" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--c-leaning)"/></marker></defs>';
   // zero line
   svg3+='<line x1="'+cx3+'" y1="16" x2="'+cx3+'" y2="'+(H3-28)+'" stroke="var(--color-text-primary)" stroke-width="1.2"/>';
@@ -3619,7 +3725,7 @@ function FinStabTab({state, dispatch, finance}) {
     s+='<text x="'+gR+'" y="'+(gY[yi]+gH+12)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)">'+max+unit+'</text>';
     return s;
   }
-  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block">';
+  let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block;overflow:visible">';
   svg4+=gaugeBar(0, reservesPctGdp, 0, 20, resColor, 'Reserves/GDP', '%');
   svg4+=gaugeBar(1, swapLn, 0, 50, swapColor, 'Swap lines', 'bn');
   svg4+=gaugeBar(2, xccyBp, -50, 10, xccyColor, 'Xccy basis', 'bp');
@@ -3639,7 +3745,7 @@ function FinStabTab({state, dispatch, finance}) {
   const xSc5=v=>P5.l+((v-xMin5)/(xMax5-xMin5))*cw5;
   const ySc5=v=>P5.t+ch5-((v-yMin5)/(yMax5-yMin5))*ch5;
 
-  let svg5='<svg viewBox="0 0 '+W5+' '+H5+'" style="width:100%;display:block">';
+  let svg5='<svg viewBox="0 0 '+W5+' '+H5+'" style="width:100%;display:block;overflow:visible">';
   [-25,0,25,50,75,100,125].forEach(x=>{
     svg5+='<line x1="'+xSc5(x)+'" y1="'+P5.t+'" x2="'+xSc5(x)+'" y2="'+(P5.t+ch5)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
     svg5+='<text x="'+xSc5(x)+'" y="'+(H5-18)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+x+'</text>';
@@ -3686,7 +3792,7 @@ function FinStabTab({state, dispatch, finance}) {
     {f:'FN',  t:'EFFR',lb:'prescription \u2192 rate'},
     {f:'TP',  t:'EFFR',lb:'SS put: TP\u2191 \u2192 cut'},
   ];
-  let svg6='<svg viewBox="0 0 '+W6+' '+H6+'" style="width:100%;display:block">';
+  let svg6='<svg viewBox="0 0 '+W6+' '+H6+'" style="width:100%;display:block;overflow:visible">';
   svg6+='<defs><marker id="arr-circ" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--color-text-secondary)"/></marker></defs>';
   edgs.forEach(e=>{
     const fn=nds.find(n=>n.id===e.f), tn=nds.find(n=>n.id===e.t);
@@ -3724,7 +3830,7 @@ function FinStabTab({state, dispatch, finance}) {
     return {x:cx7+Math.cos(a)*r, y:cy7+Math.sin(a)*r};
   };
 
-  let svg7='<svg viewBox="0 0 400 340" style="width:100%;max-width:420px;display:block;margin:0 auto">';
+  let svg7='<svg viewBox="0 0 400 340" style="width:100%;display:block;">';
   // concentric rings at 25,50,75,100%
   [0.25,0.5,0.75,1.0].forEach(pct=>{
     const r=R7*pct;
@@ -3755,12 +3861,17 @@ function FinStabTab({state, dispatch, finance}) {
   });
   polyPath+='Z';
   svg7+='<path d="'+polyPath+'" fill="var(--c-fin-neutral)" opacity=".2" stroke="var(--c-fin-neutral)" stroke-width="2"/>';
-  // vertex dots
+  // vertex dots + hover targets
   axes.forEach((a,i)=>{
     const r=R7*(a.val/100);
     const p=ptOnAxis(i,r);
     const dotCol=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
-    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+dotCol+'"/>';
+    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="5" fill="'+dotCol+'" opacity=".9"/>';
+    // Hover target around dot
+    svg7+='<rect class="mse-hover" x="'+(p.x-12).toFixed(1)+'" y="'+(p.y-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
+      +' data-label="'+a.lb+'"'
+      +' data-val="'+a.raw+' \u00b7 '+a.val.toFixed(0)+'th pctile"'
+      +' data-sub="'+(a.val>75?'\u26a0 Elevated stress':a.val>50?'Moderate':'Low stress')+'"/>';
   });
   // Phase clock index = polygon area / hexagon area * 100
   // Shoelace formula for polygon area
@@ -3950,6 +4061,18 @@ function App() {
     try { localStorage.setItem('fwCfg', JSON.stringify({lb:state.fwLb, scenario:state.fwActiveScenario, compare:state.fwCompareScenario})); }
     catch(e) {}
   }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
+
+  // Re-initialize tooltips after every render (dangerouslySetInnerHTML replaces DOM)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      document.querySelectorAll('[dangerouslySetInnerHTML]').forEach(el => {
+        initTooltips(el);
+      });
+      // Also scan the whole document for any .mse-hover not yet initialized
+      initTooltips(document.body);
+    }, 50);
+    return () => clearTimeout(timer);
+  });
 
   const TABS = [
     {id:'inputs',     label:'Futures inputs'},
