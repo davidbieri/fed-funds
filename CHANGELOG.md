@@ -6,7 +6,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
-No sessions in progress.
+### Fixed — CR-21 visualization standards (direct fix)
+- Removed `max-width:560px` from SOFR strip, yield curve, and Taylor Rule SVGs (all figures now full column width)
+- Added `font-family:'JetBrains Mono',monospace` to 4 SVG root elements that were missing it (falling back to system font)
+- Standardized Y-axis left margin: 560-wide figures → x=55; 620-wide figures → x=65 (SOFR tab figure corrected from x=60)
+- All 7 figures now fully compliant with CR-21 standards (full width, consistent font, consistent axis margins, tooltips, captions)
 
 ---
 

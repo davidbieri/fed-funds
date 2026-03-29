@@ -776,7 +776,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
       </div>
       <div class="ug-fig">
-        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;font-family:'JetBrains Mono',monospace">
           <!-- Grid -->
           <line x1="50" y1="220" x2="550" y2="220" stroke="var(--border)" stroke-width=".5"/>
           <text x="60" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">Start</text>
@@ -891,21 +891,21 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       </div>
       <div class="ug-head">Illustrative forward rate chart</div>
       <div style="margin:12px 0;overflow-x:auto">
-<svg viewBox="0 0 560 190" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="SOFR strip illustration">
+<svg viewBox="0 0 560 190" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="SOFR strip illustration">
   <rect width="560" height="190" fill="var(--surface)" rx="6"/>
   <!-- Axes -->
-  <line x1="50" y1="20" x2="50" y2="150" stroke="var(--border)" stroke-width="1"/>
-  <line x1="50" y1="150" x2="540" y2="150" stroke="var(--border)" stroke-width="1"/>
+  <line x1="55" y1="20" x2="55" y2="150" stroke="var(--border)" stroke-width="1"/>
+  <line x1="55" y1="150" x2="540" y2="150" stroke="var(--border)" stroke-width="1"/>
   <!-- Y-axis labels (rates) -->
   <text x="44" y="25" text-anchor="end" font-size="8" fill="var(--faint)">4.0%</text>
   <text x="44" y="60" text-anchor="end" font-size="8" fill="var(--faint)">3.5%</text>
   <text x="44" y="95" text-anchor="end" font-size="8" fill="var(--faint)">3.0%</text>
   <text x="44" y="130" text-anchor="end" font-size="8" fill="var(--faint)">2.5%</text>
   <!-- Grid lines -->
-  <line x1="50" y1="25" x2="540" y2="25" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
-  <line x1="50" y1="60" x2="540" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
-  <line x1="50" y1="95" x2="540" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
-  <line x1="50" y1="130" x2="540" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="25" x2="540" y2="25" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="60" x2="540" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="95" x2="540" y2="95" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+  <line x1="55" y1="130" x2="540" y2="130" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
   <!-- X-axis labels (quarters) -->
   <text x="90" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Jun26</text>
   <text x="157" y="163" text-anchor="middle" font-size="8" fill="var(--faint)">Sep26</text>
@@ -955,7 +955,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div style="font-size:11px;margin-top:8px;color:var(--faint)">Forward trough = \(\arg\min_t\; f_t\) &nbsp;→&nbsp; quarter where the market prices peak easing intensity</div>
       </div>
       <div class="ug-fig">
-        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;font-family:'JetBrains Mono',monospace">
           <!-- Grid lines -->
           <line x1="65" y1="20" x2="65" y2="185" stroke="var(--border)" stroke-width=".5"/>
           <line x1="65" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
@@ -1031,7 +1031,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> NS factors + scenario shocks → Riding HPR matrix. β₀ decomposition → Balance Sheet Tab 10.</p>
       <div class="ug-head">Illustrative curve chart</div>
       <div style="margin:12px 0;overflow-x:auto">
-<svg viewBox="0 0 560 200" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Yield curve NS illustration">
+<svg viewBox="0 0 560 200" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Yield curve NS illustration">
   <rect width="560" height="200" fill="var(--surface)" rx="6"/>
   <!-- Axes -->
   <line x1="55" y1="20" x2="55" y2="160" stroke="var(--border)" stroke-width="1"/>
@@ -1110,10 +1110,10 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard"><div class="ug-ptitle">Term premium</div><div class="ug-pdesc">β₀ − EFFR(start). The level factor in excess of the current policy rate — a proxy for the 10yr term premium.</div></div>
       </div>
       <div class="ug-fig">
-        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;font-family:'JetBrains Mono',monospace">
           <!-- Grid -->
-          <line x1="60" y1="20" x2="60" y2="185" stroke="var(--border)" stroke-width=".5"/>
-          <line x1="60" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="20" x2="65" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
           <line x1="60" y1="20" x2="570" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
           <line x1="60" y1="60" x2="570" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
           <line x1="60" y1="100" x2="570" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
@@ -1182,7 +1182,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> JR ECM signal → Riding filter #4. Finance-neutral gap → Dashboard leaning premium row.</p>
       <div class="ug-head">Illustrative prescribed vs market path</div>
       <div style="margin:12px 0;overflow-x:auto">
-<svg viewBox="0 0 560 210" style="width:100%;max-width:560px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Taylor Rule illustration">
+<svg viewBox="0 0 560 210" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Taylor Rule illustration">
   <rect width="560" height="210" fill="var(--surface)" rx="6"/>
   <!-- Axes -->
   <line x1="55" y1="20" x2="55" y2="155" stroke="var(--border)" stroke-width="1"/>
@@ -1266,7 +1266,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
       <div class="ug-fig">
-        <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg">
+        <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg" style="width:100%;display:block;font-family:'JetBrains Mono',monospace">
           <!-- Grid -->
           <line x1="65" y1="20" x2="65" y2="195" stroke="var(--border)" stroke-width=".5"/>
           <line x1="65" y1="195" x2="600" y2="195" stroke="var(--border)" stroke-width=".5"/>
