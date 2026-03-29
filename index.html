@@ -1213,7 +1213,6 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <div class="ug-head">Illustrative prescribed vs market path</div>
       <div style="margin:12px 0;overflow-x:auto">
 <svg viewBox="0 0 560 210" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Taylor Rule illustration">
-  <rect width="560" height="210" fill="var(--surface)" rx="6"/>
   <!-- Axes -->
   <line x1="55" y1="20" x2="55" y2="155" stroke="var(--border)" stroke-width="1"/>
   <line x1="55" y1="155" x2="545" y2="155" stroke="var(--border)" stroke-width="1"/>
@@ -1307,9 +1306,9 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <div class="ug-head">Five rule variants</div>
       <div class="ug-grid">
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Taylor 1993</div><div class="ug-pdesc">α=1.5, β=0.5, GDP output gap. The original specification from Taylor (1993, Carnegie-Rochester).</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">Balanced / Yellen 2012</div><div class="ug-pdesc">α=β=1.0. The "balanced approach" rule highlighted in Yellen's 2012 speech and Fed Tealbook.</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">Yellen Alt1</div><div class="ug-pdesc">Unemployment gap via Okun's Law (gap ≈ −2×(u − u*)). Uses FOMC SEP median longer-run r*.</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid rgba(225,29,72,.45)"><div class="ug-ptitle" style="color:var(--taylor-text)">Balanced / Yellen 2012</div><div class="ug-pdesc">α=β=1.0. The "balanced approach" rule highlighted in Yellen's 2012 speech and Fed Tealbook.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid rgba(225,29,72,.35)"><div class="ug-ptitle" style="color:var(--taylor-text)">Yellen Alt1</div><div class="ug-pdesc">Unemployment gap via Okun's Law (gap ≈ −2×(u − u*)). Uses FOMC SEP median longer-run r*.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid rgba(225,29,72,.25)"><div class="ug-ptitle" style="color:var(--taylor-text)">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
       <div class="ug-fig">
