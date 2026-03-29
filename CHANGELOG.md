@@ -6,6 +6,22 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Head cleanup + external assets
+- Load Google Fonts (Spectral, JetBrains Mono, DM Sans), KaTeX 0.16.9 CSS, Font Awesome 6.5.1 CSS in `<head>`
+- Add favicon.svg link
+- Shorten `<title>` to "MSE: Multi-Market Framework for Federal Reserve Policy Analytics"
+- Replace `\u2461` → ②, `\u03bb` → λ, `\u00b7` → · across finance-neutral panels and formula labels
+- Add bridge token layer (--bg, --surface, --text, --muted, --faint, --shadow, accent --*-text) aliasing existing color primitives
+- Add `[data-theme="dark"]` block with dark-mode bridge overrides (nav-blur, shadow, accent text)
+- Add `transition:background .25s,color .25s` to body for smooth theme switching
+- Sticky nav bar (`nav#mse-nav`): Spectral italic logo, JetBrains Mono MSE badge, theme toggle button
+- IntersectionObserver scroll-shadow trigger on nav
+- Nav CSS: `.nav-logo`, `.nav-tool`, `.nav-link`, `.nav-badge`, `.nav-theme`, `.nav-sep`
+- Fixed footer (`.mse-footer`): brand, SPIA affiliation, GitHub/LinkedIn links, disclaimer
+- Footer CSS: `.sf-main`, `.sf-brand`, `.sf-left`, `.sf-right`, `.sf-link`, `.sf-icon`, `.sf-disclaimer`
+- `body{padding-bottom:72px}` to prevent footer overlap
+- localStorage theme toggle (`mse-theme` key): persists light/dark across reloads, button icon swap
+
 ---
 
 ## [4.2] — March 2026
