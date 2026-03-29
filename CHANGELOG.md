@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
-## [Unreleased]
+## [4.2] — March 2026
 
 ### Changed — Head cleanup + external assets
 - Load Google Fonts (Spectral, JetBrains Mono, DM Sans), KaTeX 0.16.9 CSS, Font Awesome 6.5.1 CSS in `<head>`
@@ -21,10 +21,6 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Footer CSS: `.sf-main`, `.sf-brand`, `.sf-left`, `.sf-right`, `.sf-link`, `.sf-icon`, `.sf-disclaimer`
 - `body{padding-bottom:72px}` to prevent footer overlap
 - localStorage theme toggle (`mse-theme` key): persists light/dark across reloads, button icon swap
-
----
-
-## [4.2] — March 2026
 
 ### Added — Tool design consistency + tooltips (Sessions TOOL-A/B/C)
 - SOFR basis bars redesigned: full width, taller, labeled, opacity gradient
