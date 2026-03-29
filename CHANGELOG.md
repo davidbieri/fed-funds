@@ -6,6 +6,40 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Added — Balance Sheet & Fin. Stability Illustrations (Session INDEX-M)
+- Session INDEX-M: Balance Sheet pg-bs illustrations added — two-instrument
+  policy space scatter (8 historical episodes, QE/QT color coding, IORB floor,
+  Now marker) + KVJ 4-channel shadow rate decomposition bar (duration/safety/
+  signaling/MBS); Financial Stability pg-fin illustrations added — 6-axis
+  hexagonal phase clock radar (teal current + faint historical, composite
+  stress index 57) + finance-neutral r* gap bar chart (JR ECM vs Borio
+  fin-neutral vs EFFR + leaning premium annotation); all figures use shared
+  tooltip infrastructure from INDEX-L
+
+### Changed — Visualization Standards (Session INDEX-L)
+- Session INDEX-L: shared SVG tooltip infrastructure (JS handler,
+  CSS classes, .ug-hover rect pattern, edge-clamping); all 4 existing
+  figures converted to full-width .ug-fig class (max-width removed);
+  viewBoxes widened; hover targets added (probability tree 6 nodes,
+  SOFR strip 7 quarters, yield curve 7 maturities, Taylor Rule 8 meetings);
+  figure captions added to all 4 figures
+
+### Changed — Landing Page Footer & Favicon (Session INDEX-K)
+- Session INDEX-K: Font Awesome 6.5.1 added; SVG favicon (M letterform,
+  JetBrains Mono, CME blue); static footer removed; consolidated sticky
+  footer (full viewport width, two-row: main bar + disclaimer);
+  left zone: david bieri brand + institution + version;
+  right zone: 3 ecosystem links + 4 social icons (GitHub/YouTube/
+  LinkedIn/X with platform hover colors) + 3 nav links;
+  august-loesch.org added to ecosystem links
+
+### Changed — Landing Page Fixes (Session INDEX-J)
+- Session INDEX-J: hero title em light-mode contrast fix (dark opacity token);
+  all 11 overview mini-cards now have identity-colored left borders + --*-text
+  title tokens (cards 01-06 were missing borders); Tab 10 renamed to
+  "Balance Sheet: QE · QT Monitor" across index.html, README.md,
+  CLAUDE.md, CHANGELOG.md
+
 ### Changed — Landing Page CSS (Session INDEX-A)
 - CSS theme system: light/dark toggle via `data-theme` attribute on `<html>`
 - Sticky nav with backdrop blur, `.active` link state, `.scrolled` shadow, `.nav-theme` toggle button
@@ -77,7 +111,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [4.1] — March 2026
 
-### Added — Balance Sheet & QT Monitor (Tab 10)
+### Added — Balance Sheet: QE · QT Monitor (Tab 10)
 
 - **BalanceSheetTab**: 4-panel layout with Fetch H.4.1 button (8 FRED series)
 - Panel 1: Composition stacked bars (current vs neutral floor), KVJ (2011) 4-channel shadow rate decomposition (duration, safety, signaling, MBS), editable neutral floor + monthly runoff

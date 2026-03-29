@@ -8,6 +8,8 @@
 <link rel="canonical" href="https://davidbieri.github.io/fed-funds/">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -163,6 +165,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   padding:4px 0 4px 14px;margin-bottom:20px;line-height:1.6;
   max-width:560px;
 }
+[data-theme="light"] .hero-title em{color:rgba(26,24,20,0.50)}
 .hero-sub{
   font-size:16px;line-height:1.7;color:var(--muted);
   max-width:600px;margin-bottom:36px;font-weight:300;
@@ -327,20 +330,52 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .cite-content{display:none}
 .cite-content.act{display:block}
 
-/* FOOTER */
-footer{
-  padding:32px 0;
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+/* STICKY FOOTER */
+.sf{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--nav-blur);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;
 }
-.footer-left{
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);line-height:1.8;
+.sf-main{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 32px;flex-wrap:wrap;gap:8px;
 }
-.footer-right{display:flex;gap:16px}
-.foot-link{
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);
-  text-decoration:none;transition:color .15s;
+.sf-disclaimer{
+  font-size:9px;color:var(--faint);text-align:center;
+  padding:0 32px 6px;
+  border-top:1px solid var(--border);opacity:.7;
 }
-.foot-link:hover{color:var(--cme)}
+.sf-left{
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;color:var(--faint);
+}
+.sf-brand{
+  font-family:'Spectral',serif;font-style:italic;
+  color:var(--text);font-size:11px;
+}
+.sf-sep{color:var(--border);font-size:10px}
+.sf-right{display:flex;align-items:center;gap:12px}
+.sf-link{
+  font-size:10px;color:var(--faint);text-decoration:none;
+  transition:color .15s;
+}
+.sf-link:hover{color:var(--cme-text)}
+.sf-icon{
+  font-size:14px;color:var(--faint);text-decoration:none;
+  transition:color .2s;line-height:1;
+}
+.sf-icon:hover{color:var(--text)}
+.sf-icon.sf-yt:hover{color:#ff0000}
+.sf-icon.sf-li:hover{color:#0077b5}
+.sf-icon.sf-x:hover{color:var(--text)}
+.sf-divider{
+  width:1px;height:14px;background:var(--border);
+  display:inline-block;
+}
+/* padding so sticky footer doesn't overlap content */
+.wrap{padding-bottom:56px}
 
 /* STICKY FOOTER */
 .sticky-foot{
@@ -539,7 +574,7 @@ footer{
       <div class="tab-card tc-bs">
         <span class="tab-new">New v4.1</span>
         <div class="tab-num">10 — BALANCE SHEET</div>
-        <div class="tab-name">QT Monitor &amp; Shadow Rate</div>
+        <div class="tab-name">Balance Sheet: QE · QT Monitor</div>
         <div class="tab-desc">4-panel layout: composition stacked bars with KVJ (2011) shadow rate decomposition, monthly runoff pace vs cap with MBS undershoot, corridor mechanics (IORB/EFFR/SVR/RRP), and two-instrument policy space scatter with 9 historical episodes.</div>
       </div>
       <div class="tab-card tc-fin">
@@ -659,6 +694,13 @@ footer{
     .ug-src-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
     .ug-src-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
     .ug-regime{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border-radius:4px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;margin:10px 0}
+    .ug-fig{width:100%;margin:12px 0;overflow-x:hidden}
+    .ug-fig svg{width:100%;display:block;cursor:crosshair}
+    .ug-fig-cap{
+      font-family:'JetBrains Mono',monospace;font-size:10px;
+      color:var(--faint);text-align:center;margin-top:4px;
+      font-style:italic;
+    }
     </style>
 
     <!-- OVERVIEW -->
@@ -696,17 +738,17 @@ footer{
         <div class="ug-stat"><div class="ug-stat-l">Refresh buttons</div><div class="ug-stat-v" style="font-size:14px">7 buttons</div><div class="ug-stat-s">Independent per source</div></div>
       </div>
       <div class="ug-grid">
-        <div class="ug-pcard"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle">10-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels plus PCI Signal/Noise decomposition. Kal−CME and Poly−Kal basis pills on each panel.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
-        <div class="ug-pcard"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">01 — FUTURES INPUTS</div><div class="ug-ptitle" style="color:var(--cme-text)">ZQ Price Editor</div><div class="ug-pdesc">Edit prices, toggle FOMC meeting flags, adjust N/M day splits. Source of truth for all other tabs. 10 historical scenario presets.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">02 — EFFR CHAIN</div><div class="ug-ptitle" style="color:var(--cme-text)">Rate Propagation</div><div class="ug-pdesc">EFFR anchor chain propagation and per-meeting probability bars from the day-weighted formula.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">03 — PROBABILITY TREE</div><div class="ug-ptitle" style="color:var(--cme-text)">Unconditional Lattice</div><div class="ug-pdesc">Full probability lattice with node opacity ∝ probability, summary stats, amber compare overlay.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">04 — PREDICTION MARKETS</div><div class="ug-ptitle" style="color:var(--kal-text)">9-Panel Comparison</div><div class="ug-pdesc">CME vs Kalshi vs Polymarket across 9 panels with explicit basis pills between each market pair.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--sofr)"><div class="ug-pnum">05 — SOFR STRIP</div><div class="ug-ptitle" style="color:var(--sofr-text)">SR3 Forward Curve</div><div class="ug-pdesc">7 SR3 contracts with three-curve chart and per-quarter SOFR–EFFR basis in basis points.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--faint-accent)"><div class="ug-pnum">06 — DASHBOARD</div><div class="ug-ptitle">Unified Cross-Market View</div><div class="ug-pdesc">9 stat cards, unified rate path chart overlaying all sources, cross-market divergence table, policy regime summary.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--amber)"><div class="ug-pnum">07 — YIELD CURVE</div><div class="ug-ptitle" style="color:var(--amber-text)">Nelson-Siegel Term Structure</div><div class="ug-pdesc">NS fitting with Nelder-Mead, scenario-shocked curve fan, factor cards (β₀ level, β₁ slope, β₂ curvature, τ, term premium).</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-pnum">08 — TAYLOR RULE</div><div class="ug-ptitle" style="color:var(--taylor-text)">Prescriptive Path Analysis</div><div class="ug-pdesc">5 rule variants — Taylor 1993, Balanced, Yellen Alt1, CGG inertial, Judd-Rudebusch ECM. Prescribed vs market chart, gap decomposition, rule comparison matrix.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--riding)"><div class="ug-pnum">09 — RIDING</div><div class="ug-ptitle" style="color:var(--riding-text)">Riding the Yield Curve</div><div class="ug-pdesc">7×5 HPR matrix, 5-filter suite, duration-neutral barbell. Signals cascade from the Taylor Rule tab.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid #0ea5e9"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:var(--bs-text)">Balance Sheet / QT Monitor</div><div class="ug-pdesc">KVJ (2011) 4-channel shadow rate, Stein (2012) SVR corridor, DSS (2018) liquidity premium, two-instrument policy space. Fed H.4.1 live fetch.</div></div>
-        <div class="ug-pcard" style="border-left:3px solid #0d9488"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:var(--fin-text)">Financial Stability</div><div class="ug-pdesc">BIS/Mehrling framework: finance-neutral r* (Borio 2016), McCauley dollar gauge, doom loop scatter, 6-axis phase clock. FRED live fetch.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--bs)"><div class="ug-pnum">10 — BALANCE SHEET</div><div class="ug-ptitle" style="color:var(--bs-text)">Balance Sheet: QE · QT Monitor</div><div class="ug-pdesc">4-panel layout: composition stacked bars with KVJ shadow rate, monthly runoff pace vs cap, corridor mechanics (IORB/EFFR/SVR/RRP), two-instrument policy space scatter.</div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--fin)"><div class="ug-pnum">11 — FINANCIAL STABILITY</div><div class="ug-ptitle" style="color:var(--fin-text)">BIS/Mehrling Framework</div><div class="ug-pdesc">NFCI vs EFFR path chart, finance-neutral Taylor Rule, global dollar stress gauge, doom loop scatter, five-axis financial cycle phase clock.</div></div>
       </div>
     </div>
 
@@ -754,70 +796,69 @@ footer{
         \[P(\text{node at meeting } M,\; \text{rate } R) = \sum_{R'} P(\text{prior node at } R') \;\times\; P(R' \to R \mid M)\]
         <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
       </div>
-      <div class="ug-head">Illustrative lattice — 3 meetings</div>
-      <div style="margin:12px 0;overflow-x:auto">
-<svg viewBox="0 0 520 220" style="width:100%;max-width:520px;display:block;font-family:'JetBrains Mono',monospace" aria-label="Probability tree illustration">
-  <!-- Background -->
-  <rect width="520" height="220" fill="var(--surface)" rx="6"/>
-  <!-- Column labels -->
-  <text x="60" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">START</text>
-  <text x="200" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">MTG 1 · APR</text>
-  <text x="340" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">MTG 2 · JUN</text>
-  <text x="460" y="18" text-anchor="middle" font-size="9" fill="var(--faint)" letter-spacing=".08em">TERMINAL</text>
-  <!-- Vertical guides -->
-  <line x1="60" y1="26" x2="60" y2="205" stroke="var(--border)" stroke-width=".5"/>
-  <line x1="200" y1="26" x2="200" y2="205" stroke="var(--border)" stroke-width=".5"/>
-  <line x1="340" y1="26" x2="340" y2="205" stroke="var(--border)" stroke-width=".5"/>
-  <line x1="460" y1="26" x2="460" y2="205" stroke="var(--border)" stroke-width=".5"/>
-  <!-- Start node: 3.50% (100%) -->
-  <circle cx="60" cy="110" r="22" fill="rgba(59,130,246,.85)" stroke="none"/>
-  <text x="60" y="107" text-anchor="middle" font-size="9" fill="white" font-weight="500">3.50%</text>
-  <text x="60" y="119" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.8)">100%</text>
-  <!-- Edges from start: hold 25% = 3.50, cut 75% = 3.25 -->
-  <line x1="82" y1="100" x2="178" y2="70" stroke="var(--border)" stroke-width="1.5" opacity=".5"/>
-  <line x1="82" y1="120" x2="178" y2="150" stroke="var(--cme)" stroke-width="3" opacity=".8"/>
-  <!-- MTG1 hold node: 3.50% (25%) - dim -->
-  <circle cx="200" cy="65" r="14" fill="rgba(59,130,246,.22)" stroke="rgba(59,130,246,.35)"/>
-  <text x="200" y="62" text-anchor="middle" font-size="8" fill="var(--cme)">3.50%</text>
-  <text x="200" y="73" text-anchor="middle" font-size="7.5" fill="var(--faint)">25%</text>
-  <!-- MTG1 cut node: 3.25% (75%) - bright -->
-  <circle cx="200" cy="150" r="20" fill="rgba(59,130,246,.8)" stroke="none"/>
-  <text x="200" y="147" text-anchor="middle" font-size="8.5" fill="white" font-weight="500">3.25%</text>
-  <text x="200" y="159" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.85)">75%</text>
-  <!-- Edges from MTG1 hold (25%): hold 30% = 3.50, cut 70% = 3.25 -->
-  <line x1="214" y1="57" x2="326" y2="42" stroke="var(--border)" stroke-width=".8" opacity=".4"/>
-  <line x1="214" y1="73" x2="326" y2="88" stroke="var(--border)" stroke-width="1.5" opacity=".4"/>
-  <!-- Edges from MTG1 cut (75%): hold 40% = 3.25, cut 60% = 3.00 -->
-  <line x1="220" y1="143" x2="320" y2="120" stroke="rgba(59,130,246,.5)" stroke-width="2.5" opacity=".7"/>
-  <line x1="220" y1="157" x2="320" y2="175" stroke="rgba(59,130,246,.8)" stroke-width="3.5" opacity=".8"/>
-  <!-- MTG2 nodes: 3.50% (7.5%), 3.25% (47.5%), 3.00% (45%) -->
-  <circle cx="340" cy="38" r="10" fill="rgba(59,130,246,.12)" stroke="rgba(59,130,246,.2)"/>
-  <text x="340" y="35" text-anchor="middle" font-size="7.5" fill="var(--faint)">3.50%</text>
-  <text x="340" y="46" text-anchor="middle" font-size="7" fill="var(--faint)">7.5%</text>
-  <circle cx="340" cy="107" r="17" fill="rgba(59,130,246,.55)" stroke="none"/>
-  <text x="340" y="104" text-anchor="middle" font-size="8.5" fill="white">3.25%</text>
-  <text x="340" y="116" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.85)">47.5%</text>
-  <circle cx="340" cy="175" r="19" fill="rgba(59,130,246,.72)" stroke="none"/>
-  <text x="340" y="172" text-anchor="middle" font-size="8.5" fill="white" font-weight="500">3.00%</text>
-  <text x="340" y="184" text-anchor="middle" font-size="8" fill="rgba(255,255,255,.9)">45%</text>
-  <!-- Terminal bars (simplified distribution) -->
-  <rect x="448" y="30" width="24" height="8" rx="2" fill="rgba(59,130,246,.15)"/>
-  <text x="476" y="38" font-size="7.5" fill="var(--faint)">7.5%</text>
-  <rect x="436" y="98" width="48" height="14" rx="2" fill="rgba(59,130,246,.55)"/>
-  <text x="488" y="109" font-size="7.5" fill="var(--muted)">47.5%</text>
-  <rect x="432" y="165" width="56" height="16" rx="2" fill="rgba(59,130,246,.75)"/>
-  <text x="492" y="177" font-size="7.5" fill="var(--muted)" font-weight="500">45%</text>
-  <!-- Legend -->
-  <circle cx="30" cy="196" r="5" fill="rgba(59,130,246,.8)"/>
-  <text x="38" y="200" font-size="8" fill="var(--muted)">High prob.</text>
-  <circle cx="110" cy="196" r="5" fill="rgba(59,130,246,.2)" stroke="rgba(59,130,246,.4)"/>
-  <text x="118" y="200" font-size="8" fill="var(--muted)">Low prob.</text>
-  <line x1="185" y1="196" x2="205" y2="196" stroke="var(--cme)" stroke-width="3"/>
-  <text x="210" y="200" font-size="8" fill="var(--muted)">Dominant path</text>
-  <line x1="295" y1="196" x2="315" y2="196" stroke="var(--border)" stroke-width="1.5"/>
-  <text x="320" y="200" font-size="8" fill="var(--faint)">Low-prob. path</text>
-</svg>
+      <div class="ug-fig">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="50" y1="220" x2="550" y2="220" stroke="var(--border)" stroke-width=".5"/>
+          <text x="60" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">Start</text>
+          <text x="195" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 1 (Apr)</text>
+          <text x="330" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 2 (Jun)</text>
+          <text x="470" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 3 (Jul)</text>
+          <!-- Y-axis labels -->
+          <text x="10" y="42" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <text x="10" y="112" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <text x="10" y="182" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <!-- Edges (width proportional to probability) -->
+          <line x1="80" y1="110" x2="195" y2="57" stroke="var(--cme)" stroke-width="1.2" opacity=".5"/>
+          <line x1="80" y1="110" x2="195" y2="150" stroke="var(--cme)" stroke-width="3" opacity=".8"/>
+          <line x1="215" y1="57" x2="337" y2="37" stroke="var(--cme)" stroke-width=".8" opacity=".3"/>
+          <line x1="215" y1="57" x2="337" y2="107" stroke="var(--cme)" stroke-width="1.2" opacity=".5"/>
+          <line x1="215" y1="150" x2="337" y2="107" stroke="var(--cme)" stroke-width="2" opacity=".6"/>
+          <line x1="215" y1="150" x2="337" y2="175" stroke="var(--cme)" stroke-width="2.5" opacity=".7"/>
+          <line x1="357" y1="37" x2="480" y2="37" stroke="var(--cme)" stroke-width=".5" opacity=".2"/>
+          <line x1="357" y1="107" x2="480" y2="77" stroke="var(--cme)" stroke-width="1.5" opacity=".5"/>
+          <line x1="357" y1="107" x2="480" y2="137" stroke="var(--cme)" stroke-width="1.5" opacity=".5"/>
+          <line x1="357" y1="175" x2="480" y2="137" stroke="var(--cme)" stroke-width="1.2" opacity=".4"/>
+          <line x1="357" y1="175" x2="480" y2="195" stroke="var(--cme)" stroke-width="2" opacity=".6"/>
+          <!-- Nodes -->
+          <circle cx="60" cy="110" r="18" fill="var(--cme)" opacity=".85"/>
+          <text x="60" y="113" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <circle cx="200" cy="57" r="11" fill="var(--cme)" opacity=".25"/>
+          <text x="200" y="60" text-anchor="middle" font-size="8" fill="var(--cme)" font-family="'JetBrains Mono',monospace">3.50</text>
+          <circle cx="200" cy="150" r="16" fill="var(--cme)" opacity=".75"/>
+          <text x="200" y="153" text-anchor="middle" font-size="8" font-weight="500" fill="white" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <circle cx="340" cy="37" r="8" fill="var(--cme)" opacity=".08"/>
+          <text x="340" y="40" text-anchor="middle" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50</text>
+          <circle cx="340" cy="107" r="14" fill="var(--cme)" opacity=".48"/>
+          <text x="340" y="110" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <circle cx="340" cy="175" r="15" fill="var(--cme)" opacity=".45"/>
+          <text x="340" y="178" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <circle cx="480" cy="37" r="5" fill="var(--cme)" opacity=".04"/>
+          <circle cx="480" cy="77" r="10" fill="var(--cme)" opacity=".20"/>
+          <text x="480" y="80" text-anchor="middle" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">3.25</text>
+          <circle cx="480" cy="137" r="14" fill="var(--cme)" opacity=".42"/>
+          <text x="480" y="140" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <circle cx="480" cy="195" r="12" fill="var(--cme)" opacity=".30"/>
+          <text x="480" y="198" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">2.75%</text>
+          <!-- Probability labels -->
+          <text x="140" y="74" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace">25%</text>
+          <text x="132" y="140" font-size="8" fill="var(--cme)" font-weight="500" font-family="'JetBrains Mono',monospace">75%</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="38" y="88" width="44" height="44" fill="transparent"
+            data-label="Start - Apr 2026" data-val="3.50% - 100%" data-sub="Current EFFR lower bound"/>
+          <rect class="ug-hover" x="186" y="43" width="28" height="28" fill="transparent"
+            data-label="MTG 1 - Hold" data-val="3.50% - 25%" data-sub="P(hold) at Apr meeting"/>
+          <rect class="ug-hover" x="180" y="130" width="40" height="40" fill="transparent"
+            data-label="MTG 1 - Cut" data-val="3.25% - 75%" data-sub="P(-25bp) at Apr meeting"/>
+          <rect class="ug-hover" x="323" y="20" width="34" height="34" fill="transparent"
+            data-label="MTG 2 - Hold-Hold" data-val="3.50% - 7.5%" data-sub="P(no cut through Jun)"/>
+          <rect class="ug-hover" x="323" y="89" width="34" height="36" fill="transparent"
+            data-label="MTG 2 - Mixed" data-val="3.25% - 47.5%" data-sub="One cut by Jun"/>
+          <rect class="ug-hover" x="321" y="156" width="38" height="38" fill="transparent"
+            data-label="MTG 2 - Cut-Cut" data-val="3.00% - 45%" data-sub="Two cuts by Jun"/>
+        </svg>
       </div>
+      <p class="ug-fig-cap">Illustrative 3-meeting lattice. Node opacity ∝ probability. Seed values: Apr hold 25%, Jun cut 75%.</p>
       <div class="ug-head">Reading the lattice</div>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-ptitle">Node opacity</div><div class="ug-pdesc">More opaque = higher probability. Nodes below ~0.5% are hidden to reduce visual clutter.</div></div>
@@ -934,6 +975,73 @@ footer{
         \[f_t \;=\; 2\,r_{t+1} - r_t\]
         <div style="font-size:11px;margin-top:8px;color:var(--faint)">Forward trough = \(\arg\min_t\; f_t\) &nbsp;→&nbsp; quarter where the market prices peak easing intensity</div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid lines -->
+          <line x1="65" y1="20" x2="65" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="20" x2="570" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="60" x2="570" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="100" x2="570" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="140" x2="570" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis labels (3.55% top to 2.90% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.55%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.35%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.15%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">2.95%</text>
+          <!-- X-axis labels -->
+          <text x="105" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun26</text>
+          <text x="175" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep26</text>
+          <text x="245" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec26</text>
+          <text x="315" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Mar27</text>
+          <text x="385" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun27</text>
+          <text x="455" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep27</text>
+          <text x="525" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec27</text>
+          <!-- SOFR strip (green) -->
+          <polyline points="105,30 175,55 245,87 315,114 385,132 455,142 525,147" fill="none" stroke="var(--sofr)" stroke-width="2"/>
+          <circle cx="105" cy="30" r="3.5" fill="var(--sofr)"/>
+          <circle cx="175" cy="55" r="3.5" fill="var(--sofr)"/>
+          <circle cx="245" cy="87" r="3.5" fill="var(--sofr)"/>
+          <circle cx="315" cy="114" r="3.5" fill="var(--sofr)"/>
+          <circle cx="385" cy="132" r="3.5" fill="var(--sofr)"/>
+          <circle cx="455" cy="142" r="3.5" fill="var(--sofr)"/>
+          <circle cx="525" cy="147" r="3.5" fill="var(--sofr)"/>
+          <!-- ZQ quarterly avg EFFR (blue) -->
+          <polyline points="105,50 175,75 245,107 315,130 385,147 455,155 525,160" fill="none" stroke="var(--cme)" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <circle cx="105" cy="50" r="3" fill="var(--cme)"/>
+          <circle cx="175" cy="75" r="3" fill="var(--cme)"/>
+          <circle cx="245" cy="107" r="3" fill="var(--cme)"/>
+          <circle cx="315" cy="130" r="3" fill="var(--cme)"/>
+          <circle cx="385" cy="147" r="3" fill="var(--cme)"/>
+          <circle cx="455" cy="155" r="3" fill="var(--cme)"/>
+          <circle cx="525" cy="160" r="3" fill="var(--cme)"/>
+          <!-- Instantaneous 3M forward (cyan) -->
+          <polyline points="105,15 175,60 245,100 315,135 385,150 455,155 525,152" fill="none" stroke="var(--poly)" stroke-width="1" opacity=".7"/>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--sofr)" stroke-width="2"/>
+          <text x="100" y="11" font-size="7" fill="var(--sofr)" font-family="'JetBrains Mono',monospace">SR3 SOFR</text>
+          <line x1="180" y1="8" x2="196" y2="8" stroke="var(--cme)" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="200" y="11" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">ZQ EFFR</text>
+          <line x1="270" y1="8" x2="286" y2="8" stroke="var(--poly)" stroke-width="1" opacity=".7"/>
+          <text x="290" y="11" font-size="7" fill="var(--poly)" font-family="'JetBrains Mono',monospace">3M Forward</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="70" y="20" width="70" height="165" fill="transparent"
+            data-label="Jun 2026" data-val="SR3: 3.48% - ZQ: 3.40%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="140" y="20" width="70" height="165" fill="transparent"
+            data-label="Sep 2026" data-val="SR3: 3.38% - ZQ: 3.30%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="210" y="20" width="70" height="165" fill="transparent"
+            data-label="Dec 2026" data-val="SR3: 3.25% - ZQ: 3.17%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="280" y="20" width="70" height="165" fill="transparent"
+            data-label="Mar 2027" data-val="SR3: 3.14% - ZQ: 3.06%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="350" y="20" width="70" height="165" fill="transparent"
+            data-label="Jun 2027" data-val="SR3: 3.07% - ZQ: 2.99%" data-sub="Fwd trough near"/>
+          <rect class="ug-hover" x="420" y="20" width="70" height="165" fill="transparent"
+            data-label="Sep 2027" data-val="SR3: 3.03% - ZQ: 2.96%" data-sub="Basis: +7bp"/>
+          <rect class="ug-hover" x="490" y="20" width="70" height="165" fill="transparent"
+            data-label="Dec 2027" data-val="SR3: 3.01% - ZQ: 2.95%" data-sub="Terminal quarter"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative forward curve. Seed values reflect Mar 2026 market conditions. Basis = SR3 minus ZQ quarterly average.</p>
     </div>
 
     <!-- YIELD CURVE -->
@@ -1022,6 +1130,69 @@ footer{
         <div class="ug-pcard"><div class="ug-ptitle">H.15 live fetch</div><div class="ug-pdesc">Fetch CMT rates button retrieves current Treasury yields from the Federal Reserve H.15 release via the Anthropic API.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Term premium</div><div class="ug-pdesc">β₀ − EFFR(start). The level factor in excess of the current policy rate — a proxy for the 10yr term premium.</div></div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="60" y1="20" x2="60" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="60" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="60" y1="20" x2="570" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="60" x2="570" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="100" x2="570" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="140" x2="570" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis (3.50% top to 4.50% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.50%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.25%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.00%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.75%</text>
+          <text x="8" y="188" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <!-- X-axis (maturity) -->
+          <text x="80" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3m</text>
+          <text x="145" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">6m</text>
+          <text x="205" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">1yr</text>
+          <text x="270" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">2yr</text>
+          <text x="345" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">5yr</text>
+          <text x="425" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">10yr</text>
+          <text x="505" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">30yr</text>
+          <!-- NS fitted curve (amber, smooth) -->
+          <path d="M90,155 C120,148 160,138 210,128 C260,115 310,95 350,78 C400,58 440,42 500,30" fill="none" stroke="var(--amber)" stroke-width="2"/>
+          <!-- CMT observation dots -->
+          <circle cx="90" cy="153" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="150" cy="143" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="210" cy="130" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="270" cy="113" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="350" cy="78" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="430" cy="48" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="510" cy="28" r="4" fill="var(--text)" opacity=".8"/>
+          <!-- Scenario fan (faded amber lines) -->
+          <path d="M90,155 C160,145 260,122 350,85 C440,50 490,35 510,28" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".25"/>
+          <path d="M90,155 C160,148 260,128 350,100 C440,68 490,52 510,45" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".2"/>
+          <path d="M90,155 C160,150 260,135 350,112 C440,82 490,68 510,60" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".15"/>
+          <!-- RMSE badge -->
+          <rect x="480" y="165" width="70" height="16" rx="3" fill="rgba(16,185,129,.15)"/>
+          <text x="515" y="176" text-anchor="middle" font-size="8" fill="var(--sofr)" font-family="'JetBrains Mono',monospace">RMSE 4.2bp</text>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--amber)" stroke-width="2"/>
+          <text x="100" y="11" font-size="7" fill="var(--amber)" font-family="'JetBrains Mono',monospace">NS fitted</text>
+          <circle cx="175" cy="8" r="3" fill="var(--text)" opacity=".8"/>
+          <text x="182" y="11" font-size="7" fill="var(--text)" font-family="'JetBrains Mono',monospace">CMT obs</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="65" y="20" width="55" height="165" fill="transparent"
+            data-label="3-month" data-val="CMT: 3.64% - NS: 3.66%" data-sub="Residual: +2bp"/>
+          <rect class="ug-hover" x="120" y="20" width="55" height="165" fill="transparent"
+            data-label="6-month" data-val="CMT: 3.72% - NS: 3.70%" data-sub="Residual: -2bp"/>
+          <rect class="ug-hover" x="175" y="20" width="60" height="165" fill="transparent"
+            data-label="1-year" data-val="CMT: 3.80% - NS: 3.79%" data-sub="Residual: -1bp"/>
+          <rect class="ug-hover" x="235" y="20" width="70" height="165" fill="transparent"
+            data-label="2-year" data-val="CMT: 3.90% - NS: 3.88%" data-sub="Residual: -2bp"/>
+          <rect class="ug-hover" x="305" y="20" width="80" height="165" fill="transparent"
+            data-label="5-year" data-val="CMT: 4.05% - NS: 4.06%" data-sub="Residual: +1bp"/>
+          <rect class="ug-hover" x="385" y="20" width="80" height="165" fill="transparent"
+            data-label="10-year" data-val="CMT: 4.21% - NS: 4.18%" data-sub="Residual: -3bp"/>
+          <rect class="ug-hover" x="465" y="20" width="80" height="165" fill="transparent"
+            data-label="30-year" data-val="CMT: 4.42% - NS: 4.41%" data-sub="Residual: -1bp"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative NS fit. RMSE 4.2bp. Scenario fan shows cumulative curve response at each FOMC meeting. Seed values: Mar 2026.</p>
     </div>
 
     <!-- TAYLOR RULE -->
@@ -1115,6 +1286,80 @@ footer{
         <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor-text)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="65" y1="20" x2="65" y2="195" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="195" x2="600" y2="195" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="20" x2="600" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="60" x2="600" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="100" x2="600" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="140" x2="600" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis (4.00% top to 3.00% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.00%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.75%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <text x="8" y="188" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <!-- X-axis (meetings) -->
+          <text x="104" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Apr</text>
+          <text x="172" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun</text>
+          <text x="240" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jul</text>
+          <text x="308" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep</text>
+          <text x="376" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Oct</text>
+          <text x="444" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec</text>
+          <text x="512" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jan</text>
+          <text x="573" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Mar</text>
+          <!-- Gap shading between lines -->
+          <path d="M104,50 L172,42 240,35 308,28 376,23 444,20 512,17 573,15 573,125 512,108 444,92 376,80 308,70 240,60 172,50 104,100 Z" fill="var(--taylor)" opacity=".06"/>
+          <!-- JR ECM prescribed path (taylor rose) -->
+          <polyline points="104,50 172,42 240,35 308,28 376,23 444,20 512,17 573,15" fill="none" stroke="var(--taylor)" stroke-width="2.5"/>
+          <circle cx="104" cy="50" r="3.5" fill="var(--taylor)"/>
+          <circle cx="172" cy="42" r="3.5" fill="var(--taylor)"/>
+          <circle cx="240" cy="35" r="3.5" fill="var(--taylor)"/>
+          <circle cx="308" cy="28" r="3.5" fill="var(--taylor)"/>
+          <circle cx="376" cy="23" r="3.5" fill="var(--taylor)"/>
+          <circle cx="444" cy="20" r="3.5" fill="var(--taylor)"/>
+          <circle cx="512" cy="17" r="3.5" fill="var(--taylor)"/>
+          <circle cx="573" cy="15" r="3.5" fill="var(--taylor)"/>
+          <!-- CME market-implied path (blue) -->
+          <polyline points="104,100 172,110 240,120 308,130 376,138 444,148 512,155 573,162" fill="none" stroke="var(--cme)" stroke-width="2"/>
+          <circle cx="104" cy="100" r="3" fill="var(--cme)"/>
+          <circle cx="172" cy="110" r="3" fill="var(--cme)"/>
+          <circle cx="240" cy="120" r="3" fill="var(--cme)"/>
+          <circle cx="308" cy="130" r="3" fill="var(--cme)"/>
+          <circle cx="376" cy="138" r="3" fill="var(--cme)"/>
+          <circle cx="444" cy="148" r="3" fill="var(--cme)"/>
+          <circle cx="512" cy="155" r="3" fill="var(--cme)"/>
+          <circle cx="573" cy="162" r="3" fill="var(--cme)"/>
+          <!-- Gap annotation -->
+          <line x1="573" y1="15" x2="573" y2="162" stroke="var(--taylor)" stroke-width=".8" stroke-dasharray="3,2" opacity=".5"/>
+          <text x="585" y="90" font-size="7" fill="var(--taylor)" font-family="'JetBrains Mono',monospace" opacity=".7">+90bp</text>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--taylor)" stroke-width="2.5"/>
+          <text x="100" y="11" font-size="7" fill="var(--taylor)" font-family="'JetBrains Mono',monospace">JR ECM</text>
+          <line x1="165" y1="8" x2="181" y2="8" stroke="var(--cme)" stroke-width="2"/>
+          <text x="185" y="11" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">CME implied</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="70" y="20" width="68" height="165" fill="transparent"
+            data-label="Apr 2026" data-val="JR ECM: 3.75% - CME: 3.50%" data-sub="Taylor-CME gap: +25bp"/>
+          <rect class="ug-hover" x="138" y="20" width="68" height="165" fill="transparent"
+            data-label="Jun 2026" data-val="JR ECM: 3.79% - CME: 3.42%" data-sub="Taylor-CME gap: +37bp"/>
+          <rect class="ug-hover" x="206" y="20" width="68" height="165" fill="transparent"
+            data-label="Jul 2026" data-val="JR ECM: 3.83% - CME: 3.35%" data-sub="Taylor-CME gap: +48bp"/>
+          <rect class="ug-hover" x="274" y="20" width="68" height="165" fill="transparent"
+            data-label="Sep 2026" data-val="JR ECM: 3.87% - CME: 3.25%" data-sub="Taylor-CME gap: +62bp"/>
+          <rect class="ug-hover" x="342" y="20" width="68" height="165" fill="transparent"
+            data-label="Oct 2026" data-val="JR ECM: 3.90% - CME: 3.18%" data-sub="Taylor-CME gap: +72bp"/>
+          <rect class="ug-hover" x="410" y="20" width="68" height="165" fill="transparent"
+            data-label="Dec 2026" data-val="JR ECM: 3.92% - CME: 3.12%" data-sub="Taylor-CME gap: +80bp"/>
+          <rect class="ug-hover" x="478" y="20" width="68" height="165" fill="transparent"
+            data-label="Jan 2027" data-val="JR ECM: 3.94% - CME: 3.08%" data-sub="Taylor-CME gap: +86bp"/>
+          <rect class="ug-hover" x="546" y="20" width="54" height="165" fill="transparent"
+            data-label="Mar 2027" data-val="JR ECM: 3.95% - CME: 3.05%" data-sub="Taylor-CME gap: +90bp"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative prescribed vs market paths. JR ECM ★ is the designated signal source. Gap = prescriptive minus market-implied rate.</p>
     </div>
 
     <!-- RIDING -->
@@ -1145,18 +1390,192 @@ footer{
 
     <!-- BALANCE SHEET -->
     <div class="ug-page" id="pg-bs">
-      <p class="ug-body"><strong>Purpose:</strong> Decompose the Federal Reserve's balance sheet into its four distinct yield curve channels and track how Quantitative Tightening affects rates independently of the policy rate level.</p>
-      <p class="ug-body" style="margin-top:6px">The KVJ (2011) four-channel framework shows that QT operates through duration (all fixed income), safety (Treasuries only), signaling (forward guidance confirmation), and MBS prepayment channels simultaneously. The Stein (2012) shadow value of reserves — EFFR minus IORB — measures when reserve scarcity begins to tighten conditions independently of the policy rate. The DSS (2018) liquidity premium (T-bill minus IORB) is the near-money convenience yield: lower LP means cheaper leverage and higher risk appetite.</p>
-      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> SVR rising above zero signals the approach of reserve scarcity — a second tightening instrument activating alongside the policy rate. Widening LP signals improving financial conditions (lower risk premia). The two-instrument scatter shows where the current policy mix sits relative to nine historical episodes from Pre-GFC through 2023.</p>
-      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Shadow rate channels → NS β₀ decomposition (Tab 07). Stein SVR + DSS LP → Dashboard regime rows.</p>
+      <p class="ug-body">The Balance Sheet tab tracks the Fed's two-instrument policy framework: the federal funds rate (EFFR) and the size/composition of the balance sheet. QE expands the balance sheet to ease financial conditions at the zero lower bound; QT shrinks it to normalize. The KVJ (2011) shadow rate decomposes the balance sheet's effect into four channels.</p>
+      <div class="ug-head">Illustrative: two-instrument policy space</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 260" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Two-instrument policy space scatter">
+        <rect width="620" height="260" fill="var(--surface)" rx="6"/>
+        <!-- Axes -->
+        <line x1="65" y1="20" x2="65" y2="200" stroke="var(--border)" stroke-width="1"/>
+        <line x1="65" y1="200" x2="590" y2="200" stroke="var(--border)" stroke-width="1"/>
+        <!-- Y axis: EFFR -->
+        <text x="58" y="25" text-anchor="end" font-size="8" fill="var(--faint)">6%</text>
+        <text x="58" y="65" text-anchor="end" font-size="8" fill="var(--faint)">4%</text>
+        <text x="58" y="110" text-anchor="end" font-size="8" fill="var(--faint)">2%</text>
+        <text x="58" y="155" text-anchor="end" font-size="8" fill="var(--faint)">1%</text>
+        <text x="58" y="200" text-anchor="end" font-size="8" fill="var(--faint)">0%</text>
+        <text x="20" y="115" text-anchor="middle" font-size="9" fill="var(--faint)" transform="rotate(-90,20,115)">EFFR</text>
+        <!-- X axis: BS size % GDP -->
+        <text x="65" y="215" font-size="8" fill="var(--faint)">15%</text>
+        <text x="185" y="215" font-size="8" fill="var(--faint)">20%</text>
+        <text x="305" y="215" font-size="8" fill="var(--faint)">25%</text>
+        <text x="425" y="215" font-size="8" fill="var(--faint)">30%</text>
+        <text x="545" y="215" font-size="8" fill="var(--faint)">35%</text>
+        <text x="327" y="228" text-anchor="middle" font-size="9" fill="var(--faint)">Fed Balance Sheet (% GDP)</text>
+        <!-- Grid -->
+        <line x1="65" y1="65" x2="590" y2="65" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="65" y1="110" x2="590" y2="110" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="65" y1="155" x2="590" y2="155" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <!-- IORB neutral floor (horizontal dashed) -->
+        <line x1="65" y1="128" x2="590" y2="128" stroke="var(--sofr)" stroke-width="1" stroke-dasharray="5,4" opacity=".6"/>
+        <text x="592" y="132" font-size="8" fill="var(--sofr)">IORB floor</text>
+        <!-- Historical episode dots -->
+        <!-- Pre-GFC: BS~15%GDP, EFFR~5.25% -->
+        <circle cx="90" cy="28" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="Pre-GFC (2006)" data-val="BS: 6% GDP · EFFR: 5.25%" data-sub="Ample reserves, no QE"/>
+        <text x="100" y="26" font-size="7.5" fill="var(--muted)">Pre-GFC</text>
+        <!-- QE1: BS~20%, EFFR~0.25% -->
+        <circle cx="190" cy="197" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="QE1 (2009)" data-val="BS: 20% GDP · EFFR: 0.25%" data-sub="Emergency asset purchases"/>
+        <text x="200" y="195" font-size="7.5" fill="var(--muted)">QE1</text>
+        <!-- QE3 peak: BS~26%, EFFR~0.25% -->
+        <circle cx="326" cy="197" r="7" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5" class="ug-hover"
+          data-label="QE3 Peak (2014)" data-val="BS: 26% GDP · EFFR: 0.25%" data-sub="$4.5T balance sheet"/>
+        <text x="336" y="195" font-size="7.5" fill="var(--muted)">QE3</text>
+        <!-- Taper: BS~24%, EFFR~0.5% -->
+        <circle cx="302" cy="190" r="7" fill="rgba(245,158,11,.5)" stroke="var(--amber)" stroke-width="1.5" class="ug-hover"
+          data-label="Taper (2015)" data-val="BS: 24% GDP · EFFR: 0.50%" data-sub="Taper tantrum, liftoff"/>
+        <text x="312" y="188" font-size="7.5" fill="var(--muted)">Taper</text>
+        <!-- QT18: BS~20%, EFFR~2.5% -->
+        <circle cx="190" cy="110" r="7" fill="rgba(225,29,72,.4)" stroke="var(--taylor)" stroke-width="1.5" class="ug-hover"
+          data-label="QT 2018" data-val="BS: 20% GDP · EFFR: 2.50%" data-sub="First QT cycle, runoff cap"/>
+        <text x="200" y="108" font-size="7.5" fill="var(--muted)">QT '18</text>
+        <!-- COVID QE: BS~36%, EFFR~0.25% -->
+        <circle cx="578" cy="197" r="7" fill="rgba(59,130,246,.6)" stroke="var(--cme)" stroke-width="2" class="ug-hover"
+          data-label="COVID QE (2021)" data-val="BS: 36% GDP · EFFR: 0.25%" data-sub="Peak balance sheet, $9T"/>
+        <text x="558" y="190" font-size="7.5" fill="var(--muted)">COVID</text>
+        <!-- QT22: BS~28%, EFFR~5.5% -->
+        <circle cx="398" cy="20" r="7" fill="rgba(225,29,72,.6)" stroke="var(--taylor)" stroke-width="2" class="ug-hover"
+          data-label="QT 2022-23" data-val="BS: 28% GDP · EFFR: 5.50%" data-sub="Fastest QT in history"/>
+        <text x="408" y="18" font-size="7.5" fill="var(--muted)">QT '22</text>
+        <!-- Now: BS~26%, EFFR~4.33% -->
+        <circle cx="326" cy="42" r="9" fill="var(--cme)" stroke="white" stroke-width="2" class="ug-hover"
+          data-label="Now (2026)" data-val="BS: 26% GDP · EFFR: 4.33%" data-sub="Ongoing QT, easing cycle"/>
+        <text x="337" y="40" font-size="8" fill="var(--cme)" font-weight="500">Now</text>
+        <!-- Legend -->
+        <circle cx="80" cy="240" r="5" fill="rgba(59,130,246,.4)" stroke="var(--cme)" stroke-width="1.5"/>
+        <text x="90" y="244" font-size="8" fill="var(--muted)">QE episode</text>
+        <circle cx="180" cy="240" r="5" fill="rgba(225,29,72,.4)" stroke="var(--taylor)" stroke-width="1.5"/>
+        <text x="190" y="244" font-size="8" fill="var(--muted)">QT episode</text>
+        <circle cx="270" cy="240" r="7" fill="var(--cme)" stroke="white" stroke-width="1.5"/>
+        <text x="282" y="244" font-size="8" fill="var(--cme)">Current position</text>
+        <line x1="370" y1="240" x2="395" y2="240" stroke="var(--sofr)" stroke-width="1" stroke-dasharray="5,4" opacity=".6"/>
+        <text x="400" y="244" font-size="8" fill="var(--sofr)">IORB neutral floor</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">Two-instrument policy space: EFFR (rate) × balance sheet size (% GDP). QE episodes = blue; QT episodes = rose. Hover for episode details.</p>
+      <div class="ug-head">KVJ shadow rate channel decomposition</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 130" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="KVJ channel decomposition">
+        <rect width="620" height="130" fill="var(--surface)" rx="6"/>
+        <text x="16" y="28" font-size="9" fill="var(--faint)" letter-spacing=".06em">Shadow rate channel decomposition (KVJ 2011) — current balance sheet</text>
+        <!-- Channel bars -->
+        <!-- Duration channel (cme blue) -->
+        <rect x="16" y="38" width="220" height="16" rx="3" fill="rgba(59,130,246,.6)"
+          class="ug-hover" data-label="Duration channel"
+          data-val="-45bp shadow rate effect" data-sub="Reduces all fixed-income yields (KVJ 2011 BPEA)"/>
+        <text x="242" y="51" font-size="9" fill="var(--cme)">Duration: -45bp</text>
+        <!-- Safety channel (amber) -->
+        <rect x="16" y="62" width="140" height="16" rx="3" fill="rgba(245,158,11,.6)"
+          class="ug-hover" data-label="Safety channel"
+          data-val="-28bp shadow rate effect" data-sub="Treasury-specific safety premium (KVJ 2012 JPE)"/>
+        <text x="162" y="75" font-size="9" fill="var(--amber)">Safety: -28bp</text>
+        <!-- Signaling channel (faint) -->
+        <rect x="16" y="86" width="90" height="16" rx="3" fill="rgba(107,114,128,.4)"
+          class="ug-hover" data-label="Signaling channel"
+          data-val="-18bp shadow rate effect" data-sub="Forward guidance confirmation via purchases"/>
+        <text x="112" y="99" font-size="9" fill="var(--faint)">Signaling: -18bp</text>
+        <!-- MBS channel (orange) -->
+        <rect x="16" y="110" width="55" height="16" rx="3" fill="rgba(249,115,22,.5)"
+          class="ug-hover" data-label="MBS prepayment channel"
+          data-val="-11bp shadow rate effect" data-sub="MBS-specific prepayment option compression"/>
+        <text x="77" y="123" font-size="9" fill="var(--kal)">MBS: -11bp</text>
+        <!-- Total label -->
+        <text x="590" y="80" text-anchor="end" font-size="11" fill="var(--text)" font-weight="500">Total: -102bp</text>
+        <text x="590" y="93" text-anchor="end" font-size="8" fill="var(--faint)">shadow rate effect</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">KVJ (2011/2012) four-channel shadow rate decomposition at current balance sheet size. Bar width ∝ channel magnitude. Hover for channel details.</p>
     </div>
 
     <!-- FINANCIAL STABILITY -->
     <div class="ug-page" id="pg-fin">
-      <p class="ug-body"><strong>Purpose:</strong> Embed the BIS/Mehrling financial cycle framework into the policy analytics suite — measuring how far the standard Taylor Rule prescription diverges from what financial stability conditions warrant.</p>
-      <p class="ug-body" style="margin-top:6px">The finance-neutral natural rate (Borio 2016) augments the standard r* with NFCI: r*_finance = r*_standard + λ_fc × NFCI × 100bp. The λ_fc slider controls how aggressively the user believes financial conditions should enter the rate-setting calculus. The BDJ (2013) finance-neutral output gap corrects the standard HP-filter gap for the credit cycle — preventing the standard gap from overstating potential output during financial booms.</p>
-      <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> The leaning premium (finance-neutral r* minus JR ECM prescription) measures additional tightening that financial stability considerations warrant. The doom loop scatter (term premium vs HY OAS) identifies when elevated credit spreads and compressed term premia coexist — a historically precarious combination. The 6-axis phase clock synthesizes the full financial cycle state into a single radar reading.</p>
-      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Finance-neutral gap → Dashboard leaning premium row. Phase clock composite → riding filter context.</p>
+      <p class="ug-body">The Financial Stability tab implements a BIS/Mehrling framework for assessing financial cycle conditions alongside monetary policy. Six stress axes feed a composite index; a finance-neutral r* gap quantifies how much the leaning premium shifts the natural rate above the standard Taylor estimate.</p>
+      <div class="ug-head">Illustrative: financial cycle phase clock</div>
+      <div class="ug-fig">
+      <svg viewBox="0 0 620 280" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Financial cycle phase clock">
+        <rect width="620" height="280" fill="var(--surface)" rx="6"/>
+        <!-- Axis lines from center 200,145 -->
+        <line x1="200" y1="145" x2="200" y2="55" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="278" y2="100" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="278" y2="190" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="200" y2="235" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="122" y2="190" stroke="var(--border)" stroke-width="1"/>
+        <line x1="200" y1="145" x2="122" y2="100" stroke="var(--border)" stroke-width="1"/>
+        <!-- Reference circles at 33% and 66% -->
+        <circle cx="200" cy="145" r="30" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,2"/>
+        <circle cx="200" cy="145" r="60" fill="none" stroke="var(--border)" stroke-width=".5" stroke-dasharray="2,2"/>
+        <circle cx="200" cy="145" r="90" fill="none" stroke="var(--border)" stroke-width=".5"/>
+        <!-- Historical average polygon (faint, dashed) -->
+        <polygon points="200,109 231,127 231,163 200,181 169,163 169,127"
+          fill="rgba(107,114,128,.15)" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3,2"/>
+        <!-- Current reading polygon (teal) -->
+        <polygon points="200,86 243,120 231,163 200,208 155,172 153,118"
+          fill="rgba(13,148,136,.2)" stroke="var(--fin)" stroke-width="2"/>
+        <!-- Axis dots at current reading -->
+        <circle cx="200" cy="86" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="NFCI Stress" data-val="65th percentile" data-sub="Moderately tight financial conditions"/>
+        <circle cx="243" cy="120" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="HY OAS" data-val="55th percentile" data-sub="Credit spreads above median"/>
+        <circle cx="231" cy="163" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Term Premium" data-val="40th percentile" data-sub="Near historical average"/>
+        <circle cx="200" cy="208" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Xccy Basis" data-val="70th percentile" data-sub="Dollar funding stress elevated"/>
+        <circle cx="155" cy="172" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Credit-GDP Gap" data-val="50th percentile" data-sub="BDJ finance-neutral gap: moderate"/>
+        <circle cx="153" cy="118" r="4" fill="var(--fin)"
+          class="ug-hover" data-label="Leaning Premium" data-val="60th percentile" data-sub="Fin-neutral r* above standard r*"/>
+        <!-- Axis labels -->
+        <text x="200" y="48" text-anchor="middle" font-size="9" fill="var(--fin)" font-weight="500">NFCI</text>
+        <text x="292" y="98" font-size="9" fill="var(--muted)">HY OAS</text>
+        <text x="285" y="198" font-size="9" fill="var(--muted)">Term prem.</text>
+        <text x="200" y="252" text-anchor="middle" font-size="9" fill="var(--muted)">Xccy basis</text>
+        <text x="60" y="198" text-anchor="middle" font-size="9" fill="var(--muted)">Credit-GDP</text>
+        <text x="75" y="98" text-anchor="end" font-size="9" fill="var(--muted)">Leaning prem.</text>
+        <!-- Composite stress index -->
+        <text x="200" y="140" text-anchor="middle" font-size="18" fill="var(--fin)" font-weight="500">57</text>
+        <text x="200" y="153" text-anchor="middle" font-size="8" fill="var(--faint)">stress index</text>
+        <!-- r* gap bar chart (right side) -->
+        <text x="360" y="35" font-size="10" fill="var(--text)" font-weight="500">Finance-neutral r* gap</text>
+        <!-- Standard r* (JR ECM) bar -->
+        <rect x="360" y="50" width="140" height="18" rx="3" fill="rgba(225,29,72,.5)"
+          class="ug-hover" data-label="Standard r* (JR ECM)"
+          data-val="r* = 2.50%" data-sub="Inflation-neutral natural rate"/>
+        <text x="506" y="63" font-size="9" fill="var(--taylor)">JR ECM: 2.50%</text>
+        <!-- Finance-neutral r* bar -->
+        <rect x="360" y="76" width="196" height="18" rx="3" fill="rgba(13,148,136,.5)"
+          class="ug-hover" data-label="Finance-neutral r* (Borio 2016)"
+          data-val="r* = 3.06%" data-sub="lambda_fc x NFCI adds +56bp"/>
+        <text x="562" y="89" font-size="9" fill="var(--fin)">Fin-neutral: 3.06%</text>
+        <!-- Current EFFR bar -->
+        <rect x="360" y="102" width="108" height="18" rx="3" fill="rgba(59,130,246,.5)"
+          class="ug-hover" data-label="Current EFFR"
+          data-val="EFFR = 4.33%" data-sub="Above both r* estimates"/>
+        <text x="474" y="115" font-size="9" fill="var(--cme)">EFFR: 4.33%</text>
+        <!-- Gap annotation -->
+        <line x1="500" y1="59" x2="500" y2="94" stroke="var(--fin)" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="506" y="80" font-size="8" fill="var(--fin)">+56bp leaning</text>
+        <!-- Legend -->
+        <polygon points="370,170 390,170 390,165 400,175 390,185 390,180 370,180"
+          fill="rgba(13,148,136,.2)" stroke="var(--fin)" stroke-width="1.5"/>
+        <text x="408" y="178" font-size="8" fill="var(--muted)">Current reading</text>
+        <line x1="370" y1="200" x2="400" y2="200" stroke="var(--faint)" stroke-width="1" stroke-dasharray="3,2"/>
+        <text x="408" y="204" font-size="8" fill="var(--faint)">Historical average</text>
+        <text x="370" y="230" font-size="8" fill="var(--faint)">Axes show percentile rank (0=low stress, 100=high)</text>
+        <text x="370" y="244" font-size="8" fill="var(--faint)">Composite index = area-weighted average of all 6 axes</text>
+      </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative phase clock. Teal = current reading; dashed = historical average. Composite stress index (0-100) in center. Hover each axis dot for details.</p>
     </div>
 
     <!-- SCENARIOS -->
@@ -1305,6 +1724,83 @@ footer{
       </ol>
     </div>
 
+  <script>
+  (function(){
+    var tip = {el:null, label:null, val:null, sub:null};
+
+    function initTooltips(){
+      document.querySelectorAll('.ug-hover').forEach(function(rect){
+        rect.addEventListener('mouseenter', function(e){
+          var svg = this.closest('svg');
+          var g = svg.querySelector('.ug-tip-g');
+          if(!g){
+            g = document.createElementNS('http://www.w3.org/2000/svg','g');
+            g.classList.add('ug-tip-g');
+            g.style.pointerEvents='none';
+            var bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+            bg.setAttribute('rx','4');bg.setAttribute('fill','var(--surface2)');
+            bg.setAttribute('stroke','var(--border)');bg.setAttribute('stroke-width','1');
+            bg.classList.add('ug-tip-bg');
+            var tl = document.createElementNS('http://www.w3.org/2000/svg','text');
+            tl.setAttribute('font-size','8');tl.setAttribute('fill','var(--faint)');
+            tl.setAttribute('font-family',"'JetBrains Mono',monospace");
+            tl.classList.add('ug-tip-label');
+            var tv = document.createElementNS('http://www.w3.org/2000/svg','text');
+            tv.setAttribute('font-size','11');tv.setAttribute('font-weight','500');
+            tv.setAttribute('fill','var(--text)');
+            tv.setAttribute('font-family',"'JetBrains Mono',monospace");
+            tv.classList.add('ug-tip-val');
+            var ts = document.createElementNS('http://www.w3.org/2000/svg','text');
+            ts.setAttribute('font-size','8');ts.setAttribute('fill','var(--muted)');
+            ts.setAttribute('font-family',"'JetBrains Mono',monospace");
+            ts.classList.add('ug-tip-sub');
+            g.appendChild(bg);g.appendChild(tl);g.appendChild(tv);g.appendChild(ts);
+            svg.appendChild(g);
+          }
+          var vb = svg.viewBox.baseVal;
+          var bb = svg.getBoundingClientRect();
+          var mx = (e.clientX - bb.left) / bb.width * vb.width;
+          var my = (e.clientY - bb.top) / bb.height * vb.height;
+          var label = this.dataset.label||'';
+          var val = this.dataset.val||'';
+          var sub = this.dataset.sub||'';
+          var tl2 = g.querySelector('.ug-tip-label');
+          var tv2 = g.querySelector('.ug-tip-val');
+          var ts2 = g.querySelector('.ug-tip-sub');
+          var bg2 = g.querySelector('.ug-tip-bg');
+          tl2.textContent = label; tv2.textContent = val; ts2.textContent = sub;
+          var w = Math.max(label.length, val.length, sub.length) * 6.5 + 16;
+          var h = 50;
+          var tx = mx + 8; var ty = my - 60;
+          if(tx + w > vb.width - 10) tx = mx - w - 8;
+          if(ty < 5) ty = my + 10;
+          bg2.setAttribute('x',tx);bg2.setAttribute('y',ty);
+          bg2.setAttribute('width',w);bg2.setAttribute('height',h);
+          tl2.setAttribute('x',tx+8);tl2.setAttribute('y',ty+14);
+          tv2.setAttribute('x',tx+8);tv2.setAttribute('y',ty+30);
+          ts2.setAttribute('x',tx+8);ts2.setAttribute('y',ty+44);
+          g.style.visibility='visible';
+        });
+        rect.addEventListener('mouseleave',function(){
+          var g = this.closest('svg').querySelector('.ug-tip-g');
+          if(g) g.style.visibility='hidden';
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      initTooltips();
+      var origUgShow = window.ugShow;
+      if(origUgShow){
+        window.ugShow = function(id, btn){
+          origUgShow(id, btn);
+          setTimeout(initTooltips, 50);
+        };
+      }
+    });
+  })();
+  </script>
+
   </div><!-- end How it works section -->
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
@@ -1367,20 +1863,36 @@ footer{
     </div>
   </div>
 
-  <footer>
-    <div class="footer-left">
-      David Bieri &nbsp;·&nbsp; School of Public and International Affairs &nbsp;·&nbsp; Virginia Tech<br>
-      MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v4.1 &nbsp;·&nbsp; MIT License &nbsp;·&nbsp; For educational and research purposes only. Not financial advice.
+  <div class="sf" id="sticky-footer">
+    <div class="sf-main">
+      <div class="sf-left">
+        <span class="sf-brand">david bieri</span>
+        <span class="sf-sep">·</span>
+        <span>SPIA · Virginia Tech</span>
+        <span class="sf-sep">·</span>
+        <span>MSE v4.1</span>
+        <span class="sf-sep">·</span>
+        <span>MIT License</span>
+      </div>
+      <div class="sf-right">
+        <a class="sf-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+        <a class="sf-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
+        <a class="sf-link" href="https://www.august-loesch.org" target="_blank">august-loesch.org</a>
+        <span class="sf-divider"></span>
+        <a class="sf-icon" href="https://github.com/davidbieri" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+        <a class="sf-icon sf-yt" href="https://www.youtube.com/c/DavidBieri" target="_blank" title="YouTube"><i class="fa-brands fa-youtube"></i></a>
+        <a class="sf-icon sf-li" href="https://www.linkedin.com/in/david-bieri-a586262" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+        <a class="sf-icon sf-x" href="https://x.com/space_economy" target="_blank" title="X / Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+        <span class="sf-divider"></span>
+        <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
+        <a class="sf-link" href="fed_funds_v3.html">Tool</a>
+        <a class="sf-link" href="#cite">Cite</a>
+      </div>
     </div>
-    <div class="footer-right">
-      <a class="foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
-      <a class="foot-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
-      <a class="foot-link" href="fed_funds_v3.html">Tool</a>
-      <a class="foot-link" href="#cite">Cite</a>
+    <div class="sf-disclaimer">
+      For educational and research purposes only. Not financial advice.
     </div>
-  </footer>
+  </div>
 
 </div>
 
