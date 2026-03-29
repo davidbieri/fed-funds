@@ -215,44 +215,44 @@ const {useState, useReducer, useEffect, useMemo, useCallback} = React;
 const FW_SEED_PRICES=[96.36,96.40,96.50,96.58,96.65,96.72,96.78,96.85,96.90,96.94,96.97,97.00];
 
 const FW_SEED=[
-  {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28\u201329'},
+  {lb:'Apr 2026',price:96.36,mtg:true, N:28,M:2, ml:'Apr 28–29'},
   {lb:'May 2026',price:96.40,mtg:false,N:0, M:0, ml:''},
-  {lb:'Jun 2026',price:96.50,mtg:true, N:17,M:13,ml:'Jun 17\u201318'},
-  {lb:'Jul 2026',price:96.58,mtg:true, N:28,M:3, ml:'Jul 28\u201329'},
+  {lb:'Jun 2026',price:96.50,mtg:true, N:17,M:13,ml:'Jun 17–18'},
+  {lb:'Jul 2026',price:96.58,mtg:true, N:28,M:3, ml:'Jul 28–29'},
   {lb:'Aug 2026',price:96.65,mtg:false,N:0, M:0, ml:''},
-  {lb:'Sep 2026',price:96.72,mtg:true, N:16,M:14,ml:'Sep 16\u201317'},
-  {lb:'Oct 2026',price:96.78,mtg:true, N:28,M:3, ml:'Oct 28\u201329'},
+  {lb:'Sep 2026',price:96.72,mtg:true, N:16,M:14,ml:'Sep 16–17'},
+  {lb:'Oct 2026',price:96.78,mtg:true, N:28,M:3, ml:'Oct 28–29'},
   {lb:'Nov 2026',price:96.85,mtg:false,N:0, M:0, ml:''},
-  {lb:'Dec 2026',price:96.90,mtg:true, N:9, M:22,ml:'Dec 9\u201310'},
-  {lb:'Jan 2027',price:96.94,mtg:true, N:27,M:4, ml:'Jan 27\u201328'},
+  {lb:'Dec 2026',price:96.90,mtg:true, N:9, M:22,ml:'Dec 9–10'},
+  {lb:'Jan 2027',price:96.94,mtg:true, N:27,M:4, ml:'Jan 27–28'},
   {lb:'Feb 2027',price:96.97,mtg:false,N:0, M:0, ml:''},
-  {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17\u201318'},
+  {lb:'Mar 2027',price:97.00,mtg:true, N:17,M:14,ml:'Mar 17–18'},
 ];
 
 const SCENARIOS={
   'soft-landing-95':{
     shortLabel:'Soft Landing \'95',era:'easing',totalBp:'-25bp',endRate:'3.39',
-    desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign \u2014 growth never faltered. The most benign plausible outcome.',
+    desc:'One 25bp cut at Jun, then hold. Greenspan 1995 insurance cut after the 1994 hiking campaign — growth never faltered. The most benign plausible outcome.',
     prices:[96.36,96.36,96.47,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61,96.61]},
   'insurance-98':{
     shortLabel:'Insurance \'98/\'19',era:'easing',totalBp:'-75bp',endRate:'2.89',
-    desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment \u2014 easing that stops once tail risk subsides.',
+    desc:'Three consecutive 25bp cuts (Jun, Jul, Sep), then hold. LTCM/Russia 1998 and 2019 mid-cycle adjustment — easing that stops once tail risk subsides.',
     prices:[96.36,96.36,96.47,96.63,96.86,96.98,97.11,97.11,97.11,97.11,97.11,97.11]},
   'measured-pace':{
     shortLabel:'Measured Pace',era:'easing',totalBp:'-100bp',endRate:'2.64',
-    desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence \u2014 methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
+    desc:'One 25bp cut per quarter (Jun, Sep, Dec, Mar). Mirror of the 2015-18 liftoff cadence — methodical, fully telegraphed, consistent with a last-mile disinflation slowdown.',
     prices:[96.36,96.36,96.47,96.61,96.61,96.73,96.86,96.86,97.04,97.11,97.11,97.22]},
   'mild-recession-90':{
     shortLabel:'Recession \'90-91',era:'easing',totalBp:'-150bp',endRate:'2.14',
-    desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession \u2014 persistent incremental pressure, no financial seizure.',
+    desc:'25bp cut at every FOMC meeting Apr through Dec (six cuts), then pause. S&L crisis and Gulf War recession — persistent incremental pressure, no financial seizure.',
     prices:[96.38,96.61,96.72,96.88,97.11,97.23,97.38,97.61,97.79,97.86,97.86,97.86]},
   'dotcom-01':{
     shortLabel:'Dot-com \'01',era:'easing',totalBp:'-225bp',endRate:'1.39',
-    desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure \u2014 2001 dot-com collapse analog.',
+    desc:'Hold Apr, then three 50bp cuts (Jun, Jul, Sep) and three 25bp cuts (Oct, Dec, Jan). Severe demand shock, no systemic financial seizure — 2001 dot-com collapse analog.',
     prices:[96.36,96.36,96.58,96.91,97.36,97.59,97.88,98.11,98.29,98.39,98.61,98.61]},
   'gfc-08':{
     shortLabel:'GFC \'08',era:'crisis',totalBp:'-300bp',endRate:'0.64',
-    desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) \u2014 reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
+    desc:'25bp (Apr), 50bp (Jun), 75bp (Jul+Sep), 50bp (Oct), 25bp (Dec) — reaching near-ZLB by year-end. The Fed cut 500bp in 15 months during the GFC; this reaches ~0.64%.',
     prices:[96.38,96.61,96.83,97.18,97.86,98.21,98.66,99.11,99.29,99.36,99.36,99.36]},
   'volcker-82':{
     shortLabel:'Volcker \'82',era:'crisis',totalBp:'-350bp',endRate:'0.14',
@@ -260,7 +260,7 @@ const SCENARIOS={
     prices:[96.39,96.86,97.19,97.68,98.36,98.71,99.16,99.61,99.79,99.86,99.86,99.86]},
   'stagflation-70s':{
     shortLabel:'Stagflation \'70s',era:'tightening',totalBp:'+100bp',endRate:'4.64',
-    desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era \u2014 premature loosening followed by stubborn inflation forcing re-tightening.',
+    desc:'Hold through Jun, then 25bp hikes at Jul, Sep, Dec, Mar (+100bp total). Burns/Miller era — premature loosening followed by stubborn inflation forcing re-tightening.',
     prices:[96.36,96.36,96.36,96.34,96.11,95.99,95.86,95.86,95.68,95.61,95.61,95.50]},
   'renorm-22':{
     shortLabel:'Re-norm \'22',era:'tightening',totalBp:'+350bp',endRate:'7.14',
@@ -269,7 +269,7 @@ const SCENARIOS={
 };
 
 const kalshiD={
-  fetched:false, asOf:null, source:'Seed data \u2014 click Fetch Kalshi',
+  fetched:false, asOf:null, source:'Seed data — click Fetch Kalshi',
   kBadge:'Seed',
   meetings:{
     'Apr 2026':{hold:.992,cut25:.005,cut50:.001,hike25:.002},
@@ -285,13 +285,13 @@ const kalshiD={
     0:.15, 1:.32, 2:.30, 3:.15, 4:.08
   },
   comboPrices:{
-    'hold\u2192hold\u2192hold':'\u2014',
-    'hold\u2192hold\u2192cut':'\u2014',
-    'hold\u2192cut\u2192hold':'\u2014',
-    'hold\u2192cut\u2192cut':'\u2014',
-    'cut\u2192hold\u2192hold':'\u2014',
-    'cut\u2192cut\u2192hold':'\u2014',
-    'cut\u2192cut\u2192cut':'\u2014',
+    'hold→hold→hold':'—',
+    'hold→hold→cut':'—',
+    'hold→cut→hold':'—',
+    'hold→cut→cut':'—',
+    'cut→hold→hold':'—',
+    'cut→cut→hold':'—',
+    'cut→cut→cut':'—',
   },
   kalshiRate:{
     'Apr 2026':3.625,'Jun 2026':3.54,'Jul 2026':3.47,'Sep 2026':3.38,
@@ -311,7 +311,7 @@ const kalshiD={
 };
 
 const polyD={
-  fetched:false, asOf:'2026-03-17', source:'Seed data \u2014 click Fetch Polymarket',
+  fetched:false, asOf:'2026-03-17', source:'Seed data — click Fetch Polymarket',
   meetings:{
     'Apr 2026':{hold:.99, cut25:.005,cut50:.002,hike25:.003},
     'Jun 2026':{hold:.72, cut25:.21, cut50:.04, hike25:.03},
@@ -500,7 +500,7 @@ function enumeratePaths(meetings,depth){
   const paths=[];
   const mSlice=meetings.slice(0,depth);
   function dfs(idx,seq,prob){
-    if(idx===mSlice.length){paths.push({key:seq.join('\u2192'),prob});return;}
+    if(idx===mSlice.length){paths.push({key:seq.join('→'),prob});return;}
     const m=mSlice[idx];
     dfs(idx+1,[...seq,m.l0],prob*m.p0);
     if(m.p1>0.005)dfs(idx+1,[...seq,m.l1],prob*m.p1);
@@ -1308,10 +1308,10 @@ function useFinance(state) {
 
 async function refreshData(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, zq:true}));
-  setRefreshStatus(s=>({...s, zq:'Searching for ZQ futures and FOMC schedule\u2026'}));
+  setRefreshStatus(s=>({...s, zq:'Searching for ZQ futures and FOMC schedule…'}));
   const key=apiKey.trim();
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const prompt=`Today is ${today}. Return ONLY raw JSON \u2014 no markdown, no fences \u2014 for CME 30-Day Fed Funds (ZQ) futures prices Apr 2026\u2013Mar 2027 and FOMC meeting dates. Shape:\n{"asOf":"YYYY-MM-DD","source":"name","effr":3.64,"prices":{"Apr 2026":96.36,"May 2026":96.40,"Jun 2026":96.50,"Jul 2026":96.58,"Aug 2026":96.65,"Sep 2026":96.72,"Oct 2026":96.78,"Nov 2026":96.85,"Dec 2026":96.90,"Jan 2027":96.94,"Feb 2027":96.97,"Mar 2027":97.00},"meetings":{"Apr 2026":{"hasMeeting":true,"label":"Apr 28-29","N":28,"M":2},"May 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Jun 2026":{"hasMeeting":true,"label":"Jun 17-18","N":17,"M":13},"Jul 2026":{"hasMeeting":true,"label":"Jul 28-29","N":28,"M":3},"Aug 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Sep 2026":{"hasMeeting":true,"label":"Sep 16-17","N":16,"M":14},"Oct 2026":{"hasMeeting":true,"label":"Oct 28-29","N":28,"M":3},"Nov 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Dec 2026":{"hasMeeting":true,"label":"Dec 9-10","N":9,"M":22},"Jan 2027":{"hasMeeting":true,"label":"Jan 27-28","N":27,"M":4},"Feb 2027":{"hasMeeting":false,"label":"","N":0,"M":0},"Mar 2027":{"hasMeeting":true,"label":"Mar 17-18","N":17,"M":14}}}`;
+  const prompt=`Today is ${today}. Return ONLY raw JSON — no markdown, no fences — for CME 30-Day Fed Funds (ZQ) futures prices Apr 2026–Mar 2027 and FOMC meeting dates. Shape:\n{"asOf":"YYYY-MM-DD","source":"name","effr":3.64,"prices":{"Apr 2026":96.36,"May 2026":96.40,"Jun 2026":96.50,"Jul 2026":96.58,"Aug 2026":96.65,"Sep 2026":96.72,"Oct 2026":96.78,"Nov 2026":96.85,"Dec 2026":96.90,"Jan 2027":96.94,"Feb 2027":96.97,"Mar 2027":97.00},"meetings":{"Apr 2026":{"hasMeeting":true,"label":"Apr 28-29","N":28,"M":2},"May 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Jun 2026":{"hasMeeting":true,"label":"Jun 17-18","N":17,"M":13},"Jul 2026":{"hasMeeting":true,"label":"Jul 28-29","N":28,"M":3},"Aug 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Sep 2026":{"hasMeeting":true,"label":"Sep 16-17","N":16,"M":14},"Oct 2026":{"hasMeeting":true,"label":"Oct 28-29","N":28,"M":3},"Nov 2026":{"hasMeeting":false,"label":"","N":0,"M":0},"Dec 2026":{"hasMeeting":true,"label":"Dec 9-10","N":9,"M":22},"Jan 2027":{"hasMeeting":true,"label":"Jan 27-28","N":27,"M":4},"Feb 2027":{"hasMeeting":false,"label":"","N":0,"M":0},"Mar 2027":{"hasMeeting":true,"label":"Mar 17-18","N":17,"M":14}}}`;
   const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1200,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
@@ -1322,17 +1322,17 @@ async function refreshData(state, dispatch, apiKey, setFetching, setRefreshStatu
     if(!m) throw new Error('No JSON in response');
     const p=JSON.parse(m[0]);
     dispatch({type:'APPLY_LIVE_ZQ', data:p});
-    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' · EFFR '+(p.effr||'\u2014')+'%'}));
-  }catch(e){setRefreshStatus(s=>({...s, zq:'\u26a0 '+(e.message||'Failed \u2014 data unchanged')}));}
+    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' · EFFR '+(p.effr||'—')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, zq:'⚠ '+(e.message||'Failed — data unchanged')}));}
   finally{setFetching(f=>({...f, zq:false}));}
 }
 
 async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, kal:true}));
-  setRefreshStatus(s=>({...s, kal:'Searching Kalshi markets\u2026'}));
+  setRefreshStatus(s=>({...s, kal:'Searching Kalshi markets…'}));
   const key=apiKey.trim();
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const prompt=`Today is ${today}. Search Kalshi.com for current market prices on these contracts:\n1. kxfeddecision-26mar, kxfeddecision-26jun, kxfeddecision-26jul, kxfeddecision-26sep, kxfeddecision-26oct, kxfeddecision-26dec, kxfeddecision-27jan, kxfeddecision-27mar \u2014 per-meeting Fed decision markets (hold/cut/hike probabilities)\n2. kxfedhike / fedhike \u2014 next Fed rate hike probability\n3. kxlargecut-26 \u2014 large cut (>25bp) probability this year\n4. kxratecutcount-26dec31 \u2014 number of rate cuts in 2026\n5. kxratecut-26dec31 \u2014 P(any cut by end 2026)\n6. kxfed-26mar, kxfed-26jun, kxfed-26sep, kxfed-26dec \u2014 implied rate level after each meeting\nReturn ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best available data, keep shown fallbacks where unavailable):\n{\n  "asOf":"YYYY-MM-DD","source":"Kalshi",\n  "meetings":{\n    "Apr 2026":{"hold":0.992,"cut25":0.005,"cut50":0.001,"hike25":0.002},\n    "Jun 2026":{"hold":0.74,"cut25":0.22,"cut50":0.02,"hike25":0.02},\n    "Jul 2026":{"hold":0.64,"cut25":0.28,"cut50":0.05,"hike25":0.03},\n    "Sep 2026":{"hold":0.55,"cut25":0.32,"cut50":0.09,"hike25":0.04},\n    "Oct 2026":{"hold":0.50,"cut25":0.32,"cut50":0.13,"hike25":0.05},\n    "Dec 2026":{"hold":0.46,"cut25":0.31,"cut50":0.16,"hike25":0.07},\n    "Jan 2027":{"hold":0.44,"cut25":0.32,"cut50":0.17,"hike25":0.07},\n    "Mar 2027":{"hold":0.42,"cut25":0.33,"cut50":0.18,"hike25":0.07}\n  },\n  "cutCount":{"0":0.15,"1":0.32,"2":0.30,"3":0.15,"4":0.08},\n  "hikeAny":0.04,\n  "largeCutAny":0.11,\n  "cutBinary":{"end-2026":0.85,"end-2027":0.97},\n  "kalshiRate":{"Apr 2026":3.625,"Jun 2026":3.54,"Jul 2026":3.47,"Sep 2026":3.38,"Oct 2026":3.30,"Dec 2026":3.22,"Jan 2027":3.16,"Mar 2027":3.10}\n}`;
+  const prompt=`Today is ${today}. Search Kalshi.com for current market prices on these contracts:\n1. kxfeddecision-26mar, kxfeddecision-26jun, kxfeddecision-26jul, kxfeddecision-26sep, kxfeddecision-26oct, kxfeddecision-26dec, kxfeddecision-27jan, kxfeddecision-27mar — per-meeting Fed decision markets (hold/cut/hike probabilities)\n2. kxfedhike / fedhike — next Fed rate hike probability\n3. kxlargecut-26 — large cut (>25bp) probability this year\n4. kxratecutcount-26dec31 — number of rate cuts in 2026\n5. kxratecut-26dec31 — P(any cut by end 2026)\n6. kxfed-26mar, kxfed-26jun, kxfed-26sep, kxfed-26dec — implied rate level after each meeting\nReturn ONLY raw JSON, no markdown, no fences. Use this exact shape (fill best available data, keep shown fallbacks where unavailable):\n{\n  "asOf":"YYYY-MM-DD","source":"Kalshi",\n  "meetings":{\n    "Apr 2026":{"hold":0.992,"cut25":0.005,"cut50":0.001,"hike25":0.002},\n    "Jun 2026":{"hold":0.74,"cut25":0.22,"cut50":0.02,"hike25":0.02},\n    "Jul 2026":{"hold":0.64,"cut25":0.28,"cut50":0.05,"hike25":0.03},\n    "Sep 2026":{"hold":0.55,"cut25":0.32,"cut50":0.09,"hike25":0.04},\n    "Oct 2026":{"hold":0.50,"cut25":0.32,"cut50":0.13,"hike25":0.05},\n    "Dec 2026":{"hold":0.46,"cut25":0.31,"cut50":0.16,"hike25":0.07},\n    "Jan 2027":{"hold":0.44,"cut25":0.32,"cut50":0.17,"hike25":0.07},\n    "Mar 2027":{"hold":0.42,"cut25":0.33,"cut50":0.18,"hike25":0.07}\n  },\n  "cutCount":{"0":0.15,"1":0.32,"2":0.30,"3":0.15,"4":0.08},\n  "hikeAny":0.04,\n  "largeCutAny":0.11,\n  "cutBinary":{"end-2026":0.85,"end-2027":0.97},\n  "kalshiRate":{"Apr 2026":3.625,"Jun 2026":3.54,"Jul 2026":3.47,"Sep 2026":3.38,"Oct 2026":3.30,"Dec 2026":3.22,"Jan 2027":3.16,"Mar 2027":3.10}\n}`;
   const hdrs={'Content-Type':'application/json'}; if(key) hdrs['x-api-key']=key;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
@@ -1354,16 +1354,16 @@ async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatu
     merged.kBadge='Live';
     dispatch({type:'APPLY_LIVE_KALSHI', data:merged});
     setRefreshStatus(s=>({...s, kal:'Kalshi data updated · '+(merged.source)+' · '+(merged.asOf)}));
-  }catch(e){setRefreshStatus(s=>({...s, kal:'\u26a0 Kalshi: '+(e.message||'Failed')}));}
+  }catch(e){setRefreshStatus(s=>({...s, kal:'⚠ Kalshi: '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, kal:false}));}
 }
 
 async function fetchPolymarket(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, poly:true}));
-  setRefreshStatus(s=>({...s, poly:'Searching Polymarket fed-rates\u2026'}));
+  setRefreshStatus(s=>({...s, poly:'Searching Polymarket fed-rates…'}));
   const key=apiKey.trim();
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const prompt=`Today is ${today}. Search Polymarket.com for current prices on these Fed-related markets:\n1. polymarket.com/event/fed-decision-in-march-885 and equivalent monthly markets \u2014 per-meeting probabilities for hold/25bp cut/50+bp cut/hike\n2. polymarket.com/event/how-many-fed-rate-cuts-in-2026 \u2014 cut count distribution (13 outcomes)\n3. polymarket.com/event/what-will-the-fed-rate-be-at-the-end-of-2026 \u2014 terminal rate distribution\n4. polymarket.com/event/fed-rate-hike-in-2026 \u2014 P(any hike in 2026)\n5. polymarket.com/event/fed-emergency-rate-cut-before-2027 \u2014 P(emergency cut before 2027)\n6. polymarket.com/event/fed-rate-cut-by-629 \u2014 first cut timing by meeting\n7. polymarket.com/event/who-will-trump-nominate-as-fed-chair \u2014 Fed Chair nominee odds\nReturn ONLY raw JSON, no markdown, no fences:\n{\n  "asOf":"YYYY-MM-DD","source":"Polymarket",\n  "meetings":{\n    "Apr 2026":{"hold":0.99,"cut25":0.005,"cut50":0.002,"hike25":0.003},\n    "Jun 2026":{"hold":0.72,"cut25":0.21,"cut50":0.04,"hike25":0.03},\n    "Jul 2026":{"hold":0.62,"cut25":0.27,"cut50":0.07,"hike25":0.04},\n    "Sep 2026":{"hold":0.53,"cut25":0.31,"cut50":0.11,"hike25":0.05},\n    "Oct 2026":{"hold":0.48,"cut25":0.31,"cut50":0.15,"hike25":0.06},\n    "Dec 2026":{"hold":0.44,"cut25":0.30,"cut50":0.18,"hike25":0.08},\n    "Jan 2027":{"hold":0.43,"cut25":0.31,"cut50":0.18,"hike25":0.08},\n    "Mar 2027":{"hold":0.41,"cut25":0.32,"cut50":0.19,"hike25":0.08}\n  },\n  "cutCount":{"0":0.05,"1":0.09,"2":0.26,"3":0.22,"4":0.17,"5":0.12,"6":0.06,"7+":0.03},\n  "terminalRate":{"4.00":0.02,"3.75":0.08,"3.50":0.18,"3.25":0.26,"3.00":0.22,"2.75":0.13,"2.50":0.08,"2.25":0.03},\n  "hikeAny":0.155,\n  "emergencyCut":0.08,\n  "cutByMeeting":{"Apr 2026":0.01,"Jun 2026":0.22,"Jul 2026":0.45,"Sep 2026":0.68,"Oct 2026":0.78,"Dec 2026":0.88,"end-2026":0.88,"end-2027":0.97},\n  "fedChair":{"Kevin Warsh":0.47,"Rick Rieder":0.26,"Other":0.27}\n}`;
+  const prompt=`Today is ${today}. Search Polymarket.com for current prices on these Fed-related markets:\n1. polymarket.com/event/fed-decision-in-march-885 and equivalent monthly markets — per-meeting probabilities for hold/25bp cut/50+bp cut/hike\n2. polymarket.com/event/how-many-fed-rate-cuts-in-2026 — cut count distribution (13 outcomes)\n3. polymarket.com/event/what-will-the-fed-rate-be-at-the-end-of-2026 — terminal rate distribution\n4. polymarket.com/event/fed-rate-hike-in-2026 — P(any hike in 2026)\n5. polymarket.com/event/fed-emergency-rate-cut-before-2027 — P(emergency cut before 2027)\n6. polymarket.com/event/fed-rate-cut-by-629 — first cut timing by meeting\n7. polymarket.com/event/who-will-trump-nominate-as-fed-chair — Fed Chair nominee odds\nReturn ONLY raw JSON, no markdown, no fences:\n{\n  "asOf":"YYYY-MM-DD","source":"Polymarket",\n  "meetings":{\n    "Apr 2026":{"hold":0.99,"cut25":0.005,"cut50":0.002,"hike25":0.003},\n    "Jun 2026":{"hold":0.72,"cut25":0.21,"cut50":0.04,"hike25":0.03},\n    "Jul 2026":{"hold":0.62,"cut25":0.27,"cut50":0.07,"hike25":0.04},\n    "Sep 2026":{"hold":0.53,"cut25":0.31,"cut50":0.11,"hike25":0.05},\n    "Oct 2026":{"hold":0.48,"cut25":0.31,"cut50":0.15,"hike25":0.06},\n    "Dec 2026":{"hold":0.44,"cut25":0.30,"cut50":0.18,"hike25":0.08},\n    "Jan 2027":{"hold":0.43,"cut25":0.31,"cut50":0.18,"hike25":0.08},\n    "Mar 2027":{"hold":0.41,"cut25":0.32,"cut50":0.19,"hike25":0.08}\n  },\n  "cutCount":{"0":0.05,"1":0.09,"2":0.26,"3":0.22,"4":0.17,"5":0.12,"6":0.06,"7+":0.03},\n  "terminalRate":{"4.00":0.02,"3.75":0.08,"3.50":0.18,"3.25":0.26,"3.00":0.22,"2.75":0.13,"2.50":0.08,"2.25":0.03},\n  "hikeAny":0.155,\n  "emergencyCut":0.08,\n  "cutByMeeting":{"Apr 2026":0.01,"Jun 2026":0.22,"Jul 2026":0.45,"Sep 2026":0.68,"Oct 2026":0.78,"Dec 2026":0.88,"end-2026":0.88,"end-2027":0.97},\n  "fedChair":{"Kevin Warsh":0.47,"Rick Rieder":0.26,"Other":0.27}\n}`;
   const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1400,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
@@ -1385,16 +1385,16 @@ async function fetchPolymarket(state, dispatch, apiKey, setFetching, setRefreshS
     merged.source=p.source||'Polymarket (web search)';
     dispatch({type:'APPLY_LIVE_POLY', data:merged});
     setRefreshStatus(s=>({...s, poly:'Polymarket updated · '+(merged.source)+' · '+(merged.asOf)}));
-  }catch(e){setRefreshStatus(s=>({...s, poly:'\u26a0 Polymarket: '+(e.message||'Failed')}));}
+  }catch(e){setRefreshStatus(s=>({...s, poly:'⚠ Polymarket: '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, poly:false}));}
 }
 
 async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, sofr:true}));
-  setRefreshStatus(s=>({...s, sofr:'Searching for SR3 futures prices\u2026'}));
+  setRefreshStatus(s=>({...s, sofr:'Searching for SR3 futures prices…'}));
   const key=apiKey.trim();
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
-  const prompt=`Today is ${today}. Search for the latest CME 3-Month SOFR futures (SR3) settlement or last-trade prices for these contract months: Jun 2026 (SR3M6), Sep 2026 (SR3U6), Dec 2026 (SR3Z6), Mar 2027 (SR3H7), Jun 2027 (SR3M7), Sep 2027 (SR3U7), Dec 2027 (SR3Z7). Also find the current SOFR fixing rate. Return ONLY raw JSON \u2014 no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"source name","sofr":3.68,"prices":{"Jun 2026":96.35,"Sep 2026":96.53,"Dec 2026":96.68,"Mar 2027":96.80,"Jun 2027":96.88,"Sep 2027":96.94,"Dec 2027":96.99}}\nPrices follow the CME convention (100 minus implied rate). Keep fallback values shown if a contract is unavailable.`;
+  const prompt=`Today is ${today}. Search for the latest CME 3-Month SOFR futures (SR3) settlement or last-trade prices for these contract months: Jun 2026 (SR3M6), Sep 2026 (SR3U6), Dec 2026 (SR3Z6), Mar 2027 (SR3H7), Jun 2027 (SR3M7), Sep 2027 (SR3U7), Dec 2027 (SR3Z7). Also find the current SOFR fixing rate. Return ONLY raw JSON — no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"source name","sofr":3.68,"prices":{"Jun 2026":96.35,"Sep 2026":96.53,"Dec 2026":96.68,"Mar 2027":96.80,"Jun 2027":96.88,"Sep 2027":96.94,"Dec 2027":96.99}}\nPrices follow the CME convention (100 minus implied rate). Keep fallback values shown if a contract is unavailable.`;
   const hdrs={'Content-Type':'application/json'};if(key)hdrs['x-api-key']=key;
   try{
     const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:hdrs,body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:600,tools:[{type:'web_search_20250305',name:'web_search'}],messages:[{role:'user',content:prompt}]})});
@@ -1405,14 +1405,14 @@ async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus)
     if(!m)throw new Error('No JSON found');
     const p=JSON.parse(m[0]);
     if(p.prices) dispatch({type:'APPLY_LIVE_SOFR', prices:p.prices});
-    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' · SOFR '+(p.sofr||'\u2014')+'%'}));
-  }catch(e){setRefreshStatus(s=>({...s, sofr:'\u26a0 '+(e.message||'Failed')}));}
+    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' · SOFR '+(p.sofr||'—')+'%'}));
+  }catch(e){setRefreshStatus(s=>({...s, sofr:'⚠ '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, sofr:false}));}
 }
 
 async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus){
   setFetching(f=>({...f, yc:true}));
-  setRefreshStatus(s=>({...s, yc:'Fetching Treasury CMT rates\u2026'}));
+  setRefreshStatus(s=>({...s, yc:'Fetching Treasury CMT rates…'}));
   const key=apiKey.trim();
   const today=new Date().toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'});
   const prompt=`Today is ${today}. Search for the latest U.S. Treasury constant-maturity (CMT) par rates from the Federal Reserve H.15 release or Treasury.gov. Find the most recent daily values for: 3-month, 6-month, 1-year, 2-year, 5-year, 10-year, and 30-year. Return ONLY raw JSON, no markdown, no fences:\n{"asOf":"YYYY-MM-DD","source":"Federal Reserve H.15","rates":{"3mo":3.64,"6mo":3.60,"1yr":3.55,"2yr":3.84,"5yr":4.04,"10yr":4.31,"30yr":4.61}}\nUse null for any maturity not available. Keep fallback values shown if search fails.`;
@@ -1427,7 +1427,7 @@ async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshS
     const p=JSON.parse(m[0]);
     if(p.rates) dispatch({type:'APPLY_LIVE_YC', rates:p.rates});
     setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' · '+(p.asOf||today)}));
-  }catch(e){setRefreshStatus(s=>({...s, yc:'\u26a0 '+(e.message||'Failed \u2014 rates unchanged')}));}
+  }catch(e){setRefreshStatus(s=>({...s, yc:'⚠ '+(e.message||'Failed — rates unchanged')}));}
   finally{setFetching(f=>({...f, yc:false}));}
 }
 
@@ -1533,10 +1533,10 @@ function panel1Svg(comps,lb){
     const shortLbl=c.label.replace(/\d{4}/,'').trim()||c.lb.replace(/ 20\d\d/,'');
     svg+='<text x="'+cx.toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+shortLbl+'</text>';
   });
-  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME</text>';
-  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">\u25a0 Kalshi</text>';
-  svg+='<text x="'+(ml+102)+'" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a0 Polymarket</text>';
-  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal\u2212CME · right pill = Poly\u2212Kal</text>';
+  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">■ CME</text>';
+  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">■ Kalshi</text>';
+  svg+='<text x="'+(ml+102)+'" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">■ Polymarket</text>';
+  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal−CME · right pill = Poly−Kal</text>';
   svg+='</svg>';
   return svg;
 }
@@ -1620,7 +1620,7 @@ function panel4Svg(meetings,states,lb,fwD,kalshiD,compareSeries){
     svg+='<text x="'+xs(d.i).toFixed(1)+'" y="'+(ys(d.rate)-8).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-dots)" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
   });
   months.forEach((lb2,i)=>{if(i%2===0||i===months.length-1)svg+='<text x="'+xs(i).toFixed(1)+'" y="'+(mt+H+14).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+lb2.replace(/ 20\d\d/,'')+'</text>';});
-  if(cSeries4)svg+='<text x="'+(W-mr)+'" y="12" text-anchor="end" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2e3e '+cSeries4.label+' ('+cSeries4.totalBp+')</text>';
+  if(cSeries4)svg+='<text x="'+(W-mr)+'" y="12" text-anchor="end" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">⸾ '+cSeries4.label+' ('+cSeries4.totalBp+')</text>';
   svg+='</svg>';
   return svg;
 }
@@ -1648,7 +1648,7 @@ function panel5Svg(cmeHike,kalHike,largeCut,polyHike){
   svg+='<text x="'+cx+'" y="'+(cy+14).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-kal)" font-family="var(--font-mono)" font-weight="500">KAL '+(kalHike*100).toFixed(1)+'%</text>';
   if(polyHike!==undefined)svg+='<text x="'+cx+'" y="'+(cy+26).toFixed(1)+'" text-anchor="middle" font-size="10" fill="var(--c-poly)" font-family="var(--font-mono)" font-weight="500">POLY '+(polyHike*100).toFixed(1)+'%</text>';
   svg+='</svg>';
-  svg+='<div style="margin-top:6px"><div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut (>25bp) \u2014 Kalshi kxlargecut-26</div><div style="height:16px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+(largeCut*100).toFixed(1)+'%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">'+(largeCut*100).toFixed(0)+'%</div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
+  svg+='<div style="margin-top:6px"><div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:4px">Jumbo cut (>25bp) — Kalshi kxlargecut-26</div><div style="height:16px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary);display:flex"><div style="width:'+(largeCut*100).toFixed(1)+'%;background:var(--c-kal);opacity:.8;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:#fff">'+(largeCut*100).toFixed(0)+'%</div><div style="flex:1;background:var(--color-background-primary)"></div></div></div>';
   return svg;
 }
 
@@ -1665,7 +1665,7 @@ function panel6Svg(meetings,states,lb,kalshiD,polyD){
   if(mar2027Idx>=0&&kalshiD.cutBinary['end-2027'])kalPoints.push({i:mar2027Idx+1,v:kalshiD.cutBinary['end-2027'],label:'KAL end-27'});
   const polyPoints=meetings.map((m,i)=>{
     const v=polyD.cutByMeeting[m.lb];
-    return v!==undefined?{i:i+1,v,label:m.label.split('\u2013')[0]}:null;
+    return v!==undefined?{i:i+1,v,label:m.label.split('–')[0]}:null;
   }).filter(Boolean);
   let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
   [.25,.5,.75,1.0].forEach(v=>{
@@ -1689,11 +1689,11 @@ function panel6Svg(meetings,states,lb,kalshiD,polyD){
     svg+='<text x="'+xs(p.i).toFixed(1)+'" y="'+(H+mt+mb-4).toFixed(1)+'" text-anchor="middle" font-size="7" fill="var(--c-kal)" font-family="var(--font-sans)">'+p.label+'</text>';
   });
   meetings.forEach((m,i)=>{
-    if(i%2===0)svg+='<text x="'+xs(i+1).toFixed(1)+'" y="'+(H+mt+16).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+m.label.split('\u2013')[0]+'</text>';
+    if(i%2===0)svg+='<text x="'+xs(i+1).toFixed(1)+'" y="'+(H+mt+16).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+m.label.split('–')[0]+'</text>';
   });
-  svg+='<text x="'+ml+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">\u25cf CME</text>';
-  svg+='<text x="'+(ml+38)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">\u25cf Kalshi</text>';
-  svg+='<text x="'+(ml+90)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">\u25c6 Polymarket</text>';
+  svg+='<text x="'+ml+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-cme)" font-family="var(--font-sans)">● CME</text>';
+  svg+='<text x="'+(ml+38)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">● Kalshi</text>';
+  svg+='<text x="'+(ml+90)+'" y="'+(H+mt+mb-3).toFixed(1)+'" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">◆ Polymarket</text>';
   svg+='</svg>';
   return svg;
 }
@@ -1714,8 +1714,8 @@ function panel7Svg(final,lb,polyD){
   polyDist.forEach(d=>{if(d.p<0.01)return;const x=xs(d.rate)-bW/2+2,h=H*(d.p/maxP),y=mt+H-h;svg+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+bW+'" height="'+Math.max(1,h).toFixed(1)+'" rx="2" fill="var(--c-poly)" fill-opacity=".18" stroke="var(--c-poly)" stroke-width="1.5"/>';if(d.p>.06)svg+='<text x="'+(x+bW/2).toFixed(1)+'" y="'+(y-4).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--c-poly)" font-family="var(--font-sans)">'+(d.p*100).toFixed(0)+'%</text>';});
   const labelRates=[...new Set([...cmeDist.map(d=>d.rate),...polyDist.map(d=>d.rate)])].sort((a,b)=>a-b);
   labelRates.forEach(r=>{svg+='<text x="'+xs(r).toFixed(1)+'" y="'+(mt+H+16).toFixed(1)+'" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+r.toFixed(2)+'</text>';});
-  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME (lower bound)</text>';
-  svg+='<text x="'+(ml+140)+'" y="14" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a1 Polymarket (upper bound \u22120.25%)</text>';
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">■ CME (lower bound)</text>';
+  svg+='<text x="'+(ml+140)+'" y="14" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">□ Polymarket (upper bound −0.25%)</text>';
   svg+='</svg>';
   return svg;
 }
@@ -1805,7 +1805,7 @@ function basisBarsSvg(zqAvgs,srD){
   const ys=v=>baseline-(v/maxB)*H;
   let svg='<svg viewBox="0 0 '+W+' '+(H+mt+mb)+'" style="width:100%;display:block;overflow:visible">';
   // sub-panel label
-  svg+='<text x="'+ml+'" y="13" font-size="9" font-weight="500" fill="var(--c-sofr)" font-family="var(--font-mono)" letter-spacing=".04em">SOFR\u2212EFFR BASIS (bp)</text>';
+  svg+='<text x="'+ml+'" y="13" font-size="9" font-weight="500" fill="var(--c-sofr)" font-family="var(--font-mono)" letter-spacing=".04em">SOFR−EFFR BASIS (bp)</text>';
   // baseline
   svg+='<line x1="'+ml+'" y1="'+baseline+'" x2="'+(W-mr)+'" y2="'+baseline+'" stroke="var(--color-border-secondary)" stroke-width="1"/>';
   // reference grid at half and max
@@ -1917,7 +1917,7 @@ function ycCurveChart(ycD){
     svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)-10).toFixed(1)+'" text-anchor="middle" font-size="8" fill="'+col+'" font-family="var(--font-mono)">'+d.rate.toFixed(2)+'</text>';
     svg+='<text x="'+xs(d.mat).toFixed(1)+'" y="'+(ys(d.rate)+18).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+d.label+'</text>';
   });
-  svg+='<text x="'+(W/2).toFixed(1)+'" y="'+(mt+H/2).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--c-overlay)" opacity=".4" font-family="var(--font-sans)">Nelson-Siegel fit \u2014 Phase 2</text>';
+  svg+='<text x="'+(W/2).toFixed(1)+'" y="'+(mt+H/2).toFixed(1)+'" text-anchor="middle" font-size="11" fill="var(--c-overlay)" opacity=".4" font-family="var(--font-sans)">Nelson-Siegel fit — Phase 2</text>';
   svg+='</svg>';
   return svg;
 }
@@ -2005,12 +2005,12 @@ function taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, taylor, jr
   });
 
   // Legend
-  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="600">\u25cf JR ECM (signal)</text>';
+  svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-taylor)" font-family="var(--font-sans)" font-weight="600">● JR ECM (signal)</text>';
   svg+='<text x="'+(ml+115)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".65">- - Classic</text>';
   svg+='<text x="'+(ml+175)+'" y="14" font-size="8" fill="var(--c-taylor-mod)" font-family="var(--font-sans)">- - Balanced</text>';
   svg+='<text x="'+(ml+255)+'" y="14" font-size="8" fill="var(--c-taylor)" font-family="var(--font-sans)" opacity=".5">... CGG</text>';
   svg+='<text x="'+(ml+305)+'" y="14" font-size="8" fill="var(--c-fin-neutral)" font-family="var(--font-sans)">- - Fin-neutral</text>';
-  svg+='<text x="'+(ml+390)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf CME implied</text>';
+  svg+='<text x="'+(ml+390)+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">● CME implied</text>';
 
   svg+='</svg>';
   return svg;
@@ -2105,7 +2105,7 @@ function FuturesInputsTab({state, dispatch, finance}) {
                     onClick={()=>dispatch({type:isActive?'DEACTIVATE':'SET_SCENARIO',key})}
                     style={{display:'inline-flex',alignItems:'center',gap:'4px',padding:'3px 9px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?e.border:'var(--color-border-secondary)'),background:isActive?e.bg:'var(--color-background-secondary)',color:isActive?e.color:'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
                     <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.75}}>{sc.totalBp}</span>
-                    {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                    {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'✕'}</span>}
                   </button>
                 );
               })}
@@ -2116,13 +2116,13 @@ function FuturesInputsTab({state, dispatch, finance}) {
           <div style={{display:'flex',alignItems:'flex-start',gap:'8px',padding:'7px 10px',background:'var(--color-background-info)',border:'.5px solid var(--color-border-info)',borderRadius:'var(--border-radius-md)',marginTop:'4px',fontSize:'11px',color:'var(--color-text-info)',lineHeight:1.5,flexWrap:'wrap'}}>
             <span style={{fontWeight:600,whiteSpace:'nowrap'}}>{activeSc.shortLabel} ({activeSc.totalBp} &rarr; {activeSc.endRate}%)</span>
             <span style={{color:'var(--color-text-secondary)',flex:1}}>{activeSc.desc}</span>
-            <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'\u2715'}</button>
+            <button onClick={()=>dispatch({type:'DEACTIVATE'})} style={{padding:'1px 7px',fontSize:'10px',borderRadius:'10px',border:'.5px solid var(--color-border-info)',background:'transparent',color:'var(--color-text-info)',cursor:'pointer',whiteSpace:'nowrap'}}>Restore seed {'✕'}</button>
           </div>
         )}
       </div>
       <div style={{padding:'8px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--c-overlay)',marginBottom:'.75rem'}}>
         <div style={{fontSize:'10px',fontWeight:500,color:'var(--c-overlay)',textTransform:'uppercase',letterSpacing:'.06em',marginBottom:'6px'}}>
-          {'\u2194'} Compare overlay &mdash; amber on dot plot &amp; final distribution &middot; click active to remove
+          {'↔'} Compare overlay &mdash; amber on dot plot &amp; final distribution &middot; click active to remove
         </div>
         {['easing','crisis','tightening'].map(era=>(
           <div key={era} style={{display:'flex',alignItems:'center',gap:'5px',flexWrap:'wrap',marginBottom:'4px'}}>
@@ -2139,7 +2139,7 @@ function FuturesInputsTab({state, dispatch, finance}) {
                   onClick={()=>dispatch({type:isActive?'CLEAR_COMPARE':'SET_COMPARE',key})}
                   style={{display:'inline-flex',alignItems:'center',gap:'3px',padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(isActive?'var(--c-overlay)':'var(--color-border-secondary)'),background:isActive?'var(--c-overlay-a)':'transparent',color:isActive?'var(--c-overlay)':'var(--color-text-secondary)',fontFamily:'var(--font-sans)',fontWeight:isActive?600:400}}>
                   <span>{sc.shortLabel}</span><span style={{fontSize:'9px',fontFamily:'var(--font-mono)',opacity:.7}}>{sc.totalBp}</span>
-                  {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'\u2715'}</span>}
+                  {isActive&&<span style={{fontSize:'9px',opacity:.7}}>{'✕'}</span>}
                 </button>
               );
             })}
@@ -2161,10 +2161,10 @@ function FuturesInputsTab({state, dispatch, finance}) {
           <div style={{display:'flex',alignItems:'center',gap:'8px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)',marginBottom:'.75rem',fontSize:'11px'}}>
             <span style={{color:'var(--color-text-secondary)'}}>Riding signal (2yr/3mo):</span>
             <span style={{fontWeight:600,color:cell.signal==='ride'?'var(--color-text-success)':cell.signal==='hold'?'var(--color-text-danger)':'var(--color-text-warning)'}}>
-              {cell.signal==='ride'?'RIDE \u2713':cell.signal==='hold'?'HOLD \u2717':'Marginal'}
+              {cell.signal==='ride'?'RIDE ✓':cell.signal==='hold'?'HOLD ✗':'Marginal'}
             </span>
             <span style={{color:'var(--color-text-tertiary)'}}>Cushion: {cell.cushion>=0?'+':''}{cell.cushion.toFixed(0)}bp</span>
-            <span style={{color:'var(--c-taylor)'}}>Taylor: {finance.taylorSignalVal===-1?'\u2193 cut':finance.taylorSignalVal===1?'\u2191 hike':'neutral'}</span>
+            <span style={{color:'var(--c-taylor)'}}>Taylor: {finance.taylorSignalVal===-1?'↓ cut':finance.taylorSignalVal===1?'↑ hike':'neutral'}</span>
           </div>
         );
       })()}
@@ -2175,7 +2175,7 @@ function FuturesInputsTab({state, dispatch, finance}) {
             {state.fwD.map((m,i)=>(
               <tr key={m.lb}>
                 <td style={{whiteSpace:'nowrap',fontWeight:m.mtg?500:400}}>
-                  {m.lb}{m.mtg&&<span style={{fontSize:'9px',color:'var(--color-text-warning)'}}> {'\u25cf'}</span>}
+                  {m.lb}{m.mtg&&<span style={{fontSize:'9px',color:'var(--color-text-warning)'}}> {'●'}</span>}
                 </td>
                 <td>
                   <input className="fw-in" type="number" step="0.005" min="90" max="100"
@@ -2211,17 +2211,17 @@ function FuturesInputsTab({state, dispatch, finance}) {
 function ChainTab({state, finance}) {
   const {chain, meetings} = finance;
   const fwD = state.fwD;
-  let h='<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt"><thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>\u0394 (bp)</th><th>25bp moves</th></tr></thead><tbody>';
+  let h='<div style="overflow-x:auto;margin-bottom:1.25rem"><table class="fwt"><thead><tr><th>Month</th><th>ZQ price</th><th>EFFR avg</th><th>EFFR start</th><th>EFFR end</th><th>Δ (bp)</th><th>25bp moves</th></tr></thead><tbody>';
   fwD.forEach((m,i)=>{
     const c=chain[i],chg=(c.start!==null&&c.end!==null)?(c.end-c.start)*100:null;
     const cc=chg!==null?(chg<-0.01?'var(--color-text-info)':chg>0.01?'var(--color-text-danger)':'var(--color-text-secondary)'):'var(--color-text-secondary)';
-    h+='<tr><td style="white-space:nowrap">'+(m.mtg?'<span style="color:var(--color-text-warning);font-size:9px">\u25cf </span>':'')+m.lb+'</td>';
+    h+='<tr><td style="white-space:nowrap">'+(m.mtg?'<span style="color:var(--color-text-warning);font-size:9px">● </span>':'')+m.lb+'</td>';
     h+='<td style="font-family:var(--font-mono)">'+m.price+'</td>';
     h+='<td style="font-family:var(--font-mono)">'+c.avg.toFixed(4)+'</td>';
-    h+='<td style="font-family:var(--font-mono)">'+(c.start!==null?c.start.toFixed(4):'\u2014')+'</td>';
-    h+='<td style="font-family:var(--font-mono)">'+(c.end!==null?c.end.toFixed(4):'\u2014')+'</td>';
-    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(chg!==null?chg.toFixed(2):'\u2014')+'</td>';
-    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(m.mtg&&chg!==null?(chg/25).toFixed(4):'\u2014')+'</td></tr>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.start!==null?c.start.toFixed(4):'—')+'</td>';
+    h+='<td style="font-family:var(--font-mono)">'+(c.end!==null?c.end.toFixed(4):'—')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(chg!==null?chg.toFixed(2):'—')+'</td>';
+    h+='<td style="font-family:var(--font-mono);color:'+cc+'">'+(m.mtg&&chg!==null?(chg/25).toFixed(4):'—')+'</td></tr>';
   });
   h+='</tbody></table></div>';
   if(meetings.length){
@@ -2233,7 +2233,7 @@ function ChainTab({state, finance}) {
       h+='<div style="margin-bottom:.7rem">';
       h+='<div style="display:flex;justify-content:space-between;margin-bottom:3px;flex-wrap:wrap;gap:4px">';
       h+='<span style="font-size:12px;font-weight:500">'+m.label+'</span>';
-      h+='<span style="font-size:11px;color:var(--color-text-tertiary)">'+m.start.toFixed(3)+'% \u2192 '+m.end.toFixed(3)+'% (\u0394 '+(m.chg*100).toFixed(2)+' bp)</span>';
+      h+='<span style="font-size:11px;color:var(--color-text-tertiary)">'+m.start.toFixed(3)+'% → '+m.end.toFixed(3)+'% (Δ '+(m.chg*100).toFixed(2)+' bp)</span>';
       h+='</div>';
       h+='<div style="display:flex;height:22px;border-radius:4px;overflow:hidden;border:.5px solid var(--color-border-tertiary)">';
       h+='<div style="width:'+p0+'%;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;color:var(--color-text-secondary)">'+(p0>15?p0+'%':'')+'</div>';
@@ -2258,9 +2258,9 @@ function TreeTab({state, finance}) {
   const pC1=cuts.filter(d=>d.k<=-1).reduce((s,d)=>s+d.p,0),pC2=cuts.filter(d=>d.k<=-2).reduce((s,d)=>s+d.p,0),pC3=cuts.filter(d=>d.k<=-3).reduce((s,d)=>s+d.p,0);
   const expC=cuts.reduce((s,d)=>s+(-d.k)*d.p,0),expR=lb-expC*0.25;
   let cards='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:1rem">';
-  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div></div>';
-  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22652 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC2*100).toFixed(1)+'%</div></div>';
-  cards+='<div class="fw-stat"><div class="fw-stat-l">P(\u22653 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC3*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(≥1 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(≥2 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC2*100).toFixed(1)+'%</div></div>';
+  cards+='<div class="fw-stat"><div class="fw-stat-l">P(≥3 cuts)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC3*100).toFixed(1)+'%</div></div>';
   cards+='<div class="fw-stat"><div class="fw-stat-l">Expected cuts</div><div class="fw-stat-v">'+expC.toFixed(2)+'</div><div class="fw-stat-s">of 25bp each</div></div>';
   cards+='<div class="fw-stat"><div class="fw-stat-l">Implied rate</div><div class="fw-stat-v">'+expR.toFixed(2)+'%</div><div class="fw-stat-s">exp. lower bound</div></div>';
   cards+='</div>';
@@ -2279,7 +2279,7 @@ function TreeTab({state, finance}) {
   }
   states.forEach((st,li)=>{
     const x=gx(li);
-    const colLabel=li===0?'Now':(meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('\u2013')[0]:'');
+    const colLabel=li===0?'Now':(meetings[li-1]&&meetings[li-1].label?meetings[li-1].label.split('–')[0]:'');
     svg+='<text x="'+x.toFixed(1)+'" y="13" text-anchor="middle" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">'+colLabel+'</text>';
     Object.entries(st).forEach(([k,p])=>{
       if(p<0.005)return;
@@ -2327,15 +2327,15 @@ function TreeTab({state, finance}) {
   const mainLabel=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline';
   const cmpLabel=cSeries?' vs <span style="color:var(--c-overlay)">'+cSeries.label+' ('+cSeries.totalBp+')</span>':'';
   const h=cards
-    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice \u2014 '+meetings.length+' meetings</div>'
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Unconditional probability lattice — '+meetings.length+' meetings</div>'
     +'<div style="overflow-x:auto"><svg viewBox="0 0 '+W+' '+svgH+'" style="min-width:500px;width:100%;display:block;height:'+svgH+'px">'+svg+'</svg></div>'
     +'<div style="margin-top:1.25rem">'
-    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution \u2014 <span style="color:var(--c-cme)">'+mainLabel+'</span>'+cmpLabel+'</div>'
+    +'<div style="font-size:10px;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Final rate distribution — <span style="color:var(--c-cme)">'+mainLabel+'</span>'+cmpLabel+'</div>'
     +'<div style="overflow-x:auto"><svg viewBox="0 0 '+Math.max(560,20+allRateKeys.length*(bW+5)+20)+' 80" style="min-width:400px;width:100%;display:block;height:80px">'+dSvg+'</svg></div>'
     +'</div>'
     +'<div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">'
-    +'<span>Opacity \u221d probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width \u221d weight</span>'
-    +(cSeries?'<span style="color:var(--c-overlay)">\u25a0 Amber = compare scenario</span>':'')
+    +'<span>Opacity ∝ probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width ∝ weight</span>'
+    +(cSeries?'<span style="color:var(--c-overlay)">■ Amber = compare scenario</span>':'')
     +'</div>';
   return <SvgPanel html={h}/>;
 }
@@ -2386,9 +2386,9 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">③ Combo path decomposer — top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>';
   html+='<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Path</th><th>CME prob</th><th>Kalshi</th><th>Basis</th></tr></thead><tbody>';
   paths.forEach(p=>{
-    const kp=kD.comboPrices[p.key]||'\u2014';
-    const basis=kp!=='\u2014'?((kp-p.prob)*100).toFixed(1)+'pp':'\u2014';
-    const bClass=kp!=='\u2014'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
+    const kp=kD.comboPrices[p.key]||'—';
+    const basis=kp!=='—'?((kp-p.prob)*100).toFixed(1)+'pp':'—';
+    const bClass=kp!=='—'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
     html+='<tr><td style="font-family:var(--font-mono);font-size:11px">'+p.key+'</td>';
     html+='<td style="font-family:var(--font-mono)">'+(p.prob*100).toFixed(1)+'%</td>';
     html+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">'+(kp==='—'?kp:Math.round(kp*100)+'%')+'</td>';
@@ -2485,9 +2485,9 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   srd.forEach((s,i)=>{
     const sofrRate=(100-s.price).toFixed(4);
     const zqAvg=zqAvgs[i];
-    const basis=zqAvg!==null?((100-s.price-zqAvg)*100).toFixed(1):'\u2014';
-    const bCol=basis!=='\u2014'?(parseFloat(basis)>0?'var(--color-text-info)':'var(--color-text-danger)'):'var(--color-text-tertiary)';
-    const fwdVal=instFwd[i]!==null?instFwd[i].toFixed(4):'\u2014';
+    const basis=zqAvg!==null?((100-s.price-zqAvg)*100).toFixed(1):'—';
+    const bCol=basis!=='—'?(parseFloat(basis)>0?'var(--color-text-info)':'var(--color-text-danger)'):'var(--color-text-tertiary)';
+    const fwdVal=instFwd[i]!==null?instFwd[i].toFixed(4):'—';
     html+='<tr>';
     html+='<td style="font-family:var(--font-mono);font-size:11px;color:var(--c-sofr)">'+s.ticker+'</td>';
     html+='<td style="white-space:nowrap">'+s.qLabel+'</td>';
@@ -2521,13 +2521,13 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   html+='</div>';
 
   // Key stats panel
-  const currentBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const currentBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'—';
   const sofrTerminal=(100-srd[srd.length-1].price).toFixed(2);
-  const effrTerminal=fwd[fwd.length-1]?(100-fwd[fwd.length-1].price).toFixed(2):'\u2014';
+  const effrTerminal=fwd[fwd.length-1]?(100-fwd[fwd.length-1].price).toFixed(2):'—';
   const stripSlope=((100-srd[srd.length-1].price)-(100-srd[0].price)).toFixed(2);
   const fwdMin=instFwd.filter(v=>v!==null);
-  const troughFwd=fwdMin.length?Math.min(...fwdMin).toFixed(2):'\u2014';
-  const troughQtr=fwdMin.length?srd[instFwd.indexOf(Math.min(...fwdMin))].qLabel:'\u2014';
+  const troughFwd=fwdMin.length?Math.min(...fwdMin).toFixed(2):'—';
+  const troughQtr=fwdMin.length?srd[instFwd.indexOf(Math.min(...fwdMin))].qLabel:'—';
 
   html+='<div class="k-panel">';
   html+='<div class="k-hdr"><span class="k-title">Strip summary statistics</span></div>';
@@ -2565,15 +2565,15 @@ function DashboardTab({state, finance}) {
   const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
   const sofrNear=(100-srd[0].price).toFixed(2);
   const sofrTerm=(100-srd[srd.length-1].price).toFixed(2);
-  const nearBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'\u2014';
+  const nearBasis=zqAvgs[0]!==null?((100-srd[0].price-zqAvgs[0])*100).toFixed(1):'—';
   const activeName=state.fwActiveScenario&&SCENARIOS[state.fwActiveScenario]?SCENARIOS[state.fwActiveScenario].shortLabel:'Baseline (seed)';
   const cSeries=compareSeries;
 
   // Riding signal card
   const defaultCell = rideData?.[3]?.[1];
-  const rideSignalVal = defaultCell?.signal || '\u2014';
+  const rideSignalVal = defaultCell?.signal || '—';
   const rideCardHtml = '<div class="fw-stat"><div class="fw-stat-l">Riding signal</div><div class="fw-stat-v" style="font-size:13px;color:'+(rideSignalVal==='ride'?'var(--color-text-success)':rideSignalVal==='hold'?'var(--color-text-danger)':'var(--color-text-secondary)')+'">'+
-    (rideSignalVal==='ride'?'RIDE \u2713':rideSignalVal==='hold'?'HOLD \u2717':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo · '+
+    (rideSignalVal==='ride'?'RIDE ✓':rideSignalVal==='hold'?'HOLD ✗':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo · '+
     Object.values(state.rideFilters||{}).filter(Boolean).length+' filters active</div></div>';
 
   let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">';
@@ -2620,16 +2620,16 @@ function DashboardTab({state, finance}) {
     const s=states[mi+1]||states[states.length-1];
     const ek=Object.entries(s).reduce((sum,[k,p])=>sum+parseInt(k)*p,0);
     const cmeRate=(lb+ek*.25).toFixed(2);
-    const kalRate=kD.kalshiRate[m.lb]?kD.kalshiRate[m.lb].toFixed(2):'\u2014';
-    const kalDiff=kD.kalshiRate[m.lb]?((kD.kalshiRate[m.lb]-(lb+ek*.25))*100).toFixed(0)+'bp':'\u2014';
+    const kalRate=kD.kalshiRate[m.lb]?kD.kalshiRate[m.lb].toFixed(2):'—';
+    const kalDiff=kD.kalshiRate[m.lb]?((kD.kalshiRate[m.lb]-(lb+ek*.25))*100).toFixed(0)+'bp':'—';
     const kd2=kD.meetings[m.lb],pd2=pD.meetings[m.lb];
     const cmeCut=((m.b0<0?m.p0:0)+(m.b1<0&&m.p1>0.001?m.p1:0));
     const kCut=kd2?(kd2.cut25||0)+(kd2.cut50||0):null;
     const pCut=pd2?(pd2.cut25||0)+(pd2.cut50||0):null;
     const srRow=srd.find(s2=>s2.lb===m.lb);
     const zqAvgIdx=srd.findIndex(s2=>s2.lb===m.lb);
-    const basis=srRow&&zqAvgs[zqAvgIdx]!==null?((100-srRow.price-zqAvgs[zqAvgIdx])*100).toFixed(1)+'bp':'\u2014';
-    const sofrR=srRow?(100-srRow.price).toFixed(2)+'%':'\u2014';
+    const basis=srRow&&zqAvgs[zqAvgIdx]!==null?((100-srRow.price-zqAvgs[zqAvgIdx])*100).toFixed(1)+'bp':'—';
+    const sofrR=srRow?(100-srRow.price).toFixed(2)+'%':'—';
     const diffCol=kD.kalshiRate[m.lb]?(parseFloat(kalDiff)>5?'var(--c-kal)':parseFloat(kalDiff)<-5?'var(--color-text-danger)':'var(--color-text-tertiary)'):'var(--color-text-tertiary)';
     html+='<tr>';
     html+='<td style="white-space:nowrap;font-weight:500">'+(m.label||m.lb)+'</td>';
@@ -2710,11 +2710,11 @@ function DashboardTab({state, finance}) {
 
 function buildRuleComparisonTable(trRates, effrStart, fwLb) {
   const rules = [
-    {key:'taylor93',      label:'Taylor 1993',        note:'Original \u2014 r*=2%, \u03b2=0.5, GDP gap'},
-    {key:'yellen',        label:'Yellen Alt1',         note:'Unemployment gap, FOMC SEP r*, \u03b2=1.0'},
-    {key:'balanced',      label:'Balanced approach',   note:'\u03b2=1.0 (Yellen 2012/2017 speeches)'},
-    {key:'cgg',           label:'CGG Inertial',        note:'\u03c1=0.85 smoothing around Taylor 1993'},
-    {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM \u2014 highest R\u00b2 for \u0394FFTR prediction'},
+    {key:'taylor93',      label:'Taylor 1993',        note:'Original — r*=2%, β=0.5, GDP gap'},
+    {key:'yellen',        label:'Yellen Alt1',         note:'Unemployment gap, FOMC SEP r*, β=1.0'},
+    {key:'balanced',      label:'Balanced approach',   note:'β=1.0 (Yellen 2012/2017 speeches)'},
+    {key:'cgg',           label:'CGG Inertial',        note:'ρ=0.85 smoothing around Taylor 1993'},
+    {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM — highest R² for ΔFFTR prediction'},
     {key:'finNeutral',    label:'Finance-neutral',     note:'JR + λ·NFCI (Borio 2012/2014)'},
   ];
   const threshold = 0.125;
@@ -2724,7 +2724,7 @@ function buildRuleComparisonTable(trRates, effrStart, fwLb) {
     if(rate === undefined) return;
     var gap = (rate - effrStart) * 100;
     var signal = Math.abs(gap) < threshold*100 ? 0 : gap > 0 ? 1 : -1;
-    var sigLabel = signal === 0 ? '= Neutral' : signal === 1 ? '\u2191 Hike' : '\u2193 Cut';
+    var sigLabel = signal === 0 ? '= Neutral' : signal === 1 ? '↑ Hike' : '↓ Cut';
     var sigCol = signal === 0 ? 'var(--color-text-tertiary)' : signal === 1 ? 'var(--color-text-danger)' : 'var(--color-text-info)';
     var isJR = r.key === 'juddRudebusch';
     var isFN = r.key === 'finNeutral';
@@ -2922,7 +2922,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
     const jrRate = jrImpliedPath[i] !== undefined ? jrImpliedPath[i] : 0;
     const gap = jrRate - cmeRates[i];
     const gCol = gap > 0.05 ? 'var(--color-text-danger)' : gap < -0.05 ? 'var(--color-text-info)' : 'var(--color-text-secondary)';
-    const shortLbl = meetings[i].label.split('\u2013')[0] || meetings[i].lb;
+    const shortLbl = meetings[i].label.split('–')[0] || meetings[i].lb;
     html += '<tr>';
     html += '<td style="white-space:nowrap;font-size:11px">' + shortLbl + '</td>';
     html += '<td style="font-family:var(--font-mono)">' + pi.toFixed(2) + '%</td>';
@@ -3001,7 +3001,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
   window.__ycDispatch = (i, v) => dispatch({type:'UPDATE_YC_RATE', i, value:parseFloat(v)||state.ycD[i].rate});
 
   // -- Fetch bar --
-  const fetchStatus = refreshStatus?.yc || 'Seed data \u2014 3mo/6mo/1yr from ZQ chain · 2yr\u201330yr enter manually or fetch';
+  const fetchStatus = refreshStatus?.yc || 'Seed data — 3mo/6mo/1yr from ZQ chain · 2yr–30yr enter manually or fetch';
   const isFetching = fetching?.yc || false;
 
   // -- Curve SVG --
@@ -3061,9 +3061,9 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
     });
 
     // Legend
-    svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf ZQ-derived</text>';
-    svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
-    svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
+    svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">● ZQ-derived</text>';
+    svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">● CMT</text>';
+    svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">— NS fit</text>';
     svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd · --- scenario</text>';
     svg+='<text x="'+(ml+330)+'" y="14" font-size="8" fill="var(--c-bs)" font-family="var(--font-sans)">--- QT shock (12M)</text>';
     svg+='</svg>';
@@ -3074,9 +3074,9 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
   function buildShockTable() {
     var mats = [{m:2,l:'2yr'},{m:5,l:'5yr'},{m:10,l:'10yr'},{m:30,l:'30yr'}];
     var loadings = {2:0.50, 5:0.30, 10:0.10, 30:0.05};
-    var h = '<table class="fwt"><thead><tr><th>Meeting</th><th>EFFR \u0394 (bp)</th>';
-    mats.forEach(function(d){h+='<th>'+d.l+' \u0394 (bp)</th>';});
-    h+='<th>10\u22122yr \u0394 (bp)</th><th>Riding signal</th></tr></thead><tbody>';
+    var h = '<table class="fwt"><thead><tr><th>Meeting</th><th>EFFR Δ (bp)</th>';
+    mats.forEach(function(d){h+='<th>'+d.l+' Δ (bp)</th>';});
+    h+='<th>10−2yr Δ (bp)</th><th>Riding signal</th></tr></thead><tbody>';
     scenarioCurves.forEach(function(sc) {
       var slopeChg = (sc.cumDeltaBp * (loadings[2] - loadings[10])).toFixed(1);
       var signal = parseFloat(slopeChg) < -5 ? '\ud83d\udfe2 Ride' : parseFloat(slopeChg) > 5 ? '\ud83d\udd34 Hold' : '\ud83d\udfe1 Marginal';
@@ -3096,14 +3096,14 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       var qtTotal=Object.values(qtShocks).reduce(function(s,v){return s+v;},0)/Object.keys(qtShocks).length;
       h+='<tr style="border-top:1.5px solid var(--color-border-secondary)">';
       h+='<td style="white-space:nowrap;font-weight:500;color:var(--c-bs)">QT (12M)</td>';
-      h+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">\u2014</td>';
+      h+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">—</td>';
       mats.forEach(function(mt){
         var d=(qtShocks[mt.m]||0).toFixed(1);
         h+='<td style="font-family:var(--font-mono);color:var(--c-bs)">+'+d+'</td>';
       });
       var qtSlope=((qtShocks[2]||0)-(qtShocks[10]||0)).toFixed(1);
       h+='<td style="font-family:var(--font-mono);color:'+(parseFloat(qtSlope)>0?'var(--color-text-danger)':'var(--color-text-info)')+'">'+qtSlope+'</td>';
-      h+='<td style="color:var(--c-bs)">KVJ+D\u2019Amico</td></tr>';
+      h+='<td style="color:var(--c-bs)">KVJ+D’Amico</td></tr>';
     }
     h+='</tbody></table>';
     return h;
@@ -3141,7 +3141,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       <div className="k-fetch-bar">
         <button className="refresh-btn" disabled={isFetching}
           onClick={()=>fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshStatus)}>
-          {isFetching ? '\u27f3 ...' : '\u27f3 Fetch CMT rates'}
+          {isFetching ? '⟳ ...' : '⟳ Fetch CMT rates'}
         </button>
         <span className="k-seed-note">{fetchStatus}</span>
         <span style={{marginLeft:'auto',fontSize:'10px',color:'var(--color-text-tertiary)',display:'flex',gap:'10px'}}>
@@ -3154,14 +3154,14 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       {/* CMT input table */}
       <div className="k-panel" style={{marginBottom:'12px'}}>
         <div className="k-hdr">
-          <span className="k-title">Treasury CMT par rates \u2014 input grid</span>
+          <span className="k-title">Treasury CMT par rates — input grid</span>
           <span className="k-contract">Federal Reserve H.15 · daily</span>
         </div>
         <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildCmtTable()}}/>
         <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginTop:'8px'}}>
           {[
-            {l:'10yr\u22122yr slope', v:slope10_2+'bp', col:parseFloat(slope10_2)>0?'var(--color-text-success)':'var(--color-text-danger)'},
-            {l:'2yr\u22123mo slope',  v:slope2_3mo+'bp', col:parseFloat(slope2_3mo)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'10yr−2yr slope', v:slope10_2+'bp', col:parseFloat(slope10_2)>0?'var(--color-text-success)':'var(--color-text-danger)'},
+            {l:'2yr−3mo slope',  v:slope2_3mo+'bp', col:parseFloat(slope2_3mo)>0?'var(--color-text-success)':'var(--color-text-danger)'},
             {l:'Curve shape', v:curveShape, col:'var(--color-text-primary)'},
             {l:'NS RMSE', v:nsFactors.rmse.toFixed(1)+'bp', col:'var(--c-overlay)'},
           ].map(function(d){return(
@@ -3185,7 +3185,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
                 {m.toUpperCase()}
               </button>
             );})}
-            {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson \u2014 Phase 3 extension)</span>}
+            {model==='nss'&&<span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>(Svensson — Phase 3 extension)</span>}
           </span>
         </div>
         {(()=>{
@@ -3196,19 +3196,19 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
           const b0=nsFactors.level;
           const residual=b0-rStar-piStar-safetyPct-lpEffect;
           const bsFetched=state.bsD?.fetched;
-          const seedBadge=!bsFetched?' \u26a0 seed':'';
+          const seedBadge=!bsFetched?' ⚠ seed':'';
           return (<>
             <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px'}}>
               <div className="fw-stat">
-                <div className="fw-stat-l">Level \u03b2\u2080</div>
+                <div className="fw-stat-l">Level β₀</div>
                 <div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-overlay)'}}>{b0.toFixed(3)}%</div>
                 <div className="fw-stat-s">Long-run rate</div>
               </div>
               {[
-                {l:'Slope \u03b2\u2081', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short\u2212long spread', col:'var(--c-cme)'},
-                {l:'Curvature \u03b2\u2082', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
-                {l:'Decay \u03c4', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
-                {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'\u03b2\u2080 \u2212 EFFR', col:'var(--c-dots)'},
+                {l:'Slope β₁', v:(nsFactors.slope>=0?'+':'')+nsFactors.slope.toFixed(3)+'%', sub:'Short−long spread', col:'var(--c-cme)'},
+                {l:'Curvature β₂', v:(nsFactors.curvature>=0?'+':'')+nsFactors.curvature.toFixed(3)+'%', sub:'Hump magnitude', col:'var(--c-sofr)'},
+                {l:'Decay τ', v:nsFactors.decay.toFixed(3)+' yr', sub:'Hump location', col:'var(--color-text-secondary)'},
+                {l:'Term premium', v:(finance.termPremium>=0?'+':'')+finance.termPremium.toFixed(2)+'%', sub:'β₀ − EFFR', col:'var(--c-dots)'},
               ].map(function(d){return(
                 <div key={d.l} className="fw-stat">
                   <div className="fw-stat-l">{d.l}</div>
@@ -3218,18 +3218,18 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
               );})}
             </div>
             <div style={{marginTop:'10px',padding:'10px 12px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',border:'.5px solid var(--color-border-tertiary)'}}>
-              <div style={{fontSize:'11px',fontWeight:500,color:'var(--c-overlay)',marginBottom:'6px'}}>\u03b2\u2080 decomposition: {b0.toFixed(3)}%</div>
+              <div style={{fontSize:'11px',fontWeight:500,color:'var(--c-overlay)',marginBottom:'6px'}}>β₀ decomposition: {b0.toFixed(3)}%</div>
               <div style={{display:'grid',gridTemplateColumns:'auto 1fr',gap:'2px 12px',fontSize:'10px',fontFamily:'var(--font-mono)'}}>
-                <span style={{color:'var(--color-text-tertiary)'}}>r* + \u03c0*</span>
+                <span style={{color:'var(--color-text-tertiary)'}}>r* + π*</span>
                 <span style={{color:'var(--color-text-primary)'}}>{(rStar+piStar).toFixed(2)}%</span>
-                <span style={{color:'var(--c-bs)'}}>\u03c8 safety{seedBadge}</span>
+                <span style={{color:'var(--c-bs)'}}>ψ safety{seedBadge}</span>
                 <span style={{color:'var(--c-bs)'}}>{safetyPct>=0?'+':''}{(safetyPct*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[KVJ 2012]</span></span>
-                <span style={{color:'var(--c-lp)'}}>\u03c8 leverage{seedBadge}</span>
+                <span style={{color:'var(--c-lp)'}}>ψ leverage{seedBadge}</span>
                 <span style={{color:'var(--c-lp)'}}>{lpEffect>=0?'+':''}{(lpEffect*100).toFixed(1)} bp <span style={{color:'var(--color-text-tertiary)'}}>[DSS 2018]</span></span>
                 <span style={{color:'var(--color-text-tertiary)'}}>Residual</span>
                 <span style={{color:'var(--color-text-secondary)'}}>{residual>=0?'+':''}{(residual*100).toFixed(1)} bp</span>
               </div>
-              <div style={{fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'6px',lineHeight:1.5}}>\u03b2\u2080 = r* + \u03c0\u1d49 + \u03c8_safety + \u03c8_leverage + residual. KVJ (2012): Treasury supply safety premium. DSS (2018): leverage/liquidity premium.</div>
+              <div style={{fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'6px',lineHeight:1.5}}>β₀ = r* + πᵉ + ψ_safety + ψ_leverage + residual. KVJ (2012): Treasury supply safety premium. DSS (2018): leverage/liquidity premium.</div>
             </div>
           </>);
         })()}
@@ -3238,7 +3238,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       {/* Curve chart */}
       <div className="k-panel k-full" style={{marginBottom:'12px'}}>
         <div className="k-hdr">
-          <span className="k-title">Yield curve \u2014 CMT data + Nelson-Siegel fit + scenario paths</span>
+          <span className="k-title">Yield curve — CMT data + Nelson-Siegel fit + scenario paths</span>
           <div style={{display:'flex',gap:'6px',alignItems:'center',flexWrap:'wrap'}}>
             <button onClick={()=>setShowAll(!showAll)}
               style={{padding:'2px 8px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(showAll?'var(--c-overlay)':'var(--color-border-secondary)'),background:showAll?'var(--c-overlay-a)':'transparent',color:showAll?'var(--c-overlay)':'var(--color-text-secondary)'}}>
@@ -3247,24 +3247,24 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
             {!showAll && scenarioCurves.map(function(sc){return(
               <button key={sc.meetingLb} onClick={()=>setSelectedMeeting(selectedMeeting===sc.meetingLb?null:sc.meetingLb)}
                 style={{padding:'2px 7px',fontSize:'10px',cursor:'pointer',borderRadius:'10px',border:'.5px solid '+(selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-border-secondary)'),background:selectedMeeting===sc.meetingLb?'var(--c-overlay-a)':'transparent',color:selectedMeeting===sc.meetingLb?'var(--c-overlay)':'var(--color-text-secondary)'}}>
-                {sc.label.split('\u2013')[0].replace(/ 20\d\d/,'')}
+                {sc.label.split('–')[0].replace(/ 20\d\d/,'')}
                 {sc.cumDeltaBp!==0&&<span style={{fontSize:'9px',marginLeft:'3px',opacity:.7}}>{sc.cumDeltaBp>0?'+':''}{sc.cumDeltaBp.toFixed(0)}bp</span>}
               </button>
             );})}
           </div>
         </div>
         <SvgPanel html={buildCurveChart()}/>
-        <div className="k-note">Amber solid = NS spot rate fit · amber dashed = instantaneous forward rate · amber scenario lines = curve under active scenario at each FOMC meeting · sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'\u2019'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
+        <div className="k-note">Amber solid = NS spot rate fit · amber dashed = instantaneous forward rate · amber scenario lines = curve under active scenario at each FOMC meeting · sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'’'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
       </div>
 
       {/* Shock impact table */}
       <div className="k-panel k-full">
         <div className="k-hdr">
-          <span className="k-title">Yield curve impact by FOMC meeting \u2014 Bieri-Chincarini empirical coefficients</span>
-          <span className="k-contract">Exhibit 5: \u221225bp slope per 100bp FFTR hike</span>
+          <span className="k-title">Yield curve impact by FOMC meeting — Bieri-Chincarini empirical coefficients</span>
+          <span className="k-contract">Exhibit 5: −25bp slope per 100bp FFTR hike</span>
         </div>
         <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildShockTable()}}/>
-        <div className="k-note">Maturity loadings: 2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100bp FFR change. Slope \u0394 = 2yr loading minus 10yr loading \u00d7 cumulative delta. Green = curve steepening (riding more favorable), red = flattening/inverting. Riding signal feeds the Phase 4 calculator.</div>
+        <div className="k-note">Maturity loadings: 2yr +0.50, 5yr +0.30, 10yr +0.10, 30yr +0.05 per 100bp FFR change. Slope Δ = 2yr loading minus 10yr loading × cumulative delta. Green = curve steepening (riding more favorable), red = flattening/inverting. Riding signal feeds the Phase 4 calculator.</div>
       </div>
     </div>
   );
@@ -3299,7 +3299,7 @@ function RidingTab({state, dispatch, finance}) {
           return (
             <button key={f.key} onClick={()=>dispatch({type:'TOGGLE_RIDE_FILTER',key:f.key})}
               style={{padding:'3px 10px',fontSize:'11px',cursor:'pointer',borderRadius:'20px',border:'.5px solid '+(on?'var(--color-border-info)':'var(--color-border-secondary)'),background:on?'var(--color-background-info)':'transparent',color:on?'var(--color-text-info)':'var(--color-text-tertiary)',fontWeight:on?600:400}}>
-              {f.label} {on?'\u2713':''}
+              {f.label} {on?'✓':''}
             </button>
           );
         })}
@@ -3307,7 +3307,7 @@ function RidingTab({state, dispatch, finance}) {
 
       {/* Matrix */}
       <div className="k-panel" style={{marginBottom:'12px'}}>
-        <div className="k-hdr"><span className="k-title">HPR matrix \u2014 instrument \u00d7 horizon (click cell for detail)</span></div>
+        <div className="k-hdr"><span className="k-title">HPR matrix — instrument × horizon (click cell for detail)</span></div>
         <div style={{overflowX:'auto'}}>
           <table className="fwt">
             <thead>
@@ -3322,7 +3322,7 @@ function RidingTab({state, dispatch, finance}) {
                   <td style={{fontWeight:500,fontFamily:'var(--font-mono)'}}>{mat}</td>
                   {HORIZONS.map(function(hor,hi){
                     var cell = rideData[mi] && rideData[mi][hi] ? rideData[mi][hi] : null;
-                    if(!cell || cell.signal===undefined) return <td key={hor} style={{opacity:.3,fontSize:'11px',textAlign:'center'}}>\u2014</td>;
+                    if(!cell || cell.signal===undefined) return <td key={hor} style={{opacity:.3,fontSize:'11px',textAlign:'center'}}>—</td>;
                     var isSel = sel.matIdx===mi && sel.hIdx===hi;
                     return (
                       <td key={hor}
@@ -3342,7 +3342,7 @@ function RidingTab({state, dispatch, finance}) {
             </tbody>
           </table>
         </div>
-        <div className="k-note" style={{marginTop:'8px'}}>XHPR = annualized excess HPR vs buy-and-hold. Cushion = break-even yield change (bp). Color: \ud83d\udfe2 ride / \ud83d\udd34 hold / \ud83d\udfe1 marginal based on active filters. Source: Bieri-Chincarini (2005) Eqs. 8\u201316.</div>
+        <div className="k-note" style={{marginTop:'8px'}}>XHPR = annualized excess HPR vs buy-and-hold. Cushion = break-even yield change (bp). Color: \ud83d\udfe2 ride / \ud83d\udd34 hold / \ud83d\udfe1 marginal based on active filters. Source: Bieri-Chincarini (2005) Eqs. 8–16.</div>
       </div>
 
       {/* Cushion detail for selected cell */}
@@ -3350,7 +3350,7 @@ function RidingTab({state, dispatch, finance}) {
         <div className="k-grid" style={{marginBottom:'12px'}}>
           <div className="k-panel">
             <div className="k-hdr">
-              <span className="k-title">Cushion detail \u2014 {MATS[sel.matIdx]} instrument, {HORIZONS[sel.hIdx]} horizon</span>
+              <span className="k-title">Cushion detail — {MATS[sel.matIdx]} instrument, {HORIZONS[sel.hIdx]} horizon</span>
             </div>
             {/* Cushion gauge bar */}
             <div style={{marginBottom:'12px'}}>
@@ -3372,7 +3372,7 @@ function RidingTab({state, dispatch, finance}) {
                 <div style={{position:'absolute',left:(50+15/2)+'%',top:0,bottom:0,width:'2px',background:'var(--color-text-warning)',opacity:.6}}/>
               </div>
               <div style={{display:'flex',justifyContent:'space-between',fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
-                <span>{'\u2212'}100bp</span><span>0</span><span>75th pctile (~15bp)</span><span>+100bp</span>
+                <span>{'−'}100bp</span><span>0</span><span>75th pctile (~15bp)</span><span>+100bp</span>
               </div>
             </div>
             {/* Comparison table */}
@@ -3397,15 +3397,15 @@ function RidingTab({state, dispatch, finance}) {
             </table>
             {/* Taylor signal note */}
             <div style={{marginTop:'10px',padding:'6px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',fontSize:'11px'}}>
-              {finance.taylorSignalVal === -1 && <span style={{color:'var(--color-text-info)'}}>{'\ud83d\udccf'} Taylor rule prescribes cut \u2192 riding favorable \u2713</span>}
-              {finance.taylorSignalVal === +1 && <span style={{color:'var(--color-text-danger)'}}>{'\ud83d\udccf'} Taylor rule prescribes hike \u2192 riding less favorable \u2717</span>}
+              {finance.taylorSignalVal === -1 && <span style={{color:'var(--color-text-info)'}}>{'\ud83d\udccf'} Taylor rule prescribes cut → riding favorable ✓</span>}
+              {finance.taylorSignalVal === +1 && <span style={{color:'var(--color-text-danger)'}}>{'\ud83d\udccf'} Taylor rule prescribes hike → riding less favorable ✗</span>}
               {finance.taylorSignalVal === 0  && <span style={{color:'var(--color-text-secondary)'}}>{'\ud83d\udccf'} Taylor rule neutral</span>}
             </div>
           </div>
 
           {/* Duration-neutral barbell panel */}
           <div className="k-panel">
-            <div className="k-hdr"><span className="k-title">Duration-neutral barbell \u2014 \u03c9 weight</span></div>
+            <div className="k-hdr"><span className="k-title">Duration-neutral barbell — ω weight</span></div>
             {selectedCell && (
               <div>
                 <div style={{fontSize:'12px',color:'var(--color-text-secondary)',marginBottom:'10px'}}>
@@ -3423,23 +3423,23 @@ function RidingTab({state, dispatch, finance}) {
                 <div style={{fontSize:'11px',color:'var(--color-text-tertiary)',marginBottom:'10px'}}>
                   <b style={{color:'var(--c-cme)'}}>{(selectedCell.omega*100).toFixed(0)}%</b> in {MATS[sel.matIdx]} instrument &nbsp;+&nbsp;
                   <b>{((1-selectedCell.omega)*100).toFixed(0)}%</b> overnight
-                  <br/>{'\u03c9'} = (D_H {'\u2212'} D_O) / (D_R {'\u2212'} D_O) = ({selectedCell.h.toFixed(2)} {'\u2212'} 0) / ({selectedCell.m.toFixed(1)} {'\u2212'} 0)
+                  <br/>{'ω'} = (D_H {'−'} D_O) / (D_R {'−'} D_O) = ({selectedCell.h.toFixed(2)} {'−'} 0) / ({selectedCell.m.toFixed(1)} {'−'} 0)
                 </div>
                 {/* Return decomposition */}
                 <table className="fwt">
                   <thead><tr><th>Component</th><th>Return (ann.)</th></tr></thead>
                   <tbody>
-                    <tr><td>{'\u03c9'} {'\u00d7'} riding HPR</td>
+                    <tr><td>{'ω'} {'×'} riding HPR</td>
                       <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-info)'}}>
                         +{(selectedCell.omega * selectedCell.hpr/selectedCell.h * 100).toFixed(2)}pp
                       </td>
                     </tr>
-                    <tr><td>(1{'\u2212'}{'\u03c9'}) {'\u00d7'} overnight</td>
+                    <tr><td>(1{'−'}{'ω'}) {'×'} overnight</td>
                       <td style={{fontFamily:'var(--font-mono)'}}>{((1-selectedCell.omega)*(syncedYcD[0].rate)/100/selectedCell.h*selectedCell.h*100).toFixed(2)}pp</td>
                     </tr>
-                    <tr><td>{'\u2212'} Buy-and-hold</td>
+                    <tr><td>{'−'} Buy-and-hold</td>
                       <td style={{fontFamily:'var(--font-mono)',color:'var(--color-text-danger)'}}>
-                        {'\u2212'}{(Math.abs(rideHPR(nsYield(selectedCell.h,nsFitParams),nsYield(selectedCell.h,nsFitParams),selectedCell.h,selectedCell.h))/selectedCell.h*100).toFixed(2)}pp
+                        {'−'}{(Math.abs(rideHPR(nsYield(selectedCell.h,nsFitParams),nsYield(selectedCell.h,nsFitParams),selectedCell.h,selectedCell.h))/selectedCell.h*100).toFixed(2)}pp
                       </td>
                     </tr>
                     <tr style={{borderTop:'.5px solid var(--color-border-secondary)'}}>
@@ -3452,7 +3452,7 @@ function RidingTab({state, dispatch, finance}) {
                 </table>
               </div>
             )}
-            <div className="k-note" style={{marginTop:'8px'}}>Duration-neutral riding removes the outright rate bet while preserving the curve-slope trade. {'\u03c9'} = fraction in riding instrument. Based on Bieri-Chincarini (2005) Eqs. 29{'\u2013'}30.</div>
+            <div className="k-note" style={{marginTop:'8px'}}>Duration-neutral riding removes the outright rate bet while preserving the curve-slope trade. {'ω'} = fraction in riding instrument. Based on Bieri-Chincarini (2005) Eqs. 29{'–'}30.</div>
           </div>
 
         </div>
@@ -3483,7 +3483,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
   const tR=treasury/current, mR=mbs/current;
   const nT=neutral*tR, nM=neutral*mR, nO=Math.max(0,neutral-nT-nM);
   const runway=bsD.monthlyRunoff>0?Math.round((current-neutral)/bsD.monthlyRunoff):999;
-  const shadowBp=qtChannels?qtChannels.total.toFixed(1):'\u2014';
+  const shadowBp=qtChannels?qtChannels.total.toFixed(1):'—';
 
   function stackBar(x, vals, colors){
     let svg='';
@@ -3551,7 +3551,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
   const svrBp=svr!=null?svr:((effr-iorb)*100);
   const svrColor=Math.abs(svrBp)<5?'var(--c-stress-lo)':Math.abs(svrBp)<15?'var(--c-leaning)':'var(--c-stress-hi)';
   const lpColor=lp>0?'var(--c-stress-lo)':lp>-0.20?'var(--c-leaning)':'var(--c-stress-hi)';
-  const svrNote=Math.abs(svrBp)<5?' Ample reserves (SVR \u2248 0).':Math.abs(svrBp)<15?' Transition zone. Monitor reserves.':' \u26a0 Scarce reserves. Sep 2019 episode began at ~15bp.';
+  const svrNote=Math.abs(svrBp)<5?' Ample reserves (SVR ≈ 0).':Math.abs(svrBp)<15?' Transition zone. Monitor reserves.':' ⚠ Scarce reserves. Sep 2019 episode began at ~15bp.';
   const lpNote=lp>0?' Positive: ample liquidity. Low leverage cost (DSS 2018).':lp>-0.20?' Slightly negative: tightening liquidity conditions.':' Negative: expensive leverage. Risk premia widening expected (DSS 2018).';
 
   // --- Panel 4: Two-instrument policy space ---
@@ -3627,17 +3627,17 @@ function BalanceSheetTab({state, dispatch, finance}) {
       <div className="k-grid">
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2460 Balance Sheet Composition</span>
+            <span className="k-title">① Balance Sheet Composition</span>
             <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>
               KVJ (2011) shadow rate: <b style={{color:parseFloat(shadowBp)>0?'var(--c-stress-hi)':'var(--c-stress-lo)'}}>{shadowBp} bp</b>
             </span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg1}}/>
           <div style={{display:'flex',gap:'14px',flexWrap:'wrap',fontSize:'10px',margin:'8px 0',color:'var(--color-text-secondary)'}}>
-            <span style={{color:'var(--c-bs)'}}>Duration: {qtChannels?qtChannels.components.duration.toFixed(1):'\u2014'} bp</span>
-            <span>Safety: {qtChannels?qtChannels.components.safety.toFixed(1):'\u2014'} bp</span>
-            <span>Signaling: {qtChannels?qtChannels.components.signaling.toFixed(1):'\u2014'} bp</span>
-            <span style={{color:'var(--c-bs-mbs)'}}>MBS: {qtChannels?qtChannels.components.mbs.toFixed(1):'\u2014'} bp</span>
+            <span style={{color:'var(--c-bs)'}}>Duration: {qtChannels?qtChannels.components.duration.toFixed(1):'—'} bp</span>
+            <span>Safety: {qtChannels?qtChannels.components.safety.toFixed(1):'—'} bp</span>
+            <span>Signaling: {qtChannels?qtChannels.components.signaling.toFixed(1):'—'} bp</span>
+            <span style={{color:'var(--c-bs-mbs)'}}>MBS: {qtChannels?qtChannels.components.mbs.toFixed(1):'—'} bp</span>
           </div>
           <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
             <label style={{color:'var(--color-text-secondary)'}}>Neutral floor ($bn):
@@ -3658,12 +3658,12 @@ function BalanceSheetTab({state, dispatch, finance}) {
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
-          <div className="k-hdr"><span className="k-title">\u2462 Corridor Mechanics: Stein (2012) SVR &amp; DSS Liquidity Premium</span></div>
+          <div className="k-hdr"><span className="k-title">③ Corridor Mechanics: Stein (2012) SVR &amp; DSS Liquidity Premium</span></div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:'8px',margin:'8px 0'}}>
             <div className="fw-stat"><div className="fw-stat-l">IORB</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{iorb.toFixed(2)}%</div><div className="fw-stat-s">Interest on reserve balances</div></div>
             <div className="fw-stat"><div className="fw-stat-l">EFFR</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{effr.toFixed(2)}%</div><div className="fw-stat-s">Effective fed funds rate</div></div>
-            <div className="fw-stat"><div className="fw-stat-l" style={{color:svrColor}}>Stein SVR</div><div className="fw-stat-v" style={{fontSize:'16px',color:svrColor}}>{svrBp>=0?'+':''}{svrBp.toFixed(1)} bp</div><div className="fw-stat-s">EFFR \u2212 IORB.{svrNote}</div></div>
-            <div className="fw-stat"><div className="fw-stat-l" style={{color:lpColor}}>DSS Liquidity Prem.</div><div className="fw-stat-v" style={{fontSize:'16px',color:lpColor}}>{(lp*100).toFixed(1)} bp</div><div className="fw-stat-s">3M T-bill \u2212 IORB.{lpNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:svrColor}}>Stein SVR</div><div className="fw-stat-v" style={{fontSize:'16px',color:svrColor}}>{svrBp>=0?'+':''}{svrBp.toFixed(1)} bp</div><div className="fw-stat-s">EFFR − IORB.{svrNote}</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:lpColor}}>DSS Liquidity Prem.</div><div className="fw-stat-v" style={{fontSize:'16px',color:lpColor}}>{(lp*100).toFixed(1)} bp</div><div className="fw-stat-s">3M T-bill − IORB.{lpNote}</div></div>
             <div className="fw-stat"><div className="fw-stat-l">RRP Outstanding</div><div className="fw-stat-v" style={{fontSize:'16px'}}>${(bsD.rrpUsage||400).toFixed(0)}bn</div><div className="fw-stat-s">RRP draining to zero signals reserve transition</div></div>
           </div>
           <div className="k-note">SVR framework: Stein (2012, QJE). Liquidity premium channel: Drechsler, Savov &amp; Schnabl (2018, JoF). Near-money proxy: Nagel (2016, QJE).</div>
@@ -3671,7 +3671,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
 
         <div className="k-panel k-full">
           <div className="k-hdr">
-            <span className="k-title">\u2463 Two-Instrument Policy Space</span>
+            <span className="k-title">④ Two-Instrument Policy Space</span>
             <span style={{fontSize:'10px',color:'var(--c-combined)'}}>Combined stance: {combinedStance.toFixed(2)}%</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg4}}/>
@@ -3901,12 +3901,12 @@ function FinStabTab({state, dispatch, finance}) {
   ];
   const ndLabels={EFFR:'Policy rate',LP:'DSS Liquidity Prem.',HY:'HY OAS / Risk Premia',NFCI:'Fin. conditions',FN:'Finance-neutral rate',TP:'Term Prem. (SS put)'};
   const edgs=[
-    {f:'EFFR',t:'LP',  lb:'DSS: rate \u2192 LP'},
-    {f:'LP',  t:'HY',  lb:'\u03d5\u00d7LP \u2192 risk premia'},
-    {f:'HY',  t:'NFCI',lb:'spreads \u2192 NFCI'},
+    {f:'EFFR',t:'LP',  lb:'DSS: rate → LP'},
+    {f:'LP',  t:'HY',  lb:'ϕ×LP → risk premia'},
+    {f:'HY',  t:'NFCI',lb:'spreads → NFCI'},
     {f:'NFCI',t:'FN',  lb:'λ·NFCI → fin-neutral'},
-    {f:'FN',  t:'EFFR',lb:'prescription \u2192 rate'},
-    {f:'TP',  t:'EFFR',lb:'SS put: TP\u2191 \u2192 cut'},
+    {f:'FN',  t:'EFFR',lb:'prescription → rate'},
+    {f:'TP',  t:'EFFR',lb:'SS put: TP↑ → cut'},
   ];
   let svg6='<svg viewBox="0 0 '+W6+' '+H6+'" style="width:100%;display:block;overflow:visible">';
   svg6+='<defs><marker id="arr-circ" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="var(--color-text-secondary)"/></marker></defs>';
@@ -3987,7 +3987,7 @@ function FinStabTab({state, dispatch, finance}) {
     svg7+='<rect class="mse-hover" x="'+(p.x-12).toFixed(1)+'" y="'+(p.y-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
       +' data-label="'+a.lb+'"'
       +' data-val="'+a.raw+' · '+a.val.toFixed(0)+'th pctile"'
-      +' data-sub="'+(a.val>75?'\u26a0 Elevated stress':a.val>50?'Moderate':'Low stress')+'"/>';
+      +' data-sub="'+(a.val>75?'⚠ Elevated stress':a.val>50?'Moderate':'Low stress')+'"/>';
   });
   // Phase clock index = polygon area / hexagon area * 100
   // Shoelace formula for polygon area
@@ -4029,7 +4029,7 @@ function FinStabTab({state, dispatch, finance}) {
       <div className="k-grid">
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2460 Financial Conditions vs. Policy Stance</span>
+            <span className="k-title">① Financial Conditions vs. Policy Stance</span>
             <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Chicago Fed NFCI (weekly, FRED: NFCI)</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg1}}/>
@@ -4056,7 +4056,7 @@ function FinStabTab({state, dispatch, finance}) {
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral rate</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + λ·NFCI</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Inflation-neutral only</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>Leaning premium</div><div className="fw-stat-v" style={{fontSize:'16px',color:leanColor}}>{leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</div><div className="fw-stat-s">{leanBp>0?'Market below fin-neutral':'Market at/above fin-neutral'}</div></div>
-            <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot \u2212 ZQ terminal (SS 2018)</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot − ZQ terminal (SS 2018)</div></div>
           </div>
           <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (λ_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
         </div>
@@ -4076,7 +4076,7 @@ function FinStabTab({state, dispatch, finance}) {
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + λ·NFCI + r* corr</div></div>
           </div>
           <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
-            <label style={{color:'var(--color-text-secondary)'}}>Credit-GDP gap (\u03c3):
+            <label style={{color:'var(--color-text-secondary)'}}>Credit-GDP gap (σ):
               <input className="fw-in" type="number" value={fsD.creditGDPGap} style={{width:'60px',marginLeft:'4px'}}
                 onChange={e=>setFsd('creditGDPGap',e.target.value)} step="0.1" min="-3" max="3"/>
             </label>
@@ -4090,7 +4090,7 @@ function FinStabTab({state, dispatch, finance}) {
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2462 Dollar Safe Asset Gauge (McCauley 2019)</span>
+            <span className="k-title">③ Dollar Safe Asset Gauge (McCauley 2019)</span>
             <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>3-layer assessment</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg4}}/>
@@ -4101,25 +4101,25 @@ function FinStabTab({state, dispatch, finance}) {
               <div className="fw-stat-l" style={{color:xccyColor}}>EUR/USD xccy basis</div>
               <div className="fw-stat-v" style={{fontSize:'16px',color:xccyColor}}>{xccyBp.toFixed(0)} bp</div>
               <div className="fw-stat-s">
-                <span className="data-badge" style={{background:'var(--color-background-info)',color:'var(--color-text-warning)',fontSize:'9px'}}>\u26a0 manual</span>
+                <span className="data-badge" style={{background:'var(--color-background-info)',color:'var(--color-text-warning)',fontSize:'9px'}}>⚠ manual</span>
                 {' '}<input className="fw-in" type="number" value={fsD.xccyBasis} style={{width:'55px'}} onChange={e=>setFsd('xccyBasis',e.target.value)} step="1"/>
               </div>
             </div>
           </div>
-          <div className="k-note">McCauley (2019, BIS WP 782): the dollar functions as the global safe asset. Layer 1 (structural): Fed reserve balances relative to GDP measure the supply of ultimate dollar safe assets. Layer 2 (institutional): CB swap line drawdowns signal emergency offshore dollar demand. Layer 3 (market): EUR/USD cross-currency basis prices the marginal cost of dollar funding \u2014 deeply negative = acute scarcity. Xccy basis requires manual entry (no free public API).</div>
+          <div className="k-note">McCauley (2019, BIS WP 782): the dollar functions as the global safe asset. Layer 1 (structural): Fed reserve balances relative to GDP measure the supply of ultimate dollar safe assets. Layer 2 (institutional): CB swap line drawdowns signal emergency offshore dollar demand. Layer 3 (market): EUR/USD cross-currency basis prices the marginal cost of dollar funding — deeply negative = acute scarcity. Xccy basis requires manual entry (no free public API).</div>
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2463 Doom Loop Scatter: Term Premium vs. HY OAS</span>
+            <span className="k-title">④ Doom Loop Scatter: Term Premium vs. HY OAS</span>
             <span style={{fontSize:'10px',color:bubbleCol}}>
-              SS put: {ssSignal>0?'\u2705 active':ssSignal<0?'\u274c compressed':'\u2014 normal'}
+              SS put: {ssSignal>0?'✅ active':ssSignal<0?'❌ compressed':'— normal'}
               {' · '}LP bubble: {lpAbs.toFixed(0)} bp
             </span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg5}}/>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(120px,1fr))',gap:'8px',margin:'10px 0'}}>
-            <div className="fw-stat"><div className="fw-stat-l">Term premium</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termPremBp.toFixed(0)} bp</div><div className="fw-stat-s">\u03b2\u2080 \u2212 EFFR</div></div>
+            <div className="fw-stat"><div className="fw-stat-l">Term premium</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termPremBp.toFixed(0)} bp</div><div className="fw-stat-s">β₀ − EFFR</div></div>
             <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{hyOAS.toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA index</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-lp)'}}>DSS LP</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-lp)'}}>{(dss?dss.liquidityPremium*100:0).toFixed(0)} bp</div><div className="fw-stat-s">Bubble radius</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>SS put signal</div><div className="fw-stat-v" style={{fontSize:'14px',color:bubbleCol}}>{ssSignal>0?'ACTIVE':ssSignal<0?'COMPRESSED':'NORMAL'}</div><div className="fw-stat-s">Stein-Sunderam 2018</div></div>
@@ -4129,16 +4129,16 @@ function FinStabTab({state, dispatch, finance}) {
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2463b Policy Feedback Circuit (BIS/Mehrling Framework)</span>
+            <span className="k-title">④b Policy Feedback Circuit (BIS/Mehrling Framework)</span>
             <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>6-node directed graph</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg6}}/>
-          <div className="k-note">The Mehrling-BIS feedback circuit: EFFR \u2192 DSS liquidity premium \u2192 risk premia (HY OAS) \u2192 NFCI \u2192 finance-neutral rate \u2192 policy prescription \u2192 EFFR. The Stein-Sunderam (2018) term premium put provides an additional stabilizing channel: when TP rises above the 75th percentile, the Fed cuts to mitigate bond-market volatility. When the loop reinforces (all arrows tightening simultaneously), the Mehrling doom loop is active.</div>
+          <div className="k-note">The Mehrling-BIS feedback circuit: EFFR → DSS liquidity premium → risk premia (HY OAS) → NFCI → finance-neutral rate → policy prescription → EFFR. The Stein-Sunderam (2018) term premium put provides an additional stabilizing channel: when TP rises above the 75th percentile, the Fed cuts to mitigate bond-market volatility. When the loop reinforces (all arrows tightening simultaneously), the Mehrling doom loop is active.</div>
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2464 Financial Cycle Phase Clock</span>
+            <span className="k-title">⑤ Financial Cycle Phase Clock</span>
             <span style={{fontSize:'10px',color:phaseCol}}>Phase index: {phaseIdx.toFixed(0)}/100</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg7}}/>
@@ -4148,7 +4148,7 @@ function FinStabTab({state, dispatch, finance}) {
               return <div key={a.lb} className="fw-stat"><div className="fw-stat-l">{a.lb}</div><div className="fw-stat-v" style={{fontSize:'14px',color:col}}>{a.val.toFixed(0)}%</div><div className="fw-stat-s">{a.raw}</div></div>;
             })}
           </div>
-          <div className="k-note">6-axis radar normalized to historical 75th percentile thresholds. Phase clock index = polygon area / full hexagon area \u00d7 100. Green (&lt;33): benign. Amber (33\u201366): monitor. Red (&gt;66): stress regime. Axes: NFCI (Chicago Fed), swap lines (FRED: SWPT), |xccy basis| (manual), term premium (\u03b2\u2080\u2212EFFR), HY OAS (FRED: BAMLH0A0HYM2), |DSS liquidity premium| (Nagel 2016 proxy). Framework synthesis: Borio (2012/2016), McCauley (2019), Stein-Sunderam (2018), DSS (2018).</div>
+          <div className="k-note">6-axis radar normalized to historical 75th percentile thresholds. Phase clock index = polygon area / full hexagon area × 100. Green (&lt;33): benign. Amber (33–66): monitor. Red (&gt;66): stress regime. Axes: NFCI (Chicago Fed), swap lines (FRED: SWPT), |xccy basis| (manual), term premium (β₀−EFFR), HY OAS (FRED: BAMLH0A0HYM2), |DSS liquidity premium| (Nagel 2016 proxy). Framework synthesis: Borio (2012/2016), McCauley (2019), Stein-Sunderam (2018), DSS (2018).</div>
         </div>
       </div>
     </div>
@@ -4194,7 +4194,7 @@ function App() {
     {id:'inputs',     label:'Futures inputs',       tc:'tc-market'},
     {id:'chain',      label:'EFFR chain',            tc:'tc-market'},
     {id:'tree',       label:'Probability tree',      tc:'tc-market'},
-    {id:'kalshi',     label:'\u2696 Prediction markets', tc:'tc-market'},
+    {id:'kalshi',     label:'⚖ Prediction markets', tc:'tc-market'},
     {id:'sofr',       label:'\ud83d\udcc8 SOFR strip',   tc:'tc-market'},
     {id:'dashboard',  label:'\ud83d\uddc2 Dashboard',     tc:'tc-analytics'},
     {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve',   tc:'tc-analytics'},
