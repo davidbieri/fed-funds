@@ -112,9 +112,20 @@ body{font-family:var(--font-sans);background:var(--color-background-primary);col
 :root{--c-overlay:#f59e0b;--c-overlay-a:rgba(245,158,11,.13);}
 @media(prefers-color-scheme:dark){:root{--c-overlay:#fbbf24;--c-overlay-a:rgba(251,191,36,.13);}}
 /* -- Mobile responsive -------------------------------------------------- */
+.tab-label-short{display:none}
 @media(max-width:640px){
-  body{padding:.75rem .75rem 1.5rem}
-  .fw-tab{font-size:11px;padding:4px 9px}
+  body{padding:.75rem .75rem 80px}
+  .fw-tab-bar{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    white-space:nowrap;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  .fw-tab-bar::-webkit-scrollbar{display:none}
+  .fw-tab{font-size:11px;padding:4px 9px;white-space:nowrap}
+  .tab-label-full{display:none}
+  .tab-label-short{display:inline}
   .k-grid{grid-template-columns:1fr !important}
   #api-key-input{max-width:240px !important}
   .fw-stat-v{font-size:17px !important}
@@ -4185,18 +4196,18 @@ function App() {
   });
 
   const TABS = [
-    {id:'inputs',     label:'Futures inputs'},
-    {id:'chain',      label:'EFFR chain'},
-    {id:'tree',       label:'Probability tree'},
-    {id:'kalshi',     label:'\u2696 Prediction markets'},
-    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip'},
-    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard'},
-    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve'},
-    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule'},
-    {id:'riding',     label:'\ud83d\udcca Riding'},
+    {id:'inputs',     label:'Futures inputs',       short:'Futures'},
+    {id:'chain',      label:'EFFR chain',            short:'EFFR'},
+    {id:'tree',       label:'Probability tree',      short:'Tree'},
+    {id:'kalshi',     label:'\u2696 Prediction markets', short:'Markets'},
+    {id:'sofr',       label:'\ud83d\udcc8 SOFR strip',   short:'SOFR'},
+    {id:'dashboard',  label:'\ud83d\uddc2 Dashboard',     short:'Dash'},
+    {id:'yieldcurve', label:'\ud83d\udcd0 Yield Curve',   short:'Curve'},
+    {id:'taylor',     label:'\ud83c\udfaf Taylor Rule',   short:'Taylor'},
+    {id:'riding',     label:'\ud83d\udcca Riding',        short:'Riding'},
     {id:'_divider'},
-    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet'},
-    {id:'fs',         label:'\ud83d\udee1 Fin. Stability'},
+    {id:'bs',         label:'\ud83c\udfe6 Balance Sheet', short:'BS'},
+    {id:'fs',         label:'\ud83d\udee1 Fin. Stability',short:'Fin'},
   ];
 
   return (
@@ -4228,13 +4239,14 @@ function App() {
         <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
       </div>
 
-      <div style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
+      <div className="fw-tab-bar" style={{display:'flex',gap:'4px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'3px',margin:'1rem 0 1.25rem',width:'fit-content',flexWrap:'wrap'}}>
         {TABS.map(t=>
           t.id==='_divider'
             ? <span key="_div" className="tab-group-divider" title="Analytics tabs">|</span>
             : <div key={t.id} className={'fw-tab'+(state.fwActive===t.id?' act':'')}
                 onClick={()=>dispatch({type:'SET_TAB',tab:t.id})}>
-                {t.label}
+                <span className="tab-label-full">{t.label}</span>
+                <span className="tab-label-short">{t.short}</span>
               </div>
         )}
       </div>
