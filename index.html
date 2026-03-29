@@ -615,6 +615,13 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
     .ug-src-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
     .ug-src-dot{width:9px;height:9px;border-radius:2px;flex-shrink:0}
     .ug-regime{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 12px;background:var(--surface);border-radius:4px;border:1px solid var(--border);font-family:'JetBrains Mono',monospace;font-size:11px;margin:10px 0}
+    .ug-fig{width:100%;margin:12px 0;overflow-x:hidden}
+    .ug-fig svg{width:100%;display:block;cursor:crosshair}
+    .ug-fig-cap{
+      font-family:'JetBrains Mono',monospace;font-size:10px;
+      color:var(--faint);text-align:center;margin-top:4px;
+      font-style:italic;
+    }
     </style>
 
     <!-- OVERVIEW -->
@@ -699,6 +706,69 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         \[P(\text{node at meeting } M,\; \text{rate } R) = \sum_{R'} P(\text{prior node at } R') \;\times\; P(R' \to R \mid M)\]
         <div style="font-size:11px;margin-top:6px;color:var(--faint)">Each meeting contributes at most 2 branches.</div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 600 240" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="50" y1="220" x2="550" y2="220" stroke="var(--border)" stroke-width=".5"/>
+          <text x="60" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">Start</text>
+          <text x="195" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 1 (Apr)</text>
+          <text x="330" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 2 (Jun)</text>
+          <text x="470" y="235" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">MTG 3 (Jul)</text>
+          <!-- Y-axis labels -->
+          <text x="10" y="42" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <text x="10" y="112" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <text x="10" y="182" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <!-- Edges (width proportional to probability) -->
+          <line x1="80" y1="110" x2="195" y2="57" stroke="var(--cme)" stroke-width="1.2" opacity=".5"/>
+          <line x1="80" y1="110" x2="195" y2="150" stroke="var(--cme)" stroke-width="3" opacity=".8"/>
+          <line x1="215" y1="57" x2="337" y2="37" stroke="var(--cme)" stroke-width=".8" opacity=".3"/>
+          <line x1="215" y1="57" x2="337" y2="107" stroke="var(--cme)" stroke-width="1.2" opacity=".5"/>
+          <line x1="215" y1="150" x2="337" y2="107" stroke="var(--cme)" stroke-width="2" opacity=".6"/>
+          <line x1="215" y1="150" x2="337" y2="175" stroke="var(--cme)" stroke-width="2.5" opacity=".7"/>
+          <line x1="357" y1="37" x2="480" y2="37" stroke="var(--cme)" stroke-width=".5" opacity=".2"/>
+          <line x1="357" y1="107" x2="480" y2="77" stroke="var(--cme)" stroke-width="1.5" opacity=".5"/>
+          <line x1="357" y1="107" x2="480" y2="137" stroke="var(--cme)" stroke-width="1.5" opacity=".5"/>
+          <line x1="357" y1="175" x2="480" y2="137" stroke="var(--cme)" stroke-width="1.2" opacity=".4"/>
+          <line x1="357" y1="175" x2="480" y2="195" stroke="var(--cme)" stroke-width="2" opacity=".6"/>
+          <!-- Nodes -->
+          <circle cx="60" cy="110" r="18" fill="var(--cme)" opacity=".85"/>
+          <text x="60" y="113" text-anchor="middle" font-size="9" font-weight="500" fill="white" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <circle cx="200" cy="57" r="11" fill="var(--cme)" opacity=".25"/>
+          <text x="200" y="60" text-anchor="middle" font-size="8" fill="var(--cme)" font-family="'JetBrains Mono',monospace">3.50</text>
+          <circle cx="200" cy="150" r="16" fill="var(--cme)" opacity=".75"/>
+          <text x="200" y="153" text-anchor="middle" font-size="8" font-weight="500" fill="white" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <circle cx="340" cy="37" r="8" fill="var(--cme)" opacity=".08"/>
+          <text x="340" y="40" text-anchor="middle" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50</text>
+          <circle cx="340" cy="107" r="14" fill="var(--cme)" opacity=".48"/>
+          <text x="340" y="110" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <circle cx="340" cy="175" r="15" fill="var(--cme)" opacity=".45"/>
+          <text x="340" y="178" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <circle cx="480" cy="37" r="5" fill="var(--cme)" opacity=".04"/>
+          <circle cx="480" cy="77" r="10" fill="var(--cme)" opacity=".20"/>
+          <text x="480" y="80" text-anchor="middle" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">3.25</text>
+          <circle cx="480" cy="137" r="14" fill="var(--cme)" opacity=".42"/>
+          <text x="480" y="140" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <circle cx="480" cy="195" r="12" fill="var(--cme)" opacity=".30"/>
+          <text x="480" y="198" text-anchor="middle" font-size="8" fill="white" font-family="'JetBrains Mono',monospace">2.75%</text>
+          <!-- Probability labels -->
+          <text x="140" y="74" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace">25%</text>
+          <text x="132" y="140" font-size="8" fill="var(--cme)" font-weight="500" font-family="'JetBrains Mono',monospace">75%</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="38" y="88" width="44" height="44" fill="transparent"
+            data-label="Start - Apr 2026" data-val="3.50% - 100%" data-sub="Current EFFR lower bound"/>
+          <rect class="ug-hover" x="186" y="43" width="28" height="28" fill="transparent"
+            data-label="MTG 1 - Hold" data-val="3.50% - 25%" data-sub="P(hold) at Apr meeting"/>
+          <rect class="ug-hover" x="180" y="130" width="40" height="40" fill="transparent"
+            data-label="MTG 1 - Cut" data-val="3.25% - 75%" data-sub="P(-25bp) at Apr meeting"/>
+          <rect class="ug-hover" x="323" y="20" width="34" height="34" fill="transparent"
+            data-label="MTG 2 - Hold-Hold" data-val="3.50% - 7.5%" data-sub="P(no cut through Jun)"/>
+          <rect class="ug-hover" x="323" y="89" width="34" height="36" fill="transparent"
+            data-label="MTG 2 - Mixed" data-val="3.25% - 47.5%" data-sub="One cut by Jun"/>
+          <rect class="ug-hover" x="321" y="156" width="38" height="38" fill="transparent"
+            data-label="MTG 2 - Cut-Cut" data-val="3.00% - 45%" data-sub="Two cuts by Jun"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative 3-meeting lattice. Node opacity ∝ probability. Seed values: Apr hold 25%, Jun cut 75%.</p>
       <div class="ug-head">Reading the lattice</div>
       <div class="ug-grid">
         <div class="ug-pcard"><div class="ug-ptitle">Node opacity</div><div class="ug-pdesc">More opaque = higher probability. Nodes below ~0.5% are hidden to reduce visual clutter.</div></div>
@@ -753,6 +823,73 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         \[f_t \;=\; 2\,r_{t+1} - r_t\]
         <div style="font-size:11px;margin-top:8px;color:var(--faint)">Forward trough = \(\arg\min_t\; f_t\) &nbsp;→&nbsp; quarter where the market prices peak easing intensity</div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid lines -->
+          <line x1="65" y1="20" x2="65" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="20" x2="570" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="60" x2="570" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="100" x2="570" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="140" x2="570" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis labels (3.55% top to 2.90% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.55%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.35%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.15%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">2.95%</text>
+          <!-- X-axis labels -->
+          <text x="105" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun26</text>
+          <text x="175" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep26</text>
+          <text x="245" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec26</text>
+          <text x="315" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Mar27</text>
+          <text x="385" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun27</text>
+          <text x="455" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep27</text>
+          <text x="525" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec27</text>
+          <!-- SOFR strip (green) -->
+          <polyline points="105,30 175,55 245,87 315,114 385,132 455,142 525,147" fill="none" stroke="var(--sofr)" stroke-width="2"/>
+          <circle cx="105" cy="30" r="3.5" fill="var(--sofr)"/>
+          <circle cx="175" cy="55" r="3.5" fill="var(--sofr)"/>
+          <circle cx="245" cy="87" r="3.5" fill="var(--sofr)"/>
+          <circle cx="315" cy="114" r="3.5" fill="var(--sofr)"/>
+          <circle cx="385" cy="132" r="3.5" fill="var(--sofr)"/>
+          <circle cx="455" cy="142" r="3.5" fill="var(--sofr)"/>
+          <circle cx="525" cy="147" r="3.5" fill="var(--sofr)"/>
+          <!-- ZQ quarterly avg EFFR (blue) -->
+          <polyline points="105,50 175,75 245,107 315,130 385,147 455,155 525,160" fill="none" stroke="var(--cme)" stroke-width="1.5" stroke-dasharray="5,3"/>
+          <circle cx="105" cy="50" r="3" fill="var(--cme)"/>
+          <circle cx="175" cy="75" r="3" fill="var(--cme)"/>
+          <circle cx="245" cy="107" r="3" fill="var(--cme)"/>
+          <circle cx="315" cy="130" r="3" fill="var(--cme)"/>
+          <circle cx="385" cy="147" r="3" fill="var(--cme)"/>
+          <circle cx="455" cy="155" r="3" fill="var(--cme)"/>
+          <circle cx="525" cy="160" r="3" fill="var(--cme)"/>
+          <!-- Instantaneous 3M forward (cyan) -->
+          <polyline points="105,15 175,60 245,100 315,135 385,150 455,155 525,152" fill="none" stroke="var(--poly)" stroke-width="1" opacity=".7"/>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--sofr)" stroke-width="2"/>
+          <text x="100" y="11" font-size="7" fill="var(--sofr)" font-family="'JetBrains Mono',monospace">SR3 SOFR</text>
+          <line x1="180" y1="8" x2="196" y2="8" stroke="var(--cme)" stroke-width="1.5" stroke-dasharray="4,2"/>
+          <text x="200" y="11" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">ZQ EFFR</text>
+          <line x1="270" y1="8" x2="286" y2="8" stroke="var(--poly)" stroke-width="1" opacity=".7"/>
+          <text x="290" y="11" font-size="7" fill="var(--poly)" font-family="'JetBrains Mono',monospace">3M Forward</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="70" y="20" width="70" height="165" fill="transparent"
+            data-label="Jun 2026" data-val="SR3: 3.48% - ZQ: 3.40%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="140" y="20" width="70" height="165" fill="transparent"
+            data-label="Sep 2026" data-val="SR3: 3.38% - ZQ: 3.30%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="210" y="20" width="70" height="165" fill="transparent"
+            data-label="Dec 2026" data-val="SR3: 3.25% - ZQ: 3.17%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="280" y="20" width="70" height="165" fill="transparent"
+            data-label="Mar 2027" data-val="SR3: 3.14% - ZQ: 3.06%" data-sub="Basis: +8bp"/>
+          <rect class="ug-hover" x="350" y="20" width="70" height="165" fill="transparent"
+            data-label="Jun 2027" data-val="SR3: 3.07% - ZQ: 2.99%" data-sub="Fwd trough near"/>
+          <rect class="ug-hover" x="420" y="20" width="70" height="165" fill="transparent"
+            data-label="Sep 2027" data-val="SR3: 3.03% - ZQ: 2.96%" data-sub="Basis: +7bp"/>
+          <rect class="ug-hover" x="490" y="20" width="70" height="165" fill="transparent"
+            data-label="Dec 2027" data-val="SR3: 3.01% - ZQ: 2.95%" data-sub="Terminal quarter"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative forward curve. Seed values reflect Mar 2026 market conditions. Basis = SR3 minus ZQ quarterly average.</p>
     </div>
 
     <!-- YIELD CURVE -->
@@ -775,6 +912,69 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard"><div class="ug-ptitle">H.15 live fetch</div><div class="ug-pdesc">Fetch CMT rates button retrieves current Treasury yields from the Federal Reserve H.15 release via the Anthropic API.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">Term premium</div><div class="ug-pdesc">β₀ − EFFR(start). The level factor in excess of the current policy rate — a proxy for the 10yr term premium.</div></div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 210" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="60" y1="20" x2="60" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="60" y1="185" x2="570" y2="185" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="60" y1="20" x2="570" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="60" x2="570" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="100" x2="570" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="60" y1="140" x2="570" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis (3.50% top to 4.50% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.50%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.25%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.00%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.75%</text>
+          <text x="8" y="188" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <!-- X-axis (maturity) -->
+          <text x="80" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3m</text>
+          <text x="145" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">6m</text>
+          <text x="205" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">1yr</text>
+          <text x="270" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">2yr</text>
+          <text x="345" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">5yr</text>
+          <text x="425" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">10yr</text>
+          <text x="505" y="198" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">30yr</text>
+          <!-- NS fitted curve (amber, smooth) -->
+          <path d="M90,155 C120,148 160,138 210,128 C260,115 310,95 350,78 C400,58 440,42 500,30" fill="none" stroke="var(--amber)" stroke-width="2"/>
+          <!-- CMT observation dots -->
+          <circle cx="90" cy="153" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="150" cy="143" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="210" cy="130" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="270" cy="113" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="350" cy="78" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="430" cy="48" r="4" fill="var(--text)" opacity=".8"/>
+          <circle cx="510" cy="28" r="4" fill="var(--text)" opacity=".8"/>
+          <!-- Scenario fan (faded amber lines) -->
+          <path d="M90,155 C160,145 260,122 350,85 C440,50 490,35 510,28" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".25"/>
+          <path d="M90,155 C160,148 260,128 350,100 C440,68 490,52 510,45" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".2"/>
+          <path d="M90,155 C160,150 260,135 350,112 C440,82 490,68 510,60" fill="none" stroke="var(--amber)" stroke-width=".7" opacity=".15"/>
+          <!-- RMSE badge -->
+          <rect x="480" y="165" width="70" height="16" rx="3" fill="rgba(16,185,129,.15)"/>
+          <text x="515" y="176" text-anchor="middle" font-size="8" fill="var(--sofr)" font-family="'JetBrains Mono',monospace">RMSE 4.2bp</text>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--amber)" stroke-width="2"/>
+          <text x="100" y="11" font-size="7" fill="var(--amber)" font-family="'JetBrains Mono',monospace">NS fitted</text>
+          <circle cx="175" cy="8" r="3" fill="var(--text)" opacity=".8"/>
+          <text x="182" y="11" font-size="7" fill="var(--text)" font-family="'JetBrains Mono',monospace">CMT obs</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="65" y="20" width="55" height="165" fill="transparent"
+            data-label="3-month" data-val="CMT: 3.64% - NS: 3.66%" data-sub="Residual: +2bp"/>
+          <rect class="ug-hover" x="120" y="20" width="55" height="165" fill="transparent"
+            data-label="6-month" data-val="CMT: 3.72% - NS: 3.70%" data-sub="Residual: -2bp"/>
+          <rect class="ug-hover" x="175" y="20" width="60" height="165" fill="transparent"
+            data-label="1-year" data-val="CMT: 3.80% - NS: 3.79%" data-sub="Residual: -1bp"/>
+          <rect class="ug-hover" x="235" y="20" width="70" height="165" fill="transparent"
+            data-label="2-year" data-val="CMT: 3.90% - NS: 3.88%" data-sub="Residual: -2bp"/>
+          <rect class="ug-hover" x="305" y="20" width="80" height="165" fill="transparent"
+            data-label="5-year" data-val="CMT: 4.05% - NS: 4.06%" data-sub="Residual: +1bp"/>
+          <rect class="ug-hover" x="385" y="20" width="80" height="165" fill="transparent"
+            data-label="10-year" data-val="CMT: 4.21% - NS: 4.18%" data-sub="Residual: -3bp"/>
+          <rect class="ug-hover" x="465" y="20" width="80" height="165" fill="transparent"
+            data-label="30-year" data-val="CMT: 4.42% - NS: 4.41%" data-sub="Residual: -1bp"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative NS fit. RMSE 4.2bp. Scenario fan shows cumulative curve response at each FOMC meeting. Seed values: Mar 2026.</p>
     </div>
 
     <!-- TAYLOR RULE -->
@@ -799,6 +999,80 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard"><div class="ug-ptitle">Clarida-Gali-Gertler</div><div class="ug-pdesc">Inertial rule with ρ=0.85 smoothing. Matches the empirical persistence observed in FOMC behavior.</div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--taylor)"><div class="ug-ptitle" style="color:var(--taylor)">Judd-Rudebusch ECM ★</div><div class="ug-pdesc">Dynamic partial adjustment. JR signal feeds the Riding Calculator's filter cascade and the Dashboard regime summary.</div></div>
       </div>
+      <div class="ug-fig">
+        <svg viewBox="0 0 620 220" xmlns="http://www.w3.org/2000/svg">
+          <!-- Grid -->
+          <line x1="65" y1="20" x2="65" y2="195" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="195" x2="600" y2="195" stroke="var(--border)" stroke-width=".5"/>
+          <line x1="65" y1="20" x2="600" y2="20" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="60" x2="600" y2="60" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="100" x2="600" y2="100" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <line x1="65" y1="140" x2="600" y2="140" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3"/>
+          <!-- Y-axis (4.00% top to 3.00% bottom) -->
+          <text x="8" y="24" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">4.00%</text>
+          <text x="8" y="64" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.75%</text>
+          <text x="8" y="104" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.50%</text>
+          <text x="8" y="144" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.25%</text>
+          <text x="8" y="188" font-size="8" fill="var(--faint)" font-family="'JetBrains Mono',monospace">3.00%</text>
+          <!-- X-axis (meetings) -->
+          <text x="104" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Apr</text>
+          <text x="172" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jun</text>
+          <text x="240" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jul</text>
+          <text x="308" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Sep</text>
+          <text x="376" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Oct</text>
+          <text x="444" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Dec</text>
+          <text x="512" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Jan</text>
+          <text x="573" y="210" font-size="7" fill="var(--faint)" font-family="'JetBrains Mono',monospace" text-anchor="middle">Mar</text>
+          <!-- Gap shading between lines -->
+          <path d="M104,50 L172,42 240,35 308,28 376,23 444,20 512,17 573,15 573,125 512,108 444,92 376,80 308,70 240,60 172,50 104,100 Z" fill="var(--taylor)" opacity=".06"/>
+          <!-- JR ECM prescribed path (taylor rose) -->
+          <polyline points="104,50 172,42 240,35 308,28 376,23 444,20 512,17 573,15" fill="none" stroke="var(--taylor)" stroke-width="2.5"/>
+          <circle cx="104" cy="50" r="3.5" fill="var(--taylor)"/>
+          <circle cx="172" cy="42" r="3.5" fill="var(--taylor)"/>
+          <circle cx="240" cy="35" r="3.5" fill="var(--taylor)"/>
+          <circle cx="308" cy="28" r="3.5" fill="var(--taylor)"/>
+          <circle cx="376" cy="23" r="3.5" fill="var(--taylor)"/>
+          <circle cx="444" cy="20" r="3.5" fill="var(--taylor)"/>
+          <circle cx="512" cy="17" r="3.5" fill="var(--taylor)"/>
+          <circle cx="573" cy="15" r="3.5" fill="var(--taylor)"/>
+          <!-- CME market-implied path (blue) -->
+          <polyline points="104,100 172,110 240,120 308,130 376,138 444,148 512,155 573,162" fill="none" stroke="var(--cme)" stroke-width="2"/>
+          <circle cx="104" cy="100" r="3" fill="var(--cme)"/>
+          <circle cx="172" cy="110" r="3" fill="var(--cme)"/>
+          <circle cx="240" cy="120" r="3" fill="var(--cme)"/>
+          <circle cx="308" cy="130" r="3" fill="var(--cme)"/>
+          <circle cx="376" cy="138" r="3" fill="var(--cme)"/>
+          <circle cx="444" cy="148" r="3" fill="var(--cme)"/>
+          <circle cx="512" cy="155" r="3" fill="var(--cme)"/>
+          <circle cx="573" cy="162" r="3" fill="var(--cme)"/>
+          <!-- Gap annotation -->
+          <line x1="573" y1="15" x2="573" y2="162" stroke="var(--taylor)" stroke-width=".8" stroke-dasharray="3,2" opacity=".5"/>
+          <text x="585" y="90" font-size="7" fill="var(--taylor)" font-family="'JetBrains Mono',monospace" opacity=".7">+90bp</text>
+          <!-- Legend -->
+          <line x1="80" y1="8" x2="96" y2="8" stroke="var(--taylor)" stroke-width="2.5"/>
+          <text x="100" y="11" font-size="7" fill="var(--taylor)" font-family="'JetBrains Mono',monospace">JR ECM</text>
+          <line x1="165" y1="8" x2="181" y2="8" stroke="var(--cme)" stroke-width="2"/>
+          <text x="185" y="11" font-size="7" fill="var(--cme)" font-family="'JetBrains Mono',monospace">CME implied</text>
+          <!-- Hover targets -->
+          <rect class="ug-hover" x="70" y="20" width="68" height="165" fill="transparent"
+            data-label="Apr 2026" data-val="JR ECM: 3.75% - CME: 3.50%" data-sub="Taylor-CME gap: +25bp"/>
+          <rect class="ug-hover" x="138" y="20" width="68" height="165" fill="transparent"
+            data-label="Jun 2026" data-val="JR ECM: 3.79% - CME: 3.42%" data-sub="Taylor-CME gap: +37bp"/>
+          <rect class="ug-hover" x="206" y="20" width="68" height="165" fill="transparent"
+            data-label="Jul 2026" data-val="JR ECM: 3.83% - CME: 3.35%" data-sub="Taylor-CME gap: +48bp"/>
+          <rect class="ug-hover" x="274" y="20" width="68" height="165" fill="transparent"
+            data-label="Sep 2026" data-val="JR ECM: 3.87% - CME: 3.25%" data-sub="Taylor-CME gap: +62bp"/>
+          <rect class="ug-hover" x="342" y="20" width="68" height="165" fill="transparent"
+            data-label="Oct 2026" data-val="JR ECM: 3.90% - CME: 3.18%" data-sub="Taylor-CME gap: +72bp"/>
+          <rect class="ug-hover" x="410" y="20" width="68" height="165" fill="transparent"
+            data-label="Dec 2026" data-val="JR ECM: 3.92% - CME: 3.12%" data-sub="Taylor-CME gap: +80bp"/>
+          <rect class="ug-hover" x="478" y="20" width="68" height="165" fill="transparent"
+            data-label="Jan 2027" data-val="JR ECM: 3.94% - CME: 3.08%" data-sub="Taylor-CME gap: +86bp"/>
+          <rect class="ug-hover" x="546" y="20" width="54" height="165" fill="transparent"
+            data-label="Mar 2027" data-val="JR ECM: 3.95% - CME: 3.05%" data-sub="Taylor-CME gap: +90bp"/>
+        </svg>
+      </div>
+      <p class="ug-fig-cap">Illustrative prescribed vs market paths. JR ECM ★ is the designated signal source. Gap = prescriptive minus market-implied rate.</p>
     </div>
 
     <!-- RIDING -->
@@ -964,6 +1238,83 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <li>Inside claude.ai the key is injected automatically — leave the field blank</li>
       </ol>
     </div>
+
+  <script>
+  (function(){
+    var tip = {el:null, label:null, val:null, sub:null};
+
+    function initTooltips(){
+      document.querySelectorAll('.ug-hover').forEach(function(rect){
+        rect.addEventListener('mouseenter', function(e){
+          var svg = this.closest('svg');
+          var g = svg.querySelector('.ug-tip-g');
+          if(!g){
+            g = document.createElementNS('http://www.w3.org/2000/svg','g');
+            g.classList.add('ug-tip-g');
+            g.style.pointerEvents='none';
+            var bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+            bg.setAttribute('rx','4');bg.setAttribute('fill','var(--surface2)');
+            bg.setAttribute('stroke','var(--border)');bg.setAttribute('stroke-width','1');
+            bg.classList.add('ug-tip-bg');
+            var tl = document.createElementNS('http://www.w3.org/2000/svg','text');
+            tl.setAttribute('font-size','8');tl.setAttribute('fill','var(--faint)');
+            tl.setAttribute('font-family',"'JetBrains Mono',monospace");
+            tl.classList.add('ug-tip-label');
+            var tv = document.createElementNS('http://www.w3.org/2000/svg','text');
+            tv.setAttribute('font-size','11');tv.setAttribute('font-weight','500');
+            tv.setAttribute('fill','var(--text)');
+            tv.setAttribute('font-family',"'JetBrains Mono',monospace");
+            tv.classList.add('ug-tip-val');
+            var ts = document.createElementNS('http://www.w3.org/2000/svg','text');
+            ts.setAttribute('font-size','8');ts.setAttribute('fill','var(--muted)');
+            ts.setAttribute('font-family',"'JetBrains Mono',monospace");
+            ts.classList.add('ug-tip-sub');
+            g.appendChild(bg);g.appendChild(tl);g.appendChild(tv);g.appendChild(ts);
+            svg.appendChild(g);
+          }
+          var vb = svg.viewBox.baseVal;
+          var bb = svg.getBoundingClientRect();
+          var mx = (e.clientX - bb.left) / bb.width * vb.width;
+          var my = (e.clientY - bb.top) / bb.height * vb.height;
+          var label = this.dataset.label||'';
+          var val = this.dataset.val||'';
+          var sub = this.dataset.sub||'';
+          var tl2 = g.querySelector('.ug-tip-label');
+          var tv2 = g.querySelector('.ug-tip-val');
+          var ts2 = g.querySelector('.ug-tip-sub');
+          var bg2 = g.querySelector('.ug-tip-bg');
+          tl2.textContent = label; tv2.textContent = val; ts2.textContent = sub;
+          var w = Math.max(label.length, val.length, sub.length) * 6.5 + 16;
+          var h = 50;
+          var tx = mx + 8; var ty = my - 60;
+          if(tx + w > vb.width - 10) tx = mx - w - 8;
+          if(ty < 5) ty = my + 10;
+          bg2.setAttribute('x',tx);bg2.setAttribute('y',ty);
+          bg2.setAttribute('width',w);bg2.setAttribute('height',h);
+          tl2.setAttribute('x',tx+8);tl2.setAttribute('y',ty+14);
+          tv2.setAttribute('x',tx+8);tv2.setAttribute('y',ty+30);
+          ts2.setAttribute('x',tx+8);ts2.setAttribute('y',ty+44);
+          g.style.visibility='visible';
+        });
+        rect.addEventListener('mouseleave',function(){
+          var g = this.closest('svg').querySelector('.ug-tip-g');
+          if(g) g.style.visibility='hidden';
+        });
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', function(){
+      initTooltips();
+      var origUgShow = window.ugShow;
+      if(origUgShow){
+        window.ugShow = function(id, btn){
+          origUgShow(id, btn);
+          setTimeout(initTooltips, 50);
+        };
+      }
+    });
+  })();
+  </script>
 
   </div><!-- end How it works section -->
 

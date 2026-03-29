@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Visualization Standards (Session INDEX-L)
+- Session INDEX-L: shared SVG tooltip infrastructure (JS handler,
+  CSS classes, .ug-hover rect pattern, edge-clamping); all 4 existing
+  figures converted to full-width .ug-fig class (max-width removed);
+  viewBoxes widened; hover targets added (probability tree 6 nodes,
+  SOFR strip 7 quarters, yield curve 7 maturities, Taylor Rule 8 meetings);
+  figure captions added to all 4 figures
+
 ### Changed — Landing Page Footer & Favicon (Session INDEX-K)
 - Session INDEX-K: Font Awesome 6.5.1 added; SVG favicon (M letterform,
   JetBrains Mono, CME blue); static footer removed; consolidated sticky
