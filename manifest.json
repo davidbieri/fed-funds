@@ -1,0 +1,16 @@
+{
+  "name": "MSE — Federal Reserve Policy Analytics",
+  "short_name": "MSE",
+  "description": "CME FedWatch methodology, prediction markets, SOFR strip, Taylor Rule, yield curve, and riding calculator.",
+  "start_url": "/fed-funds/fed_funds_v3.html",
+  "scope": "/fed-funds/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#f8f7f4",
+  "theme_color": "#f8f7f4",
+  "icons": [
+    {"src": "icon-180.png", "sizes": "180x180", "type": "image/png", "purpose": "apple touch icon"},
+    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
