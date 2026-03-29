@@ -201,7 +201,7 @@ body{padding-bottom:72px}
   <span class="nav-tool">MSE</span>
   <div class="nav-links">
     <button class="nav-theme" id="theme-toggle" onclick="mseToggleTheme()" title="Toggle theme">◐</button>
-    <span class="nav-badge">v3.0 · Mar 2026</span>
+    <span class="nav-badge">v4.3 · Mar 2026</span>
   </div>
 </nav>
 <div id="root"></div>
@@ -4280,6 +4280,12 @@ if(_navEl){
   new IntersectionObserver(([e])=>_navEl.classList.toggle('scrolled',!e.isIntersecting))
     .observe(_sentinel);
 }
+if(window.self !== window.top){
+  const _nav = document.getElementById('mse-nav');
+  if(_nav) _nav.style.display = 'none';
+  const _footer = document.querySelector('.mse-footer');
+  if(_footer) _footer.style.display = 'none';
+}
 </script>
 <footer class="mse-footer">
   <div class="sf-main">
@@ -4288,7 +4294,7 @@ if(_navEl){
       <span class="sf-sep">·</span>
       <span>SPIA · Virginia Tech</span>
       <span class="sf-sep">·</span>
-      <span>MSE v3.0 · MIT License</span>
+      <span>MSE v4.3 · MIT License</span>
     </div>
     <div class="sf-right">
       <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
