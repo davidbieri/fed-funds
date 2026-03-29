@@ -6,30 +6,18 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
-### Added — Session TOOL-C: probability tree dynamic hover rects
-- Probability tree: .mse-hover rect generated for every node (p >= 0.005) in the states.forEach loop; rect size hr=NR+4=22 units centered on node; tooltip shows rate level, probability percentage, confidence label (Dominant path/Likely/Possible/Tail), move description (cuts/hikes/Hold from start)
-
-### Added — Session TOOL-B: tooltip infrastructure + scatter/clock hover targets
-- Tooltip infrastructure (Option C): initTooltips() vanilla JS function with .mse-hover class, useEffect re-runs after every render (50ms debounce), tooltip g element uses var(--color-background-secondary) background
-- Policy space scatter: hover rects on all 9 historical episode dots + "Now" dot (live curX/curY/combinedStance values)
-- Phase clock: hover rects on all 6 vertex dots (axis name, raw value, percentile, stress level)
-
-### Changed — Session TOOL-A: SVG design consistency
-- basisBarsSvg redesigned: taller bars H=100, wider bW=44, bp labels (font-size 9), SOFR-EFFR basis sub-panel header, opacity gradient (near-term darker), W=680 full width, clean positive-axis baseline
-- Phase clock SVG: removed max-width:420px constraint (now full column width)
-- All SVG opening tags normalized to include overflow:visible (9 occurrences in BalanceSheetTab/FinancialStabilityTab)
-
-### Fixed — CR-21 visualization standards (direct fix)
-- Taylor Rule variant cards: add border-left to Balanced/Yellen (45% opacity), Yellen Alt1 (35%), Clarida-Gali-Gertler (25%) — opacity gradient communicates variant hierarchy while preserving identity color; Taylor Rule SVG background rect removed (transparent, strong-contrast lines only)
-- CR-21 tooltip completion: added ug-hover rects to SOFR strip (7 quarterly columns), yield curve (7 CMT maturities with residual + scenario shock data), Taylor Rule (8 meeting columns with JR ECM/CME/gap data); total hover targets now 71 across all figures
-- Removed `max-width:560px` from SOFR strip, yield curve, and Taylor Rule SVGs (all figures now full column width)
-- Added `font-family:'JetBrains Mono',monospace` to 4 SVG root elements that were missing it (falling back to system font)
-- Standardized Y-axis left margin: 560-wide figures → x=55; 620-wide figures → x=65 (SOFR tab figure corrected from x=60)
-- All 7 figures now fully compliant with CR-21 standards (full width, consistent font, consistent axis margins, tooltips, captions)
-
 ---
 
 ## [4.2] — March 2026
+
+### Added — Tool design consistency + tooltips (Sessions TOOL-A/B/C)
+- SOFR basis bars redesigned: full width, taller, labeled, opacity gradient
+- Phase clock: max-width removed, vertex dots enlarged
+- SVG panels: overflow:visible normalized
+- Tooltip infrastructure (Option C): initTooltips() + useEffect re-runner
+- Balance sheet scatter: hover rects on 9 episodes + live Now dot
+- Phase clock: hover rects on all 6 axis dots
+- Probability tree: dynamic hover rects on all nodes (rate/probability/move)
 
 ### Changed — Landing Page Design Refresh (Sessions INDEX-A through INDEX-N)
 
