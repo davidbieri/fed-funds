@@ -8,6 +8,8 @@
 <link rel="canonical" href="https://davidbieri.github.io/fed-funds/">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 
@@ -277,20 +279,52 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .cite-content{display:none}
 .cite-content.act{display:block}
 
-/* FOOTER */
-footer{
-  padding:32px 0;
-  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;
+/* STICKY FOOTER */
+.sf{
+  position:fixed;bottom:0;left:0;right:0;z-index:40;
+  background:var(--nav-blur);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border-top:1px solid var(--border);
+  font-family:'JetBrains Mono',monospace;
 }
-.footer-left{
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);line-height:1.8;
+.sf-main{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 32px;flex-wrap:wrap;gap:8px;
 }
-.footer-right{display:flex;gap:16px}
-.foot-link{
-  font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--faint);
-  text-decoration:none;transition:color .15s;
+.sf-disclaimer{
+  font-size:9px;color:var(--faint);text-align:center;
+  padding:0 32px 6px;
+  border-top:1px solid var(--border);opacity:.7;
 }
-.foot-link:hover{color:var(--cme)}
+.sf-left{
+  display:flex;align-items:center;gap:8px;
+  font-size:10px;color:var(--faint);
+}
+.sf-brand{
+  font-family:'Spectral',serif;font-style:italic;
+  color:var(--text);font-size:11px;
+}
+.sf-sep{color:var(--border);font-size:10px}
+.sf-right{display:flex;align-items:center;gap:12px}
+.sf-link{
+  font-size:10px;color:var(--faint);text-decoration:none;
+  transition:color .15s;
+}
+.sf-link:hover{color:var(--cme-text)}
+.sf-icon{
+  font-size:14px;color:var(--faint);text-decoration:none;
+  transition:color .2s;line-height:1;
+}
+.sf-icon:hover{color:var(--text)}
+.sf-icon.sf-yt:hover{color:#ff0000}
+.sf-icon.sf-li:hover{color:#0077b5}
+.sf-icon.sf-x:hover{color:var(--text)}
+.sf-divider{
+  width:1px;height:14px;background:var(--border);
+  display:inline-block;
+}
+/* padding so sticky footer doesn't overlap content */
+.wrap{padding-bottom:56px}
 
 /* MODAL */
 .modal-backdrop{
@@ -993,20 +1027,36 @@ footer{
     </div>
   </div>
 
-  <footer>
-    <div class="footer-left">
-      David Bieri · SPIA · Virginia Tech<br>
-      MSE: A Multi-Market Framework for Federal Reserve Policy Analytics<br>
-      v4.1 · MIT License<br>
+  <div class="sf" id="sticky-footer">
+    <div class="sf-main">
+      <div class="sf-left">
+        <span class="sf-brand">david bieri</span>
+        <span class="sf-sep">·</span>
+        <span>SPIA · Virginia Tech</span>
+        <span class="sf-sep">·</span>
+        <span>MSE v4.1</span>
+        <span class="sf-sep">·</span>
+        <span>MIT License</span>
+      </div>
+      <div class="sf-right">
+        <a class="sf-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+        <a class="sf-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
+        <a class="sf-link" href="https://www.august-loesch.org" target="_blank">august-loesch.org</a>
+        <span class="sf-divider"></span>
+        <a class="sf-icon" href="https://github.com/davidbieri" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+        <a class="sf-icon sf-yt" href="https://www.youtube.com/c/DavidBieri" target="_blank" title="YouTube"><i class="fa-brands fa-youtube"></i></a>
+        <a class="sf-icon sf-li" href="https://www.linkedin.com/in/david-bieri-a586262" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+        <a class="sf-icon sf-x" href="https://x.com/space_economy" target="_blank" title="X / Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+        <span class="sf-divider"></span>
+        <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
+        <a class="sf-link" href="fed_funds_v3.html">Tool</a>
+        <a class="sf-link" href="#cite">Cite</a>
+      </div>
+    </div>
+    <div class="sf-disclaimer">
       For educational and research purposes only. Not financial advice.
     </div>
-    <div class="footer-right">
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
-      <a class="foot-link" href="fed_funds_v3.html">Tool</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/README.md" target="_blank">Docs</a>
-      <a class="foot-link" href="https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md" target="_blank">Changelog</a>
-    </div>
-  </footer>
+  </div>
 
 </div>
 

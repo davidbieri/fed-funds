@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Landing Page Footer & Favicon (Session INDEX-K)
+- Session INDEX-K: Font Awesome 6.5.1 added; SVG favicon (M letterform,
+  JetBrains Mono, CME blue); static footer removed; consolidated sticky
+  footer (full viewport width, two-row: main bar + disclaimer);
+  left zone: david bieri brand + institution + version;
+  right zone: 3 ecosystem links + 4 social icons (GitHub/YouTube/
+  LinkedIn/X with platform hover colors) + 3 nav links;
+  august-loesch.org added to ecosystem links
+
 ### Changed — Landing Page Fixes (Session INDEX-J)
 - Session INDEX-J: hero title em light-mode contrast fix (dark opacity token);
   all 11 overview mini-cards now have identity-colored left borders + --*-text
