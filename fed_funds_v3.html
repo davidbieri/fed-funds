@@ -2366,10 +2366,10 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   // Panel 1
   const comps=getMeetingComps(meetings,kD,pD);
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
-  html+='<div class="k-hdr"><span class="k-title">\u2460 Meeting-by-meeting divergence: P(cut) \u2014 CME vs Kalshi vs Polymarket</span>';
+  html+='<div class="k-hdr"><span class="k-title">① Meeting-by-meeting divergence: P(cut) — CME vs Kalshi vs Polymarket</span>';
   html+='<span style="display:flex;gap:4px;flex-wrap:wrap"><span class="k-contract">kxfeddecision-26xxx</span><span class="k-contract">polymarket fed-decision</span></span></div>';
   html+=panel1Svg(comps,lb);
-  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal\u2212CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly\u2212Kal</b> basis reveals the information spread between the two platforms.</div>';
+  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal−CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly−Kal</b> basis reveals the information spread between the two platforms.</div>';
   html+='</div></div>';
 
   // Panel 2 + 3
@@ -2382,14 +2382,14 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
   const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
   const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
-  html+='<div class="k-note">Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
-  html+='Kal\u2212CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
-  html+='Poly\u2212CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
-  html+='Poly\u2212Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
+  html+='<div class="k-note">Expected 2026 cuts — CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='Kal−CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
+  html+='Poly−CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
+  html+='Poly−Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
 
   // Panel 3: Combo paths
   const paths=enumeratePaths(meetings,3);
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2462 Combo path decomposer \u2014 top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">③ Combo path decomposer — top paths (first 3 meetings)</span><span class="k-contract">kxfedcombo-26xxx</span></div>';
   html+='<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Path</th><th>CME prob</th><th>Kalshi</th><th>Basis</th></tr></thead><tbody>';
   paths.forEach(p=>{
     const kp=kD.comboPrices[p.key]||'\u2014';
@@ -2397,7 +2397,7 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
     const bClass=kp!=='\u2014'?(kp>p.prob+0.02?'k-up':kp<p.prob-0.02?'k-dn':'k-neu'):'k-neu';
     html+='<tr><td style="font-family:var(--font-mono);font-size:11px">'+p.key+'</td>';
     html+='<td style="font-family:var(--font-mono)">'+(p.prob*100).toFixed(1)+'%</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">'+(kp==='\u2014'?kp:Math.round(kp*100)+'%')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--color-text-tertiary)">'+(kp==='—'?kp:Math.round(kp*100)+'%')+'</td>';
     html+='<td><span class="k-pill '+bClass+'">'+basis+'</span></td></tr>';
   });
   html+='</tbody></table></div>';
@@ -2405,7 +2405,7 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
 
   // Panel 4: Dot plot
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
-  html+='<div class="k-hdr"><span class="k-title">\u2463 Market-implied dot plot \u2014 CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx · Dec 2025 SEP</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">④ Market-implied dot plot — CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx · Dec 2025 SEP</span></div>';
   html+=panel4Svg(meetings,states,lb,fwD,kD,compareSeries);
   html+='<div class="k-note">Three implied rate paths. CME (blue): expected EFFR from ZQ chain. Kalshi (orange): implied rate from decision markets. Fed dots (purple): Dec 2025 SEP medians.</div>';
   html+='</div></div>';
@@ -2413,34 +2413,34 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   // Panels 5 + 6
   html+='<div class="k-grid">';
   const cmeHike=getCmeHikeProb(meetings);
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2464 Hike risk monitor</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">⑤ Hike risk monitor</span>';
   html+='<span style="display:flex;gap:4px"><span class="k-contract">kxfedhike</span><span class="k-contract">polymarket fed-rate-hike-in-2026</span></span></div>';
   html+=panel5Svg(cmeHike,kD.hikeAny,kD.largeCutAny,pD.hikeAny);
   html+='<div class="k-note">Semicircular gauge: CME max single-meeting hike probability (blue), Kalshi "any hike" (orange), Polymarket "hike in 2026" (cyan). Also shown: Kalshi jumbo-cut probability.</div></div>';
 
   // Panel 6
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2465 First cut timing \u2014 cumulative P(cut has happened)</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">⑥ First cut timing — cumulative P(cut has happened)</span>';
   html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecut-26dec31</span><span class="k-contract">polymarket fed-rate-cut-by</span></span></div>';
   html+=panel6Svg(meetings,states,lb,kD,pD);
-  html+='<div class="k-note">CME step curve (blue): cumulative P(\u22651 cut) by meeting. Kalshi binary markers (orange \u25cf): cut-by-end-2026 = <b>'+(kD.cutBinary['end-2026']*100).toFixed(0)+'%</b>, cut-by-end-2027 = <b>'+(kD.cutBinary['end-2027']*100).toFixed(0)+'%</b>. Polymarket per-meeting markers (cyan \u25c6).</div></div></div>';
+  html+='<div class="k-note">CME step curve (blue): cumulative P(≥1 cut) by meeting. Kalshi binary markers (orange ●): cut-by-end-2026 = <b>'+(kD.cutBinary['end-2026']*100).toFixed(0)+'%</b>, cut-by-end-2027 = <b>'+(kD.cutBinary['end-2027']*100).toFixed(0)+'%</b>. Polymarket per-meeting markers (cyan ◆).</div></div></div>';
 
   // Panel 7
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
-  html+='<div class="k-hdr"><span class="k-title">\u2466 Terminal rate distribution end-2026 \u2014 CME tree vs Polymarket</span>';
+  html+='<div class="k-hdr"><span class="k-title">⑦ Terminal rate distribution end-2026 — CME tree vs Polymarket</span>';
   html+='<span class="k-contract">polymarket what-will-the-fed-rate-be-at-the-end-of-2026</span></div>';
   html+=panel7Svg(final,lb,pD);
   const cmeTerm=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
   const polyTermExp=Object.entries(pD.terminalRate).reduce((s,[r,p])=>s+parseFloat(r)*p,0);
-  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> · Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound \u2014 subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
+  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> · Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound — subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
 
   // Panels 8a + 8b
   html+='<div class="k-grid">';
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2467 Fed Chair nomination \u2014 regime risk</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">⑧ Fed Chair nomination — regime risk</span>';
   html+='<span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair · $230M vol</span></div>';
   html+=panel8aHtml(pD);
   html+='<div class="k-note">Polymarket\'s most liquid Fed markets ($230M volume). The nominee probabilities are a proxy for <i>policy regime risk</i>.</div></div>';
 
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2468 Emergency cut gauge \u2014 unscheduled FOMC action</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">⑨ Emergency cut gauge — unscheduled FOMC action</span>';
   html+='<span class="k-contract">polymarket fed-emergency-rate-cut-before-2027</span></div>';
   html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
   html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
@@ -2473,7 +2473,7 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   // -- Fetch bar --
   let html='<div class="k-fetch-bar">';
   html+='<button class="refresh-btn" id="sofr-btn"'+(fetching.sofr?' disabled':'')+' onclick="window.__sofrFetch()"><span'+(fetching.sofr?' class="spin"':'')+'>&#x27f3;</span> Fetch SR3 data</button>';
-  html+='<span class="k-seed-note">'+(refreshStatus.sofr||'Seed data \u2014 click to fetch live SR3 prices')+'</span>';
+  html+='<span class="k-seed-note">'+(refreshStatus.sofr||'Seed data — click to fetch live SR3 prices')+'</span>';
   html+='<span style="margin-left:auto;font-size:10px;color:var(--color-text-tertiary)">';
   html+='<span class="k-dot" style="background:var(--c-sofr)"></span> SR3 implied SOFR &nbsp;';
   html+='<span class="k-dot" style="background:var(--c-cme)"></span> ZQ quarterly avg EFFR &nbsp;';
@@ -2483,7 +2483,7 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
 
   // -- Panel A: contract table --
   html+='<div class="k-panel" style="margin-bottom:12px">';
-  html+='<div class="k-hdr"><span class="k-title">SR3 contract strip \u2014 3-month SOFR futures (CME)</span><span class="k-contract">SR3M6 \u2192 SR3Z7</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">SR3 contract strip — 3-month SOFR futures (CME)</span><span class="k-contract">SR3M6 → SR3Z7</span></div>';
   html+='<div style="overflow-x:auto"><table class="fwt">';
   html+='<thead><tr><th>Contract</th><th>Quarter</th><th>SR3 price</th>';
   html+='<th>Impl. SOFR</th><th>ZQ avg EFFR</th><th>Basis (bp)</th><th>3M inst. fwd</th>';
@@ -2499,21 +2499,21 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
     html+='<td style="white-space:nowrap">'+s.qLabel+'</td>';
     html+='<td><input class="fw-in" type="number" step="0.005" min="90" max="100" value="'+s.price+'" style="width:72px" onchange="window.__srDispatch('+i+',this.value)"></td>';
     html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrRate+'%</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+(zqAvg!==null?zqAvg.toFixed(4)+'%':'\u2014')+'</td>';
-    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+bCol+'">'+(basis!=='\u2014'?(parseFloat(basis)>0?'+':'')+basis:basis)+'</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr-fwd)">'+(fwdVal!=='\u2014'?fwdVal+'%':fwdVal)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+(zqAvg!==null?zqAvg.toFixed(4)+'%':'—')+'</td>';
+    html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+bCol+'">'+(basis!=='—'?(parseFloat(basis)>0?'+':'')+basis:basis)+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-sofr-fwd)">'+(fwdVal!=='—'?fwdVal+'%':fwdVal)+'</td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
-  html+='<div class="k-note">Basis = (SR3 implied SOFR \u2212 ZQ quarterly avg EFFR) \u00d7 100, in basis points. Historically 5\u201315bp reflecting the repo/deposit spread between SOFR and EFFR. Instantaneous forward = 2\u00d7r<sub>t+1</sub> \u2212 r<sub>t</sub> \u2014 the marginal rate the market prices for each successive quarter, stripping out the averaging effect of the futures contract.</div>';
+  html+='<div class="k-note">Basis = (SR3 implied SOFR − ZQ quarterly avg EFFR) × 100, in basis points. Historically 5–15bp reflecting the repo/deposit spread between SOFR and EFFR. Instantaneous forward = 2×r<sub>t+1</sub> − r<sub>t</sub> — the marginal rate the market prices for each successive quarter, stripping out the averaging effect of the futures contract.</div>';
   html+='</div>';
 
   // -- Panel B: main chart --
   html+='<div class="k-panel k-full" style="margin-bottom:12px">';
-  html+='<div class="k-hdr"><span class="k-title">Forward rate curves \u2014 SR3 SOFR strip vs ZQ EFFR chain vs Fed SEP</span>';
+  html+='<div class="k-hdr"><span class="k-title">Forward rate curves — SR3 SOFR strip vs ZQ EFFR chain vs Fed SEP</span>';
   html+='<span class="k-contract">SR3 vs ZQ vs Dec 2025 SEP</span></div>';
   html+=sofrMainChart(zqAvgs,instFwd,lb,srd,state.kalshiD);
-  html+='<div class="k-note">Three forward rate curves on a common axis. The SR3 strip (green) typically trades a few basis points above the ZQ-derived EFFR path (blue) \u2014 this persistent basis reflects the credit/liquidity premium embedded in SOFR. The instantaneous forward curve (dashed green) extracts the marginal rate implied by each successive quarterly contract, removing the averaging effect; it will lead the SR3 rate lower at inflection points in the easing cycle. Purple circles: Fed December 2025 SEP median projections at year-end 2026 and 2027 horizons.</div>';
+  html+='<div class="k-note">Three forward rate curves on a common axis. The SR3 strip (green) typically trades a few basis points above the ZQ-derived EFFR path (blue) — this persistent basis reflects the credit/liquidity premium embedded in SOFR. The instantaneous forward curve (dashed green) extracts the marginal rate implied by each successive quarterly contract, removing the averaging effect; it will lead the SR3 rate lower at inflection points in the easing cycle. Purple circles: Fed December 2025 SEP median projections at year-end 2026 and 2027 horizons.</div>';
   html+='</div>';
 
   // -- Panels C1 + C2 --
@@ -2521,7 +2521,7 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
 
   // Basis bars
   html+='<div class="k-panel">';
-  html+='<div class="k-hdr"><span class="k-title">SOFR\u2013EFFR basis by quarter (bp)</span><span class="k-contract">SR3 \u2212 ZQ avg</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">SOFR–EFFR basis by quarter (bp)</span><span class="k-contract">SR3 − ZQ avg</span></div>';
   html+=basisBarsSvg(zqAvgs,srd);
   html+='<div class="k-note">Positive basis = SOFR trades above EFFR, as expected. A widening basis signals stress in overnight repo markets or increased demand for SOFR-linked instruments. A compression toward zero would suggest convergence of money market conditions.</div>';
   html+='</div>';
@@ -2538,13 +2538,13 @@ function SofrTab({state, dispatch, finance, fetching, setFetching, refreshStatus
   html+='<div class="k-panel">';
   html+='<div class="k-hdr"><span class="k-title">Strip summary statistics</span></div>';
   html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
-  html+='<div class="fw-stat"><div class="fw-stat-l">Near-term basis</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+(currentBasis!=='\u2014'?'+':'')+currentBasis+' bp</div><div class="fw-stat-s">SR3M6 \u2212 ZQ Q2 avg</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">Near-term basis</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+(currentBasis!=='—'?'+':'')+currentBasis+' bp</div><div class="fw-stat-s">SR3M6 − ZQ Q2 avg</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal (Dec 27)</div><div class="fw-stat-v" style="color:var(--c-sofr);font-size:16px">'+sofrTerminal+'%</div><div class="fw-stat-s">SR3Z7 implied</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">EFFR terminal (Mar 27)</div><div class="fw-stat-v" style="color:var(--c-cme);font-size:16px">'+effrTerminal+'%</div><div class="fw-stat-s">ZQ Mar 2027 implied</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Strip slope</div><div class="fw-stat-v" style="color:'+(parseFloat(stripSlope)<0?'var(--color-text-info)':'var(--color-text-danger)')+';font-size:16px">'+stripSlope+'%</div><div class="fw-stat-s">Dec 27 minus Jun 26</div></div>';
-  html+='<div class="fw-stat" style="grid-column:1/-1"><div class="fw-stat-l">Forward trough</div><div class="fw-stat-v" style="color:var(--c-sofr-fwd);font-size:16px">'+troughFwd+'%</div><div class="fw-stat-s">Inst. fwd minimum \u2014 '+troughQtr+'</div></div>';
+  html+='<div class="fw-stat" style="grid-column:1/-1"><div class="fw-stat-l">Forward trough</div><div class="fw-stat-v" style="color:var(--c-sofr-fwd);font-size:16px">'+troughFwd+'%</div><div class="fw-stat-s">Inst. fwd minimum — '+troughQtr+'</div></div>';
   html+='</div>';
-  html+='<div class="k-note">The instantaneous forward trough marks the quarter where the SR3 strip prices the most aggressive easing \u2014 where the marginal rate bottoms before potentially rising toward neutral. This is distinct from the terminal rate level implied by the strip\'s endpoint.</div>';
+  html+='<div class="k-note">The instantaneous forward trough marks the quarter where the SR3 strip prices the most aggressive easing — where the marginal rate bottoms before potentially rising toward neutral. This is distinct from the terminal rate level implied by the strip\'s endpoint.</div>';
   html+='</div>';
   html+='</div>';
 
@@ -2584,7 +2584,7 @@ function DashboardTab({state, finance}) {
 
   let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">';
   html+='<div class="fw-stat"><div class="fw-stat-l">EFFR start</div><div class="fw-stat-v">'+se+'%</div><div class="fw-stat-s">Current effective</div></div>';
-  html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div><div class="fw-stat-s">CME 12-month</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">P(≥1 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div><div class="fw-stat-s">CME 12-month</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Exp. terminal</div><div class="fw-stat-v">'+expR+'%</div><div class="fw-stat-s">CME implied lb</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Exp. cuts 2026</div><div class="fw-stat-v" style="font-size:15px">';
   html+='<span style="color:var(--c-cme)">'+cmeExpCC.toFixed(1)+'</span>&thinsp;·&thinsp;';
@@ -2593,14 +2593,14 @@ function DashboardTab({state, finance}) {
   html+='</div><div class="fw-stat-s">CME · Kal · Poly</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR near-term</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrNear+'%</div><div class="fw-stat-s">SR3M6 (Q2 2026)</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrTerm+'%</div><div class="fw-stat-s">SR3Z7 (Q4 2027)</div></div>';
-  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
+  html+='<div class="fw-stat"><div class="fw-stat-l">SOFR–EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='—'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='—'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Active scenario</div><div class="fw-stat-v" style="font-size:13px;color:var(--color-text-secondary)">'+activeName+'</div>'+(cSeries?'<div class="fw-stat-s" style="color:var(--c-overlay)">vs '+cSeries.label+'</div>':'<div class="fw-stat-s">No compare</div>')+'</div>';
   html+=rideCardHtml;
   html+='</div>';
 
   // -- 2. Unified rate path chart --
   html+='<div class="k-panel k-full" style="margin-bottom:12px">';
-  html+='<div class="k-hdr"><span class="k-title">Unified rate path \u2014 CME EFFR chain · Kalshi implied · SR3 SOFR strip · Compare scenario</span>';
+  html+='<div class="k-hdr"><span class="k-title">Unified rate path — CME EFFR chain · Kalshi implied · SR3 SOFR strip · Compare scenario</span>';
   html+='<span style="display:flex;gap:8px;font-size:10px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap">';
   html+='<span><span class="k-dot" style="background:var(--c-cme)"></span>CME</span>';
   html+='<span><span class="k-dot" style="background:var(--c-kal)"></span>Kalshi</span>';
@@ -2609,15 +2609,15 @@ function DashboardTab({state, finance}) {
   if(cSeries) html+='<span><span class="k-dot" style="background:var(--c-overlay)"></span>'+cSeries.label+'</span>';
   html+='</span></div>';
   html+=dashUnifiedSvg(chain,meetings,states,lb,cSeries,zqAvgs,fwD,kD,srd);
-  html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026\u2013Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' \u2192 '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
+  html+='<div class="k-note">All four rate signals on a single canvas. CME (solid blue): expected EFFR path from the ZQ futures chain, computed meeting-by-meeting. Kalshi (orange dashed): per-meeting implied rate from kxfed-26xxx contracts. SR3 SOFR (green): quarterly strip for Q2 2026–Q4 2027, plotted at quarterly spacing. Fed SEP medians (purple): December 2025 projections. '+(cSeries?'Compare scenario (amber dashed): '+cSeries.label+' ('+cSeries.totalBp+' → '+cSeries.endRate+'%).':'Set a compare scenario in Futures Inputs to add a fourth path.')+'</div>';
   html+='</div>';
 
   // -- 3. Cross-market divergence table --
   const comps=getMeetingComps(meetings,kD,pD);
   html+='<div class="k-panel k-full" style="margin-bottom:12px">';
-  html+='<div class="k-hdr"><span class="k-title">Cross-market divergence \u2014 all sources per meeting</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">Cross-market divergence — all sources per meeting</span></div>';
   html+='<div style="overflow-x:auto"><table class="fwt">';
-  html+='<thead><tr><th>Meeting</th><th>CME exp. rate</th><th>Kalshi imp.</th><th>Kal\u2212CME</th>';
+  html+='<thead><tr><th>Meeting</th><th>CME exp. rate</th><th>Kalshi imp.</th><th>Kal−CME</th>';
   html+='<th>CME P(cut)</th><th>Kal P(cut)</th><th>Poly P(cut)</th><th>SOFR (qtr)</th><th>Basis bp</th>';
   html+='</tr></thead><tbody>';
   let si3=0;
@@ -2640,17 +2640,17 @@ function DashboardTab({state, finance}) {
     html+='<tr>';
     html+='<td style="white-space:nowrap;font-weight:500">'+(m.label||m.lb)+'</td>';
     html+='<td style="font-family:var(--font-mono);color:var(--c-cme)">'+cmeRate+'%</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+kalRate+(kalRate!=='\u2014'?'%':'')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+kalRate+(kalRate!=='—'?'%':'')+'</td>';
     html+='<td style="font-family:var(--font-mono);font-weight:500;color:'+diffCol+'">'+kalDiff+'</td>';
     html+='<td style="font-family:var(--font-mono)">'+(cmeCut*100).toFixed(1)+'%</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+(kCut!==null?(kCut*100).toFixed(1)+'%':'\u2014')+'</td>';
-    html+='<td style="font-family:var(--font-mono);color:var(--c-poly)">'+(pCut!==null?(pCut*100).toFixed(1)+'%':'\u2014')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-kal)">'+(kCut!==null?(kCut*100).toFixed(1)+'%':'—')+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:var(--c-poly)">'+(pCut!==null?(pCut*100).toFixed(1)+'%':'—')+'</td>';
     html+='<td style="font-family:var(--font-mono);color:var(--c-sofr)">'+sofrR+'</td>';
-    html+='<td style="font-family:var(--font-mono);color:'+(basis!=='\u2014'&&parseFloat(basis)>0?'var(--c-sofr)':'var(--color-text-danger)')+'">'+basis+'</td>';
+    html+='<td style="font-family:var(--font-mono);color:'+(basis!=='—'&&parseFloat(basis)>0?'var(--c-sofr)':'var(--color-text-danger)')+'">'+basis+'</td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
-  html+='<div class="k-note">Single table reading all four live data stores simultaneously. Kal\u2212CME in bp: the spread between Kalshi\'s implied rate and the CME-derived expected EFFR at that meeting date \u2014 the key cross-market dislocation signal. SOFR column and basis only shown for quarterly contract dates (SR3 alignment).</div>';
+  html+='<div class="k-note">Single table reading all four live data stores simultaneously. Kal−CME in bp: the spread between Kalshi\'s implied rate and the CME-derived expected EFFR at that meeting date — the key cross-market dislocation signal. SOFR column and basis only shown for quarterly contract dates (SR3 alignment).</div>';
   html+='</div>';
 
   // -- 4. Regime summary box --
@@ -2693,7 +2693,7 @@ function DashboardTab({state, finance}) {
 
   // Scenario delta panel
   html+='<div class="k-panel">';
-  html+='<div class="k-hdr"><span class="k-title">Scenario delta \u2014 compare vs active</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">Scenario delta — compare vs active</span></div>';
   if(cSeries){
     html+='<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>'+activeName+'</b> · Compare: <b style="color:var(--c-overlay)">'+cSeries.label+'</b></div>';
     const actExp=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
@@ -2704,10 +2704,10 @@ function DashboardTab({state, finance}) {
     const cP1=Object.entries(cSeries.final).filter(([k])=>parseInt(k)<=-1).reduce((s,[,p])=>s+p,0);
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">';
     html+='<div class="fw-stat"><div class="fw-stat-l">Rate delta</div><div class="fw-stat-v" style="font-size:16px;color:'+deltaCol+'">'+(parseInt(delta)>0?'+':'')+delta+' bp</div><div class="fw-stat-s">Compare vs active terminal</div></div>';
-    html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut) delta</div><div class="fw-stat-v" style="font-size:16px;color:var(--c-overlay)">'+((cP1-actP1)*100).toFixed(1)+'pp</div><div class="fw-stat-s">Compare minus active</div></div>';
+    html+='<div class="fw-stat"><div class="fw-stat-l">P(≥1 cut) delta</div><div class="fw-stat-v" style="font-size:16px;color:var(--c-overlay)">'+((cP1-actP1)*100).toFixed(1)+'pp</div><div class="fw-stat-s">Compare minus active</div></div>';
     html+='</div>';
   } else {
-    html+='<div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Set a compare scenario in the Futures Inputs tab to see the cross-scenario delta here \u2014 terminal rate difference in bp, P(\u22651 cut) spread, and path divergence.</div>';
+    html+='<div style="font-size:12px;color:var(--color-text-tertiary);line-height:1.6">Set a compare scenario in the Futures Inputs tab to see the cross-scenario delta here — terminal rate difference in bp, P(≥1 cut) spread, and path divergence.</div>';
   }
   html+='</div></div>';
 
@@ -2818,12 +2818,12 @@ function TaylorRuleTab({state, dispatch, finance}) {
     const isAct = ruleVariant === v.key;
     html += '<div class="fw-tab'+(isAct?' act':'')+'" data-rule-variant="'+v.key+'" style="cursor:pointer'+(v.key==='juddRudebusch'&&isAct?';border-color:var(--c-taylor)':'')+(v.key==='finNeutral'&&isAct?';border-color:var(--c-fin-neutral)':'')+'">';
     html += v.label;
-    if(v.key==='juddRudebusch') html += ' <span style="font-size:8px;color:var(--c-taylor);margin-left:2px">\u2605</span>';
-    if(v.key==='finNeutral') html += ' <span style="font-size:8px;color:var(--c-fin-neutral);margin-left:2px">\u25cf</span>';
+    if(v.key==='juddRudebusch') html += ' <span style="font-size:8px;color:var(--c-taylor);margin-left:2px">★</span>';
+    if(v.key==='finNeutral') html += ' <span style="font-size:8px;color:var(--c-fin-neutral);margin-left:2px">●</span>';
     html += '</div>';
   });
   html += '</div>';
-  html += '<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:1rem;line-height:1.5">Signal source: Judd-Rudebusch ECM (highest predictive R\u00b2 for FFTR changes, Bieri-Chincarini 2005 Exhibit 7)</div>';
+  html += '<div style="font-size:10px;color:var(--color-text-tertiary);margin-bottom:1rem;line-height:1.5">Signal source: Judd-Rudebusch ECM (highest predictive R² for FFTR changes, Bieri-Chincarini 2005 Exhibit 7)</div>';
 
   // Summary cards
   html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:1rem">';
@@ -2832,7 +2832,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div class="fw-stat"><div class="fw-stat-l">Yellen Alt1</div><div class="fw-stat-v" style="color:var(--c-taylor-mod)">'+(yellenNow!==undefined?yellenNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">unemployment gap</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">JR gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':gapNow<-0.05?'policy too tight':'near neutral')+'</div></div>';
-  html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+π*</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l" style="color:var(--c-fin-neutral)">Fin-neutral</div><div class="fw-stat-v" style="color:var(--c-fin-neutral)">'+(fnNow!==undefined?fnNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">JR + λ·NFCI (Borio)</div></div>';
   html += '</div>';
 
@@ -2842,7 +2842,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   // Macro inputs
   html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Macro inputs</span></div>';
   html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
-  html += paramField('Inflation target (\u03c0*)', 'piStar', 0, 10, 0.1, '%');
+  html += paramField('Inflation target (π*)', 'piStar', 0, 10, 0.1, '%');
   html += paramField('Current PCE inflation', 'piNow', -2, 15, 0.1, '% yr/yr');
   html += paramField('End-horizon PCE forecast', 'piEnd', -2, 15, 0.1, '% yr/yr');
   html += paramField('Potential GDP growth (y*)', 'yStar', -2, 8, 0.1, '%');
@@ -2866,7 +2866,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div style="margin-top:8px;display:flex;gap:4px;align-items:center">';
   html += '<span style="font-size:10px;color:var(--color-text-tertiary);margin-right:4px">Gap measure:</span>';
   html += '<div data-gap-measure="output" class="fw-tab'+(tr.gapMeasure==='output'||!tr.gapMeasure?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">GDP output gap</div>';
-  html += '<div data-gap-measure="unemployment" class="fw-tab'+(tr.gapMeasure==='unemployment'?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">Unemployment gap (2\u00d7)</div>';
+  html += '<div data-gap-measure="unemployment" class="fw-tab'+(tr.gapMeasure==='unemployment'?' act':'')+'" style="cursor:pointer;font-size:10px;padding:3px 8px">Unemployment gap (2×)</div>';
   html += '</div>';
   // Unemployment fields (shown when unemployment gap selected)
   if(tr.gapMeasure==='unemployment'){
@@ -2881,11 +2881,11 @@ function TaylorRuleTab({state, dispatch, finance}) {
   // Rule coefficients + JR parameters
   html += '<div class="k-panel"><div class="k-hdr"><span class="k-title">Rule coefficients</span></div>';
   html += '<table class="fwt"><thead><tr><th>Parameter</th><th>Value</th><th></th></tr></thead><tbody>';
-  html += paramField('Classic \u03b1 (inflation)', 'alphaClassic', 0, 5, 0.1, 'Taylor \'93');
-  html += paramField('Classic \u03b2 (output gap)', 'betaClassic', 0, 5, 0.1, 'Taylor \'93');
-  html += paramField('Balanced \u03b1 (inflation)', 'alphaBalanced', 0, 5, 0.1, 'Yellen \'12');
-  html += paramField('Balanced \u03b2 (output gap)', 'betaBalanced', 0, 5, 0.1, 'Yellen \'12');
-  html += paramField('Inertia \u03c1 (smoothing)', 'inertia', 0, 0.99, 0.05, 'Clarida-Gali-Gertler');
+  html += paramField('Classic α (inflation)', 'alphaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Classic β (output gap)', 'betaClassic', 0, 5, 0.1, 'Taylor \'93');
+  html += paramField('Balanced α (inflation)', 'alphaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Balanced β (output gap)', 'betaBalanced', 0, 5, 0.1, 'Yellen \'12');
+  html += paramField('Inertia ρ (smoothing)', 'inertia', 0, 0.99, 0.05, 'Clarida-Gali-Gertler');
   html += '</tbody></table>';
   // JR ECM parameters
   html += '<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--color-border-tertiary)">';
@@ -2894,32 +2894,32 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += trField('λ₁ (inflation weight)', 'jrLambda1', 0.5, 3.0, 0.25, 'Eq. 23');
   html += trField('λ₂ (gap weight)', 'jrLambda2', 0.0, 2.0, 0.25, 'Eq. 23');
   html += trField('λ₃ (lagged gap)', 'jrLambda3', 0.0, 1.0, 0.10, 'Eq. 23');
-  html += trField('\u03b3 (adjustment speed)', 'jrGamma', 0.50, 0.99, 0.05, 'Eq. 24');
+  html += trField('γ (adjustment speed)', 'jrGamma', 0.50, 0.99, 0.05, 'Eq. 24');
   html += '</tbody></table>';
   html += '</div>';
-  html += '<div class="k-note"><b>Classic:</b> r = r* + \u03c0* + \u03b1(\u03c0 \u2212 \u03c0*) + \u03b2(y \u2212 y*). Taylor 1993: \u03b1=1.5, \u03b2=0.5.<br>';
-  html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.<br>';
-  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + \u03c0* + λ₁(π−π*) + λ₂·gap<sub>t</sub> + λ₃·gap<sub>t-1</sub>; \u0394i<sub>t</sub> = \u03b3(i*<sub>t</sub> \u2212 i<sub>t-1</sub>).</div>';
+  html += '<div class="k-note"><b>Classic:</b> r = r* + π* + α(π − π*) + β(y − y*). Taylor 1993: α=1.5, β=0.5.<br>';
+  html += '<b>Balanced:</b> α=1.0, β=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = ρ r<sub>t-1</sub> + (1−ρ) r<sub>Taylor</sub>.<br>';
+  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + π* + λ₁(π−π*) + λ₂·gap<sub>t</sub> + λ₃·gap<sub>t-1</sub>; Δi<sub>t</sub> = γ(i*<sub>t</sub> − i<sub>t-1</sub>).</div>';
   html += '</div></div>';
 
   // Main chart — now includes JR path
   html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Prescribed rate path vs CME market-implied path</span></div>';
   html += taylorChartSvg(meetings, states, lb, effrStart, taylorPaths, t, jrImpliedPath, fnImpliedPath);
-  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Teal dashed = finance-neutral (Borio 2012). Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+\u03c0*.</div>';
+  html += '<div class="k-note">Heavy rose solid = Judd-Rudebusch ECM (signal source). Dashed rose = classic Taylor 1993. Light dashed = balanced approach (Yellen). Dotted = CGG inertial. Teal dashed = finance-neutral (Borio 2012). Blue = CME futures-implied expected EFFR. Gray dashed = neutral rate r*+π*.</div>';
   html += '</div>';
 
   // Gap chart
   html += '<div class="k-panel" style="margin-bottom:14px">';
-  html += '<div class="k-hdr"><span class="k-title">Taylor\u2212CME gap (prescriptive minus market)</span></div>';
+  html += '<div class="k-hdr"><span class="k-title">Taylor−CME gap (prescriptive minus market)</span></div>';
   html += taylorGapSvg(meetings, cmeRates, taylorPaths.classic, taylorPaths.balanced);
-  html += '<div class="k-note">Positive gap = Taylor says policy is too loose (rate should be higher). Negative = Taylor says policy is too tight. Solid = classic, dashed = balanced. Red/blue coloring at \u00b15bp threshold.</div>';
+  html += '<div class="k-note">Positive gap = Taylor says policy is too loose (rate should be higher). Negative = Taylor says policy is too tight. Solid = classic, dashed = balanced. Red/blue coloring at ±5bp threshold.</div>';
   html += '</div>';
 
   // Decomposition table — now includes JR column
   html += '<div class="k-panel" style="margin-bottom:14px">';
   html += '<div class="k-hdr"><span class="k-title">Meeting-by-meeting decomposition</span></div>';
-  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. \u03c0</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th style="color:var(--c-fin-neutral)">Fin-neutral</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
+  html += '<div style="overflow-x:auto"><table class="fwt"><thead><tr><th>Meeting</th><th>Interp. π</th><th>Interp. y</th><th>Classic</th><th>Balanced</th><th>JR ECM</th><th style="color:var(--c-fin-neutral)">Fin-neutral</th><th>CME</th><th>JR gap</th></tr></thead><tbody>';
   const n = meetings.length;
   for (let i = 0; i < n; i++) {
     const t2 = n > 1 ? i / (n - 1) : 0;
@@ -2947,12 +2947,12 @@ function TaylorRuleTab({state, dispatch, finance}) {
 
   // Rule comparison matrix
   html += '<div class="k-panel" style="margin-top:12px">';
-  html += '<div class="k-hdr"><span class="k-title">Rule comparison matrix \u2014 all variants at current inputs</span>';
+  html += '<div class="k-hdr"><span class="k-title">Rule comparison matrix — all variants at current inputs</span>';
   html += '<span class="k-contract">Bieri-Chincarini (2005) Exhibit 7 · Atlanta Fed Taylor Rule Utility</span></div>';
   html += '<div style="overflow-x:auto">';
   html += buildRuleComparisonTable(trRates, effrStart, lb);
   html += '</div>';
-  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter \u2014 it has the highest R\u00b2 for predicting actual FFTR changes (Exhibit 7: R\u00b2=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term λ₃ captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative \u2014 it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
+  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter — it has the highest R² for predicting actual FFTR changes (Exhibit 7: R²=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term λ₃ captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative — it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
   html += '</div>';
 
   // Wire onchange events for parameter inputs + variant chips + gap measure
