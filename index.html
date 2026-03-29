@@ -340,30 +340,30 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 }
 .sf-main{
   display:flex;align-items:center;justify-content:space-between;
-  padding:8px 32px;flex-wrap:wrap;gap:8px;
+  padding:14px 40px;flex-wrap:wrap;gap:8px;
 }
 .sf-disclaimer{
-  font-size:9px;color:var(--faint);text-align:center;
-  padding:0 32px 6px;
+  font-size:11px;color:var(--faint);text-align:center;
+  padding:4px 40px 8px;
   border-top:1px solid var(--border);opacity:.7;
 }
 .sf-left{
   display:flex;align-items:center;gap:8px;
-  font-size:10px;color:var(--faint);
+  font-size:12px;color:var(--faint);
 }
 .sf-brand{
   font-family:'Spectral',serif;font-style:italic;
-  color:var(--text);font-size:11px;
+  color:var(--text);font-size:14px;
 }
-.sf-sep{color:var(--border);font-size:10px}
+.sf-sep{color:var(--border);font-size:12px}
 .sf-right{display:flex;align-items:center;gap:12px}
 .sf-link{
-  font-size:10px;color:var(--faint);text-decoration:none;
+  font-size:12px;color:var(--faint);text-decoration:none;
   transition:color .15s;
 }
 .sf-link:hover{color:var(--cme-text)}
 .sf-icon{
-  font-size:14px;color:var(--faint);text-decoration:none;
+  font-size:17px;color:var(--faint);text-decoration:none;
   transition:color .2s;line-height:1;
 }
 .sf-icon:hover{color:var(--text)}
@@ -371,32 +371,11 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 .sf-icon.sf-li:hover{color:#0077b5}
 .sf-icon.sf-x:hover{color:var(--text)}
 .sf-divider{
-  width:1px;height:14px;background:var(--border);
+  width:1px;height:18px;background:var(--border);
   display:inline-block;
 }
 /* padding so sticky footer doesn't overlap content */
-.wrap{padding-bottom:56px}
-
-/* STICKY FOOTER */
-.sticky-foot{
-  position:fixed;bottom:0;left:0;right:0;z-index:40;
-  background:var(--nav-blur);backdrop-filter:blur(8px);
-  -webkit-backdrop-filter:blur(8px);
-  border-top:1px solid var(--border);
-  padding:7px 32px;
-  display:flex;align-items:center;justify-content:space-between;
-  flex-wrap:wrap;gap:8px;
-}
-.sticky-foot-left{
-  font-family:'JetBrains Mono',monospace;font-size:10px;
-  color:var(--faint);line-height:1.4;
-}
-.sticky-foot-right{display:flex;gap:16px}
-.sticky-foot-link{
-  font-family:'JetBrains Mono',monospace;font-size:10px;
-  color:var(--faint);text-decoration:none;transition:color .15s;
-}
-.sticky-foot-link:hover{color:var(--cme-text)}
+.wrap{padding-bottom:72px}
 
 /* MODAL */
 .modal-backdrop{
@@ -1870,7 +1849,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <span class="sf-sep">·</span>
         <span>SPIA · Virginia Tech</span>
         <span class="sf-sep">·</span>
-        <span>MSE v4.1</span>
+        <span>MSE v4.2</span>
         <span class="sf-sep">·</span>
         <span>MIT License</span>
       </div>
@@ -1957,16 +1936,5 @@ document.querySelectorAll('#tabs, #sources, #guide, #cite').forEach(el => {
 });
 </script>
 
-<div class="sticky-foot">
-  <div class="sticky-foot-left">
-    MSE v4.1 &nbsp;·&nbsp; David Bieri &nbsp;·&nbsp; SPIA · Virginia Tech &nbsp;·&nbsp; MIT License &nbsp;·&nbsp;
-    <em>For educational and research purposes only. Not financial advice.</em>
-  </div>
-  <div class="sticky-foot-right">
-    <a class="sticky-foot-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
-    <a class="sticky-foot-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
-    <a class="sticky-foot-link" href="#cite">Cite</a>
-  </div>
-</div>
 </body>
 </html>
