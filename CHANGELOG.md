@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Fixed — Footer Cleanup (Session INDEX-N)
+- Session INDEX-N: remove duplicate .sticky-foot footer (old block left
+  from merge conflict); bump footer version v4.1 -> v4.2; increase footer
+  padding (8px->14px), font sizes (10px->12px text, 11px->14px brand,
+  14px->17px icons), wrap padding-bottom 56px->72px
+
 ### Added — Balance Sheet & Fin. Stability Illustrations (Session INDEX-M)
 - Session INDEX-M: Balance Sheet pg-bs illustrations added — two-instrument
   policy space scatter (8 historical episodes, QE/QT color coding, IORB floor,
