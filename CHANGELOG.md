@@ -17,6 +17,13 @@ All notable changes to this project are documented here. Dates reflect the data 
 - `ycCurveChart`: mse-hover rects on Nelson-Siegel input dots (ZQ chain + H.15 manual sources)
 - `taylorChartSvg`: mse-hover rects on Classic Taylor, Balanced, Judd-Rudebusch, Finance-neutral, and CME implied dots
 
+### Added — Hover instrumentation on Taylor gap, Balance Sheet, Financial Stability (Iterations 3-5)
+- `taylorGapSvg`: mse-hover rects on Classic gap dots showing Classic + Balanced gap values
+- `BalanceSheetTab` `stackBar`: mse-hover rects on each stacked bar segment (Treasuries, MBS, Other) for Current and Neutral Floor
+- `FinStabTab` NFCI gauge: mse-hover rect on needle showing NFCI value and regime
+- `FinStabTab` rateRows: mse-hover rects on finance-neutral rate comparison dots
+- Yield Curve tab (full NS chart): mse-hover rects on `syncedYcD` raw data points
+
 ### Added — Tab group identity colors and two dividers
 - CSS: `.tc-market` (CME blue), `.tc-analytics` (overlay amber), `.tc-macro` (fin-neutral teal) applied to `.fw-tab` and `.fw-tab.act`
 - TABS array: `tc` field on each tab; removed `_divider` sentinel row
