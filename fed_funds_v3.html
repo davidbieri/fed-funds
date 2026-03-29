@@ -245,6 +245,78 @@ const ycD=[
 // PURE FUNCTIONS --- math layer + helpers (no globals, explicit args only)
 // ============================================================================
 
+// === TOOLTIP INFRASTRUCTURE (Option C) ===
+function initTooltips(container) {
+  if (!container) return;
+  container.querySelectorAll('.mse-hover').forEach(rect => {
+    rect.addEventListener('mouseenter', function(e) {
+      const svg = this.closest('svg');
+      if (!svg) return;
+      let g = svg.querySelector('.mse-tip-g');
+      if (!g) {
+        g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.classList.add('mse-tip-g');
+        g.style.pointerEvents = 'none';
+        g.style.visibility = 'hidden';
+        const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        bg.setAttribute('rx', '4');
+        bg.setAttribute('fill', 'var(--color-background-secondary)');
+        bg.setAttribute('stroke', 'var(--color-border-secondary)');
+        bg.setAttribute('stroke-width', '1');
+        bg.classList.add('mse-tip-bg');
+        const tl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tl.setAttribute('font-size', '8');
+        tl.setAttribute('fill', 'var(--color-text-tertiary)');
+        tl.setAttribute('font-family', 'var(--font-mono)');
+        tl.classList.add('mse-tip-label');
+        const tv = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        tv.setAttribute('font-size', '11');
+        tv.setAttribute('font-weight', '500');
+        tv.setAttribute('fill', 'var(--color-text-primary)');
+        tv.setAttribute('font-family', 'var(--font-mono)');
+        tv.classList.add('mse-tip-val');
+        const ts = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        ts.setAttribute('font-size', '8.5');
+        ts.setAttribute('fill', 'var(--color-text-secondary)');
+        ts.setAttribute('font-family', 'var(--font-mono)');
+        ts.classList.add('mse-tip-sub');
+        g.appendChild(bg); g.appendChild(tl); g.appendChild(tv); g.appendChild(ts);
+        svg.appendChild(g);
+      }
+      const vb = svg.viewBox.baseVal;
+      const bb = svg.getBoundingClientRect();
+      const mx = (e.clientX - bb.left) / bb.width * vb.width;
+      const my = (e.clientY - bb.top) / bb.height * vb.height;
+      const label = this.dataset.label || '';
+      const val = this.dataset.val || '';
+      const sub = this.dataset.sub || '';
+      const tl = g.querySelector('.mse-tip-label');
+      const tv = g.querySelector('.mse-tip-val');
+      const ts = g.querySelector('.mse-tip-sub');
+      const bg = g.querySelector('.mse-tip-bg');
+      tl.textContent = label;
+      tv.textContent = val;
+      ts.textContent = sub;
+      const w = Math.max(label.length, val.length, sub.length) * 6.8 + 20;
+      const h = sub ? 54 : 38;
+      let tx = mx + 10;
+      let ty = my - h - 8;
+      if (tx + w > vb.width - 5) tx = mx - w - 10;
+      if (ty < 5) ty = my + 12;
+      bg.setAttribute('x', tx); bg.setAttribute('y', ty);
+      bg.setAttribute('width', w); bg.setAttribute('height', h);
+      tl.setAttribute('x', tx + 8); tl.setAttribute('y', ty + 13);
+      tv.setAttribute('x', tx + 8); tv.setAttribute('y', ty + 28);
+      ts.setAttribute('x', tx + 8); ts.setAttribute('y', ty + 42);
+      g.style.visibility = 'visible';
+    });
+    rect.addEventListener('mouseleave', function() {
+      const g = this.closest('svg') && this.closest('svg').querySelector('.mse-tip-g');
+      if (g) g.style.visibility = 'hidden';
+    });
+  });
+}
+
 function fwChain(months){
   const n=months.length,c=months.map(m=>({avg:+(100-m.price).toFixed(6),start:null,end:null}));
   for(let i=0;i<n;i++){if(!months[i].mtg){c[i].start=c[i].avg;c[i].end=c[i].avg;if(i>0&&months[i-1].mtg)c[i-1].end=c[i].avg;if(i<n-1&&months[i+1].mtg)c[i+1].start=c[i].avg;}}
@@ -3389,10 +3461,19 @@ function BalanceSheetTab({state, dispatch, finance}) {
     const ex=xSc4(ep.x), ey=ySc4(ep.y);
     svg4+='<circle cx="'+ex+'" cy="'+ey+'" r="3.5" fill="none" stroke="var(--color-text-tertiary)" stroke-width="1"/>';
     svg4+='<text x="'+(ex+6)+'" y="'+(ey+3)+'" font-size="7.5" fill="var(--color-text-tertiary)">'+ep.lb+'</text>';
+    // Hover target centered on episode dot
+    svg4+='<rect class="mse-hover" x="'+(ex-10).toFixed(1)+'" y="'+(ey-10).toFixed(1)+'" width="20" height="20" fill="transparent"'
+      +' data-label="'+ep.lb+'"'
+      +' data-val="BS: '+ep.x+'% GDP \u00b7 Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
+      +' data-sub="Hover for episode context"/>';
   });
   // current position
   svg4+='<circle cx="'+xSc4(curX)+'" cy="'+ySc4(curY)+'" r="7" fill="var(--c-combined)" opacity=".9"/>';
   svg4+='<text x="'+(xSc4(curX)+10)+'" y="'+(ySc4(curY)+4)+'" font-size="10" font-weight="bold" fill="var(--c-combined)">Now</text>';
+  svg4+='<rect class="mse-hover" x="'+(xSc4(curX)-12).toFixed(1)+'" y="'+(ySc4(curY)-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
+    +' data-label="Current position (2026)"'
+    +' data-val="BS: '+curX.toFixed(1)+'% GDP \u00b7 Real EFFR: '+(curY>0?'+':'')+curY.toFixed(2)+'%"'
+    +' data-sub="Ongoing QT + easing cycle \u00b7 Combined stance: '+combinedStance.toFixed(2)+'%"/>';
   // axis labels
   svg4+='<text x="'+(P4.l+cw4/2)+'" y="'+(H4-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Fed Total Assets (% of GDP)</text>';
   svg4+='<text x="14" y="'+(P4.t+ch4/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P4.t+ch4/2)+')">Real EFFR (%)</text>';
@@ -3764,12 +3845,17 @@ function FinStabTab({state, dispatch, finance}) {
   });
   polyPath+='Z';
   svg7+='<path d="'+polyPath+'" fill="var(--c-fin-neutral)" opacity=".2" stroke="var(--c-fin-neutral)" stroke-width="2"/>';
-  // vertex dots
+  // vertex dots + hover targets
   axes.forEach((a,i)=>{
     const r=R7*(a.val/100);
     const p=ptOnAxis(i,r);
     const dotCol=a.val>75?'var(--c-stress-hi)':a.val>50?'var(--c-leaning)':'var(--c-stress-lo)';
-    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="4" fill="'+dotCol+'"/>';
+    svg7+='<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="5" fill="'+dotCol+'" opacity=".9"/>';
+    // Hover target around dot
+    svg7+='<rect class="mse-hover" x="'+(p.x-12).toFixed(1)+'" y="'+(p.y-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
+      +' data-label="'+a.lb+'"'
+      +' data-val="'+a.raw+' \u00b7 '+a.val.toFixed(0)+'th pctile"'
+      +' data-sub="'+(a.val>75?'\u26a0 Elevated stress':a.val>50?'Moderate':'Low stress')+'"/>';
   });
   // Phase clock index = polygon area / hexagon area * 100
   // Shoelace formula for polygon area
@@ -3959,6 +4045,18 @@ function App() {
     try { localStorage.setItem('fwCfg', JSON.stringify({lb:state.fwLb, scenario:state.fwActiveScenario, compare:state.fwCompareScenario})); }
     catch(e) {}
   }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
+
+  // Re-initialize tooltips after every render (dangerouslySetInnerHTML replaces DOM)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      document.querySelectorAll('[dangerouslySetInnerHTML]').forEach(el => {
+        initTooltips(el);
+      });
+      // Also scan the whole document for any .mse-hover not yet initialized
+      initTooltips(document.body);
+    }, 50);
+    return () => clearTimeout(timer);
+  });
 
   const TABS = [
     {id:'inputs',     label:'Futures inputs'},

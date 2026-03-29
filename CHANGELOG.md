@@ -6,6 +6,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Added — Session TOOL-B: tooltip infrastructure + scatter/clock hover targets
+- Tooltip infrastructure (Option C): initTooltips() vanilla JS function with .mse-hover class, useEffect re-runs after every render (50ms debounce), tooltip g element uses var(--color-background-secondary) background
+- Policy space scatter: hover rects on all 9 historical episode dots + "Now" dot (live curX/curY/combinedStance values)
+- Phase clock: hover rects on all 6 vertex dots (axis name, raw value, percentile, stress level)
+
 ### Changed — Session TOOL-A: SVG design consistency
 - basisBarsSvg redesigned: taller bars H=100, wider bW=44, bp labels (font-size 9), SOFR-EFFR basis sub-panel header, opacity gradient (near-term darker), W=680 full width, clean positive-axis baseline
 - Phase clock SVG: removed max-width:420px constraint (now full column width)
