@@ -4,16 +4,6 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
-## [Unreleased]
-
-### Added — Mobile: scrollable tab bar with short labels (M1)
-- `.fw-tab-bar`: horizontal scroll on mobile (overflow-x:auto, hidden scrollbar, touch momentum)
-- TABS array: `short` field on each tab for condensed mobile labels (Futures, EFFR, Tree, Markets, SOFR, Dash, Curve, Taylor, Riding, BS, Fin)
-- CSS: `.tab-label-full` / `.tab-label-short` span pair; short hidden by default, swapped at 640px breakpoint
-- Mobile body padding updated to `0.75rem 0.75rem 80px` for footer clearance
-
----
-
 ## [4.3] — March 2026
 
 ### Fixed — Chrome: iframe detection + version bump
