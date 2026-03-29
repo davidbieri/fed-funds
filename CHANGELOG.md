@@ -7,6 +7,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 ## [Unreleased]
 
 ### Fixed — CR-21 visualization standards (direct fix)
+- CR-21 tooltip completion: added ug-hover rects to SOFR strip (7 quarterly columns), yield curve (7 CMT maturities with residual + scenario shock data), Taylor Rule (8 meeting columns with JR ECM/CME/gap data); total hover targets now 71 across all figures
 - Removed `max-width:560px` from SOFR strip, yield curve, and Taylor Rule SVGs (all figures now full column width)
 - Added `font-family:'JetBrains Mono',monospace` to 4 SVG root elements that were missing it (falling back to system font)
 - Standardized Y-axis left margin: 560-wide figures → x=55; 620-wide figures → x=65 (SOFR tab figure corrected from x=60)

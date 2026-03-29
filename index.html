@@ -923,6 +923,21 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   <!-- Instantaneous forward (cyan dashed) — leads the trough -->
   <polyline points="90,50 157,60 224,78 291,97 358,113 425,122 492,126"
     fill="none" stroke="var(--poly)" stroke-width="1.8" stroke-dasharray="3,2"/>
+  <!-- Hover targets — 7 quarterly columns -->
+  <rect class="ug-hover" x="57" y="20" width="64" height="130" fill="transparent"
+    data-label="Jun 2026" data-val="SR3: 3.48% · ZQ: 3.40%" data-sub="SOFR−EFFR basis: +8bp"/>
+  <rect class="ug-hover" x="124" y="20" width="64" height="130" fill="transparent"
+    data-label="Sep 2026" data-val="SR3: 3.38% · ZQ: 3.30%" data-sub="SOFR−EFFR basis: +8bp"/>
+  <rect class="ug-hover" x="191" y="20" width="64" height="130" fill="transparent"
+    data-label="Dec 2026" data-val="SR3: 3.25% · ZQ: 3.17%" data-sub="SOFR−EFFR basis: +8bp"/>
+  <rect class="ug-hover" x="258" y="20" width="64" height="130" fill="transparent"
+    data-label="Mar 2027" data-val="SR3: 3.14% · ZQ: 3.06%" data-sub="SOFR−EFFR basis: +8bp"/>
+  <rect class="ug-hover" x="325" y="20" width="64" height="130" fill="transparent"
+    data-label="Jun 2027" data-val="SR3: 3.07% · ZQ: 2.99%" data-sub="Inst. fwd trough near"/>
+  <rect class="ug-hover" x="392" y="20" width="64" height="130" fill="transparent"
+    data-label="Sep 2027" data-val="SR3: 3.03% · ZQ: 2.96%" data-sub="SOFR−EFFR basis: +7bp"/>
+  <rect class="ug-hover" x="459" y="20" width="75" height="130" fill="transparent"
+    data-label="Dec 2027" data-val="SR3: 3.01% · ZQ: 2.95%" data-sub="Terminal quarter — strip endpoint"/>
   <!-- Trough marker on instantaneous forward -->
   <circle cx="425" cy="122" r="4" fill="var(--poly)" opacity=".8"/>
   <text x="430" y="118" font-size="8" fill="var(--poly)">trough</text>
@@ -1053,6 +1068,21 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   <text x="335" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">5yr</text>
   <text x="415" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">10yr</text>
   <text x="505" y="173" text-anchor="middle" font-size="8" fill="var(--faint)">30yr</text>
+  <!-- Hover targets — 7 CMT maturities (click-area around each data point) -->
+  <rect class="ug-hover" x="60" y="20" width="50" height="155" fill="transparent"
+    data-label="3-month" data-val="CMT: 3.64% · NS fit: 3.66%" data-sub="Residual: +2bp · Short end synced from ZQ"/>
+  <rect class="ug-hover" x="110" y="20" width="50" height="155" fill="transparent"
+    data-label="6-month" data-val="CMT: 3.72% · NS fit: 3.70%" data-sub="Residual: −2bp"/>
+  <rect class="ug-hover" x="160" y="20" width="65" height="155" fill="transparent"
+    data-label="1-year" data-val="CMT: 3.80% · NS fit: 3.79%" data-sub="Residual: −1bp"/>
+  <rect class="ug-hover" x="225" y="20" width="70" height="155" fill="transparent"
+    data-label="2-year" data-val="CMT: 3.90% · NS fit: 3.88%" data-sub="Residual: −2bp · Scenario shock: +50bp/100bp FFTR"/>
+  <rect class="ug-hover" x="295" y="20" width="80" height="155" fill="transparent"
+    data-label="5-year" data-val="CMT: 4.05% · NS fit: 4.06%" data-sub="Residual: +1bp · Scenario shock: +30bp/100bp FFTR"/>
+  <rect class="ug-hover" x="375" y="20" width="80" height="155" fill="transparent"
+    data-label="10-year" data-val="CMT: 4.21% · NS fit: 4.18%" data-sub="Residual: −3bp · Scenario shock: +10bp/100bp FFTR"/>
+  <rect class="ug-hover" x="455" y="20" width="80" height="155" fill="transparent"
+    data-label="30-year" data-val="CMT: 4.42% · NS fit: 4.41%" data-sub="Residual: −1bp · Scenario shock: +5bp/100bp FFTR"/>
   <!-- CMT data points (circles) -->
   <circle cx="80" cy="110" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
   <circle cx="130" cy="104" r="4" fill="none" stroke="var(--muted)" stroke-width="1.5"/>
@@ -1205,6 +1235,23 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   <text x="390" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Dec</text>
   <text x="450" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Jan</text>
   <text x="510" y="168" text-anchor="middle" font-size="8" fill="var(--faint)">Mar</text>
+  <!-- Hover targets — 8 meeting columns -->
+  <rect class="ug-hover" x="60" y="20" width="58" height="135" fill="transparent"
+    data-label="Apr 2026" data-val="JR ECM: 3.92% · CME: 3.50%" data-sub="Taylor−CME gap: +42bp"/>
+  <rect class="ug-hover" x="120" y="20" width="58" height="135" fill="transparent"
+    data-label="Jun 2026" data-val="JR ECM: 3.88% · CME: 3.40%" data-sub="Taylor−CME gap: +48bp"/>
+  <rect class="ug-hover" x="180" y="20" width="58" height="135" fill="transparent"
+    data-label="Jul 2026" data-val="JR ECM: 3.83% · CME: 3.28%" data-sub="Taylor−CME gap: +55bp"/>
+  <rect class="ug-hover" x="240" y="20" width="58" height="135" fill="transparent"
+    data-label="Sep 2026" data-val="JR ECM: 3.79% · CME: 3.17%" data-sub="Taylor−CME gap: +62bp · Gap annotation shown"/>
+  <rect class="ug-hover" x="300" y="20" width="58" height="135" fill="transparent"
+    data-label="Oct 2026" data-val="JR ECM: 3.76% · CME: 3.10%" data-sub="Taylor−CME gap: +66bp"/>
+  <rect class="ug-hover" x="360" y="20" width="58" height="135" fill="transparent"
+    data-label="Dec 2026" data-val="JR ECM: 3.74% · CME: 3.02%" data-sub="Taylor−CME gap: +72bp"/>
+  <rect class="ug-hover" x="420" y="20" width="58" height="135" fill="transparent"
+    data-label="Jan 2027" data-val="JR ECM: 3.72% · CME: 2.96%" data-sub="Taylor−CME gap: +76bp"/>
+  <rect class="ug-hover" x="480" y="20" width="60" height="135" fill="transparent"
+    data-label="Mar 2027" data-val="JR ECM: 3.71% · CME: 2.91%" data-sub="Taylor−CME gap: +80bp · Terminal"/>
   <!-- CME market path (blue dashed — lower, easing) -->
   <polyline points="90,97 150,103 210,110 270,117 330,121 390,125 450,128 510,130"
     fill="none" stroke="var(--cme)" stroke-width="2.5" stroke-dasharray="6,3"/>
