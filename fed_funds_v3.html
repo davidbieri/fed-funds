@@ -1206,7 +1206,7 @@ async function refreshData(state, dispatch, apiKey, setFetching, setRefreshStatu
     if(!m) throw new Error('No JSON in response');
     const p=JSON.parse(m[0]);
     dispatch({type:'APPLY_LIVE_ZQ', data:p});
-    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' \u00b7 EFFR '+(p.effr||'\u2014')+'%'}));
+    setRefreshStatus(s=>({...s, zq:(p.source||'web')+' · EFFR '+(p.effr||'\u2014')+'%'}));
   }catch(e){setRefreshStatus(s=>({...s, zq:'\u26a0 '+(e.message||'Failed \u2014 data unchanged')}));}
   finally{setFetching(f=>({...f, zq:false}));}
 }
@@ -1237,7 +1237,7 @@ async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatu
     merged.source=p.source||'Kalshi (web search)';
     merged.kBadge='Live';
     dispatch({type:'APPLY_LIVE_KALSHI', data:merged});
-    setRefreshStatus(s=>({...s, kal:'Kalshi data updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+    setRefreshStatus(s=>({...s, kal:'Kalshi data updated · '+(merged.source)+' · '+(merged.asOf)}));
   }catch(e){setRefreshStatus(s=>({...s, kal:'\u26a0 Kalshi: '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, kal:false}));}
 }
@@ -1268,7 +1268,7 @@ async function fetchPolymarket(state, dispatch, apiKey, setFetching, setRefreshS
     merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
     merged.source=p.source||'Polymarket (web search)';
     dispatch({type:'APPLY_LIVE_POLY', data:merged});
-    setRefreshStatus(s=>({...s, poly:'Polymarket updated \u00b7 '+(merged.source)+' \u00b7 '+(merged.asOf)}));
+    setRefreshStatus(s=>({...s, poly:'Polymarket updated · '+(merged.source)+' · '+(merged.asOf)}));
   }catch(e){setRefreshStatus(s=>({...s, poly:'\u26a0 Polymarket: '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, poly:false}));}
 }
@@ -1289,7 +1289,7 @@ async function fetchSOFR(state, dispatch, apiKey, setFetching, setRefreshStatus)
     if(!m)throw new Error('No JSON found');
     const p=JSON.parse(m[0]);
     if(p.prices) dispatch({type:'APPLY_LIVE_SOFR', prices:p.prices});
-    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' \u00b7 SOFR '+(p.sofr||'\u2014')+'%'}));
+    setRefreshStatus(s=>({...s, sofr:(p.source||'web')+' · SOFR '+(p.sofr||'\u2014')+'%'}));
   }catch(e){setRefreshStatus(s=>({...s, sofr:'\u26a0 '+(e.message||'Failed')}));}
   finally{setFetching(f=>({...f, sofr:false}));}
 }
@@ -1310,7 +1310,7 @@ async function fetchYieldCurve(state, dispatch, apiKey, setFetching, setRefreshS
     if(!m)throw new Error('No JSON found');
     const p=JSON.parse(m[0]);
     if(p.rates) dispatch({type:'APPLY_LIVE_YC', rates:p.rates});
-    setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' \u00b7 '+(p.asOf||today)}));
+    setRefreshStatus(s=>({...s, yc:(p.source||'H.15')+' · '+(p.asOf||today)}));
   }catch(e){setRefreshStatus(s=>({...s, yc:'\u26a0 '+(e.message||'Failed \u2014 rates unchanged')}));}
   finally{setFetching(f=>({...f, yc:false}));}
 }
@@ -1420,7 +1420,7 @@ function panel1Svg(comps,lb){
   svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25a0 CME</text>';
   svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)" font-weight="500">\u25a0 Kalshi</text>';
   svg+='<text x="'+(ml+102)+'" y="12" font-size="8.5" fill="var(--c-poly)" font-family="var(--font-sans)" font-weight="500">\u25a0 Polymarket</text>';
-  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal\u2212CME \u00b7 right pill = Poly\u2212Kal</text>';
+  svg+='<text x="'+(ml+188)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">left pill = Kal\u2212CME · right pill = Poly\u2212Kal</text>';
   svg+='</svg>';
   return svg;
 }
@@ -2175,9 +2175,9 @@ function TreeTab({state, finance}) {
       const hr=NR+4;
       const moveDesc=ki<0?Math.abs(ki)+' cut'+(Math.abs(ki)>1?'s':''):ki>0?ki+' hike'+(ki>1?'s':''):'Hold';
       const confDesc=p>0.50?'Dominant path':p>0.20?'Likely':p>0.05?'Possible':'Tail';
-      const tipLabel=rate+'% \u00b7 '+(li===0?'Current':colLabel);
+      const tipLabel=rate+'% · '+(li===0?'Current':colLabel);
       const tipVal='P = '+(p*100).toFixed(1)+'%';
-      const tipSub=confDesc+' \u00b7 '+moveDesc+(ki!==0?' from start':'');
+      const tipSub=confDesc+' · '+moveDesc+(ki!==0?' from start':'');
       svg+='<rect class="mse-hover"'
         +' x="'+(x-hr).toFixed(1)+'" y="'+(y-hr).toFixed(1)+'"'
         +' width="'+(hr*2)+'" height="'+(hr*2)+'"'
@@ -2218,7 +2218,7 @@ function TreeTab({state, finance}) {
     +'<div style="overflow-x:auto"><svg viewBox="0 0 '+Math.max(560,20+allRateKeys.length*(bW+5)+20)+' 80" style="min-width:400px;width:100%;display:block;height:80px">'+dSvg+'</svg></div>'
     +'</div>'
     +'<div style="display:flex;gap:1.5rem;margin-top:.75rem;font-size:11px;color:var(--color-text-tertiary);flex-wrap:wrap">'
-    +'<span>Opacity \u221d probability</span><span>Solid = hold/base \u00b7 Dashed = extra 25bp cut</span><span>Width \u221d weight</span>'
+    +'<span>Opacity \u221d probability</span><span>Solid = hold/base · Dashed = extra 25bp cut</span><span>Width \u221d weight</span>'
     +(cSeries?'<span style="color:var(--c-overlay)">\u25a0 Amber = compare scenario</span>':'')
     +'</div>';
   return <SvgPanel html={h}/>;
@@ -2253,14 +2253,14 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   // Panel 2 + 3
   html+='<div class="k-grid" style="margin-bottom:12px">';
   const cmeCC=cmeCutCountDist(final,fwD);
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2461 Cut count distribution \u2014 2026</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">② Cut count distribution — 2026</span>';
   html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecutcount-26dec31</span><span class="k-contract">polymarket how-many-cuts</span></span></div>';
   html+=panel2Svg(cmeCC,kD.cutCount,pD.cutCount);
   const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
   const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
   const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
   const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
-  html+='<div class="k-note">Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> \u00b7 Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> \u00b7 Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='<div class="k-note">Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
   html+='Kal\u2212CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
   html+='Poly\u2212CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
   html+='Poly\u2212Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
@@ -2283,7 +2283,7 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
 
   // Panel 4: Dot plot
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
-  html+='<div class="k-hdr"><span class="k-title">\u2463 Market-implied dot plot \u2014 CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx \u00b7 Dec 2025 SEP</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">\u2463 Market-implied dot plot \u2014 CME chain vs Kalshi rate expectations vs Fed SEP</span><span class="k-contract">kxfed-26xxx · Dec 2025 SEP</span></div>';
   html+=panel4Svg(meetings,states,lb,fwD,kD,compareSeries);
   html+='<div class="k-note">Three implied rate paths. CME (blue): expected EFFR from ZQ chain. Kalshi (orange): implied rate from decision markets. Fed dots (purple): Dec 2025 SEP medians.</div>';
   html+='</div></div>';
@@ -2309,12 +2309,12 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+=panel7Svg(final,lb,pD);
   const cmeTerm=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
   const polyTermExp=Object.entries(pD.terminalRate).reduce((s,[r,p])=>s+parseFloat(r)*p,0);
-  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> \u00b7 Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound \u2014 subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
+  html+='<div class="k-note">CME expected terminal rate: <b>'+cmeTerm.toFixed(2)+'%</b> · Polymarket expected: <b>'+polyTermExp.toFixed(2)+'%</b>. Polymarket resolves on upper bound \u2014 subtract 0.25% when comparing to CME lower-bound figures.</div></div></div>';
 
   // Panels 8a + 8b
   html+='<div class="k-grid">';
   html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">\u2467 Fed Chair nomination \u2014 regime risk</span>';
-  html+='<span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair \u00b7 $230M vol</span></div>';
+  html+='<span class="k-contract">polymarket who-will-trump-nominate-as-fed-chair · $230M vol</span></div>';
   html+=panel8aHtml(pD);
   html+='<div class="k-note">Polymarket\'s most liquid Fed markets ($230M volume). The nominee probabilities are a proxy for <i>policy regime risk</i>.</div></div>';
 
@@ -2457,7 +2457,7 @@ function DashboardTab({state, finance}) {
   const defaultCell = rideData?.[3]?.[1];
   const rideSignalVal = defaultCell?.signal || '\u2014';
   const rideCardHtml = '<div class="fw-stat"><div class="fw-stat-l">Riding signal</div><div class="fw-stat-v" style="font-size:13px;color:'+(rideSignalVal==='ride'?'var(--color-text-success)':rideSignalVal==='hold'?'var(--color-text-danger)':'var(--color-text-secondary)')+'">'+
-    (rideSignalVal==='ride'?'RIDE \u2713':rideSignalVal==='hold'?'HOLD \u2717':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo \u00b7 '+
+    (rideSignalVal==='ride'?'RIDE \u2713':rideSignalVal==='hold'?'HOLD \u2717':'Marginal')+'</div><div class="fw-stat-s">2yr / 3mo · '+
     Object.values(state.rideFilters||{}).filter(Boolean).length+' filters active</div></div>';
 
   let html='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin-bottom:1rem">';
@@ -2465,10 +2465,10 @@ function DashboardTab({state, finance}) {
   html+='<div class="fw-stat"><div class="fw-stat-l">P(\u22651 cut)</div><div class="fw-stat-v" style="color:var(--color-text-info)">'+(pC1*100).toFixed(1)+'%</div><div class="fw-stat-s">CME 12-month</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Exp. terminal</div><div class="fw-stat-v">'+expR+'%</div><div class="fw-stat-s">CME implied lb</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">Exp. cuts 2026</div><div class="fw-stat-v" style="font-size:15px">';
-  html+='<span style="color:var(--c-cme)">'+cmeExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
-  html+='<span style="color:var(--c-kal)">'+kalExpCC.toFixed(1)+'</span>&thinsp;\u00b7&thinsp;';
+  html+='<span style="color:var(--c-cme)">'+cmeExpCC.toFixed(1)+'</span>&thinsp;·&thinsp;';
+  html+='<span style="color:var(--c-kal)">'+kalExpCC.toFixed(1)+'</span>&thinsp;·&thinsp;';
   html+='<span style="color:var(--c-poly)">'+polyExpCC.toFixed(1)+'</span>';
-  html+='</div><div class="fw-stat-s">CME \u00b7 Kal \u00b7 Poly</div></div>';
+  html+='</div><div class="fw-stat-s">CME · Kal · Poly</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR near-term</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrNear+'%</div><div class="fw-stat-s">SR3M6 (Q2 2026)</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR terminal</div><div class="fw-stat-v" style="color:var(--c-sofr)">'+sofrTerm+'%</div><div class="fw-stat-s">SR3Z7 (Q4 2027)</div></div>';
   html+='<div class="fw-stat"><div class="fw-stat-l">SOFR\u2013EFFR basis</div><div class="fw-stat-v" style="color:'+(nearBasis!=='\u2014'&&parseFloat(nearBasis)>0?'var(--c-sofr)':'var(--color-text-danger)')+';font-size:15px">'+(nearBasis!=='\u2014'?'+':'')+nearBasis+' bp</div><div class="fw-stat-s">Near-term Q2</div></div>';
@@ -2478,7 +2478,7 @@ function DashboardTab({state, finance}) {
 
   // -- 2. Unified rate path chart --
   html+='<div class="k-panel k-full" style="margin-bottom:12px">';
-  html+='<div class="k-hdr"><span class="k-title">Unified rate path \u2014 CME EFFR chain \u00b7 Kalshi implied \u00b7 SR3 SOFR strip \u00b7 Compare scenario</span>';
+  html+='<div class="k-hdr"><span class="k-title">Unified rate path \u2014 CME EFFR chain · Kalshi implied · SR3 SOFR strip · Compare scenario</span>';
   html+='<span style="display:flex;gap:8px;font-size:10px;color:var(--color-text-tertiary);align-items:center;flex-wrap:wrap">';
   html+='<span><span class="k-dot" style="background:var(--c-cme)"></span>CME</span>';
   html+='<span><span class="k-dot" style="background:var(--c-kal)"></span>Kalshi</span>';
@@ -2548,7 +2548,7 @@ function DashboardTab({state, finance}) {
   html+='<div>Emergency cut: <b style="color:var(--c-poly)">'+(pD.emergencyCut*100).toFixed(1)+'%</b></div>';
   html+='<div style="margin-top:6px;padding-top:6px;border-top:.5px solid var(--color-border-tertiary)">';
   html+='Chair regime risk: <b>'+regimeRisk+'</b><br>';
-  html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% \u00b7 Rieder '+(riederP*100).toFixed(0)+'%</span>';
+  html+='<span style="font-size:10px;color:var(--color-text-tertiary)">Warsh '+(warshP*100).toFixed(0)+'% · Rieder '+(riederP*100).toFixed(0)+'%</span>';
   html+='</div>';
   // Phase 6: Balance Sheet & Financial Stability regime rows
   const svrVal=finance.steinSVR||0;
@@ -2573,7 +2573,7 @@ function DashboardTab({state, finance}) {
   html+='<div class="k-panel">';
   html+='<div class="k-hdr"><span class="k-title">Scenario delta \u2014 compare vs active</span></div>';
   if(cSeries){
-    html+='<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>'+activeName+'</b> \u00b7 Compare: <b style="color:var(--c-overlay)">'+cSeries.label+'</b></div>';
+    html+='<div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px">Active: <b>'+activeName+'</b> · Compare: <b style="color:var(--c-overlay)">'+cSeries.label+'</b></div>';
     const actExp=Object.entries(final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
     const cExp=Object.entries(cSeries.final).reduce((s,[k,p])=>s+(lb+parseInt(k)*.25)*p,0);
     const delta=((cExp-actExp)*100).toFixed(0);
@@ -2599,7 +2599,7 @@ function buildRuleComparisonTable(trRates, effrStart, fwLb) {
     {key:'balanced',      label:'Balanced approach',   note:'\u03b2=1.0 (Yellen 2012/2017 speeches)'},
     {key:'cgg',           label:'CGG Inertial',        note:'\u03c1=0.85 smoothing around Taylor 1993'},
     {key:'juddRudebusch', label:'Judd-Rudebusch ECM',  note:'Dynamic ECM \u2014 highest R\u00b2 for \u0394FFTR prediction'},
-    {key:'finNeutral',    label:'Finance-neutral',     note:'JR + \u03bb\u00b7NFCI (Borio 2012/2014)'},
+    {key:'finNeutral',    label:'Finance-neutral',     note:'JR + λ·NFCI (Borio 2012/2014)'},
   ];
   const threshold = 0.125;
   var h = '<table class="fwt"><thead><tr><th>Rule</th><th>Prescribed</th><th>Gap vs EFFR (bp)</th><th>Signal</th><th>Notes</th></tr></thead><tbody>';
@@ -2711,7 +2711,7 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div class="fw-stat"><div class="fw-stat-l">Current EFFR</div><div class="fw-stat-v" style="color:var(--c-cme)">'+effrStart.toFixed(2)+'%</div><div class="fw-stat-s">from ZQ chain</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">JR gap</div><div class="fw-stat-v" style="color:'+(gapNow>0.05?'var(--color-text-danger)':gapNow<-0.05?'var(--color-text-info)':'var(--color-text-secondary)')+'">'+(gapNow>0?'+':'')+gapNow.toFixed(2)+'</div><div class="fw-stat-s">'+(gapNow>0.05?'policy too loose':gapNow<-0.05?'policy too tight':'near neutral')+'</div></div>';
   html += '<div class="fw-stat"><div class="fw-stat-l">r* neutral</div><div class="fw-stat-v">'+rNeutral.toFixed(2)+'%</div><div class="fw-stat-s">r*+\u03c0*</div></div>';
-  html += '<div class="fw-stat"><div class="fw-stat-l" style="color:var(--c-fin-neutral)">Fin-neutral</div><div class="fw-stat-v" style="color:var(--c-fin-neutral)">'+(fnNow!==undefined?fnNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">JR + \u03bb\u00b7NFCI (Borio)</div></div>';
+  html += '<div class="fw-stat"><div class="fw-stat-l" style="color:var(--c-fin-neutral)">Fin-neutral</div><div class="fw-stat-v" style="color:var(--c-fin-neutral)">'+(fnNow!==undefined?fnNow.toFixed(2):'--')+'%</div><div class="fw-stat-s">JR + λ·NFCI (Borio)</div></div>';
   html += '</div>';
 
   // Parameter tables side by side
@@ -2769,15 +2769,15 @@ function TaylorRuleTab({state, dispatch, finance}) {
   html += '<div style="margin-top:10px;padding-top:8px;border-top:.5px solid var(--color-border-tertiary)">';
   html += '<div style="font-size:10px;font-weight:500;color:var(--c-taylor);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Judd-Rudebusch ECM parameters</div>';
   html += '<table class="fwt"><tbody>';
-  html += trField('\u03bb\u2081 (inflation weight)', 'jrLambda1', 0.5, 3.0, 0.25, 'Eq. 23');
-  html += trField('\u03bb\u2082 (gap weight)', 'jrLambda2', 0.0, 2.0, 0.25, 'Eq. 23');
-  html += trField('\u03bb\u2083 (lagged gap)', 'jrLambda3', 0.0, 1.0, 0.10, 'Eq. 23');
+  html += trField('λ₁ (inflation weight)', 'jrLambda1', 0.5, 3.0, 0.25, 'Eq. 23');
+  html += trField('λ₂ (gap weight)', 'jrLambda2', 0.0, 2.0, 0.25, 'Eq. 23');
+  html += trField('λ₃ (lagged gap)', 'jrLambda3', 0.0, 1.0, 0.10, 'Eq. 23');
   html += trField('\u03b3 (adjustment speed)', 'jrGamma', 0.50, 0.99, 0.05, 'Eq. 24');
   html += '</tbody></table>';
   html += '</div>';
   html += '<div class="k-note"><b>Classic:</b> r = r* + \u03c0* + \u03b1(\u03c0 \u2212 \u03c0*) + \u03b2(y \u2212 y*). Taylor 1993: \u03b1=1.5, \u03b2=0.5.<br>';
   html += '<b>Balanced:</b> \u03b1=1.0, \u03b2=1.0 (Yellen 2012). <b>Inertial:</b> r<sub>t</sub> = \u03c1 r<sub>t-1</sub> + (1\u2212\u03c1) r<sub>Taylor</sub>.<br>';
-  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + \u03c0* + \u03bb\u2081(\u03c0\u2212\u03c0*) + \u03bb\u2082\u00b7gap<sub>t</sub> + \u03bb\u2083\u00b7gap<sub>t-1</sub>; \u0394i<sub>t</sub> = \u03b3(i*<sub>t</sub> \u2212 i<sub>t-1</sub>).</div>';
+  html += '<b>JR ECM:</b> i*<sub>t</sub> = r* + \u03c0* + λ₁(π−π*) + λ₂·gap<sub>t</sub> + λ₃·gap<sub>t-1</sub>; \u0394i<sub>t</sub> = \u03b3(i*<sub>t</sub> \u2212 i<sub>t-1</sub>).</div>';
   html += '</div></div>';
 
   // Main chart — now includes JR path
@@ -2826,11 +2826,11 @@ function TaylorRuleTab({state, dispatch, finance}) {
   // Rule comparison matrix
   html += '<div class="k-panel" style="margin-top:12px">';
   html += '<div class="k-hdr"><span class="k-title">Rule comparison matrix \u2014 all variants at current inputs</span>';
-  html += '<span class="k-contract">Bieri-Chincarini (2005) Exhibit 7 \u00b7 Atlanta Fed Taylor Rule Utility</span></div>';
+  html += '<span class="k-contract">Bieri-Chincarini (2005) Exhibit 7 · Atlanta Fed Taylor Rule Utility</span></div>';
   html += '<div style="overflow-x:auto">';
   html += buildRuleComparisonTable(trRates, effrStart, lb);
   html += '</div>';
-  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter \u2014 it has the highest R\u00b2 for predicting actual FFTR changes (Exhibit 7: R\u00b2=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term \u03bb\u2083 captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative \u2014 it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
+  html += '<div class="k-note">Judd-Rudebusch ECM is the signal source for the riding calculator filter \u2014 it has the highest R\u00b2 for predicting actual FFTR changes (Exhibit 7: R\u00b2=7.68% vs 6.79% for static Taylor, both significant at 95%). The lagged gap term λ₃ captures Fed momentum: when the output gap is persistent, the ECM prescribes continued adjustment in the same direction. Rule disagreement (different signals across variants) is itself informative \u2014 it indicates genuine policy uncertainty rather than mechanical rule-following.</div>';
   html += '</div>';
 
   // Wire onchange events for parameter inputs + variant chips + gap measure
@@ -2885,7 +2885,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
   window.__ycDispatch = (i, v) => dispatch({type:'UPDATE_YC_RATE', i, value:parseFloat(v)||state.ycD[i].rate});
 
   // -- Fetch bar --
-  const fetchStatus = refreshStatus?.yc || 'Seed data \u2014 3mo/6mo/1yr from ZQ chain \u00b7 2yr\u201330yr enter manually or fetch';
+  const fetchStatus = refreshStatus?.yc || 'Seed data \u2014 3mo/6mo/1yr from ZQ chain · 2yr\u201330yr enter manually or fetch';
   const isFetching = fetching?.yc || false;
 
   // -- Curve SVG --
@@ -2948,7 +2948,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
     svg+='<text x="'+ml+'" y="14" font-size="8.5" fill="var(--c-cme)" font-family="var(--font-sans)" font-weight="500">\u25cf ZQ-derived</text>';
     svg+='<text x="'+(ml+80)+'" y="14" font-size="8.5" fill="var(--c-sofr)" font-family="var(--font-sans)" font-weight="500">\u25cf CMT</text>';
     svg+='<text x="'+(ml+120)+'" y="14" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)" font-weight="500">\u2014 NS fit</text>';
-    svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd \u00b7 --- scenario</text>';
+    svg+='<text x="'+(ml+168)+'" y="14" font-size="8" fill="var(--c-overlay)" font-family="var(--font-sans)" opacity=".6">--- fwd · --- scenario</text>';
     svg+='<text x="'+(ml+330)+'" y="14" font-size="8" fill="var(--c-bs)" font-family="var(--font-sans)">--- QT shock (12M)</text>';
     svg+='</svg>';
     return svg;
@@ -3039,7 +3039,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
       <div className="k-panel" style={{marginBottom:'12px'}}>
         <div className="k-hdr">
           <span className="k-title">Treasury CMT par rates \u2014 input grid</span>
-          <span className="k-contract">Federal Reserve H.15 \u00b7 daily</span>
+          <span className="k-contract">Federal Reserve H.15 · daily</span>
         </div>
         <div style={{overflowX:'auto'}} dangerouslySetInnerHTML={{__html: buildCmtTable()}}/>
         <div style={{display:'flex',gap:'8px',flexWrap:'wrap',marginTop:'8px'}}>
@@ -3138,7 +3138,7 @@ function YieldCurveTab({state, dispatch, finance, fetching, setFetching, refresh
           </div>
         </div>
         <SvgPanel html={buildCurveChart()}/>
-        <div className="k-note">Amber solid = NS spot rate fit \u00b7 amber dashed = instantaneous forward rate \u00b7 amber scenario lines = curve under active scenario at each FOMC meeting \u00b7 sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'\u2019'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
+        <div className="k-note">Amber solid = NS spot rate fit · amber dashed = instantaneous forward rate · amber scenario lines = curve under active scenario at each FOMC meeting · sky-blue dashed = QT shock (12M runoff via KVJ 2011 + D{'\u2019'}Amico-King 2013, links Tab 07 to Tab 10 balance sheet). X-axis is log-scaled for readability. NS RMSE: {nsFactors.rmse.toFixed(1)}bp.</div>
       </div>
 
       {/* Shock impact table */}
@@ -3480,7 +3480,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
     // Hover target centered on episode dot
     svg4+='<rect class="mse-hover" x="'+(ex-10).toFixed(1)+'" y="'+(ey-10).toFixed(1)+'" width="20" height="20" fill="transparent"'
       +' data-label="'+ep.lb+'"'
-      +' data-val="BS: '+ep.x+'% GDP \u00b7 Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
+      +' data-val="BS: '+ep.x+'% GDP · Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
       +' data-sub="Hover for episode context"/>';
   });
   // current position
@@ -3488,8 +3488,8 @@ function BalanceSheetTab({state, dispatch, finance}) {
   svg4+='<text x="'+(xSc4(curX)+10)+'" y="'+(ySc4(curY)+4)+'" font-size="10" font-weight="bold" fill="var(--c-combined)">Now</text>';
   svg4+='<rect class="mse-hover" x="'+(xSc4(curX)-12).toFixed(1)+'" y="'+(ySc4(curY)-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
     +' data-label="Current position (2026)"'
-    +' data-val="BS: '+curX.toFixed(1)+'% GDP \u00b7 Real EFFR: '+(curY>0?'+':'')+curY.toFixed(2)+'%"'
-    +' data-sub="Ongoing QT + easing cycle \u00b7 Combined stance: '+combinedStance.toFixed(2)+'%"/>';
+    +' data-val="BS: '+curX.toFixed(1)+'% GDP · Real EFFR: '+(curY>0?'+':'')+curY.toFixed(2)+'%"'
+    +' data-sub="Ongoing QT + easing cycle · Combined stance: '+combinedStance.toFixed(2)+'%"/>';
   // axis labels
   svg4+='<text x="'+(P4.l+cw4/2)+'" y="'+(H4-8)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)">Fed Total Assets (% of GDP)</text>';
   svg4+='<text x="14" y="'+(P4.t+ch4/2)+'" text-anchor="middle" font-size="10" fill="var(--color-text-primary)" transform="rotate(-90 14 '+(P4.t+ch4/2)+')">Real EFFR (%)</text>';
@@ -3502,7 +3502,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
           <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Balance Sheet &amp; QT Monitor</h3>
           <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
             <span className="data-badge">{bsD.fetched?'live':'seed'}</span>
-            {' '}{bsD.source}{bsD.asOf?' \u00b7 '+bsD.asOf:''}
+            {' '}{bsD.source}{bsD.asOf?' · '+bsD.asOf:''}
           </div>
         </div>
         <button className="refresh-btn" onClick={()=>fetchBalanceSheet(dispatch)}>&#x27f3; Fetch H.4.1</button>
@@ -3537,7 +3537,7 @@ function BalanceSheetTab({state, dispatch, finance}) {
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
-          <div className="k-hdr"><span className="k-title">\u2461 Monthly Runoff: Pace vs. Cap</span></div>
+          <div className="k-hdr"><span className="k-title">② Monthly Runoff: Pace vs. Cap</span></div>
           <div dangerouslySetInnerHTML={{__html:svg2}}/>
         </div>
 
@@ -3788,7 +3788,7 @@ function FinStabTab({state, dispatch, finance}) {
     {f:'EFFR',t:'LP',  lb:'DSS: rate \u2192 LP'},
     {f:'LP',  t:'HY',  lb:'\u03d5\u00d7LP \u2192 risk premia'},
     {f:'HY',  t:'NFCI',lb:'spreads \u2192 NFCI'},
-    {f:'NFCI',t:'FN',  lb:'\u03bb\u00b7NFCI \u2192 fin-neutral'},
+    {f:'NFCI',t:'FN',  lb:'λ·NFCI → fin-neutral'},
     {f:'FN',  t:'EFFR',lb:'prescription \u2192 rate'},
     {f:'TP',  t:'EFFR',lb:'SS put: TP\u2191 \u2192 cut'},
   ];
@@ -3870,7 +3870,7 @@ function FinStabTab({state, dispatch, finance}) {
     // Hover target around dot
     svg7+='<rect class="mse-hover" x="'+(p.x-12).toFixed(1)+'" y="'+(p.y-12).toFixed(1)+'" width="24" height="24" fill="transparent"'
       +' data-label="'+a.lb+'"'
-      +' data-val="'+a.raw+' \u00b7 '+a.val.toFixed(0)+'th pctile"'
+      +' data-val="'+a.raw+' · '+a.val.toFixed(0)+'th pctile"'
       +' data-sub="'+(a.val>75?'\u26a0 Elevated stress':a.val>50?'Moderate':'Low stress')+'"/>';
   });
   // Phase clock index = polygon area / hexagon area * 100
@@ -3897,7 +3897,7 @@ function FinStabTab({state, dispatch, finance}) {
           <h3 style={{fontSize:'15px',fontWeight:600,margin:0}}>Financial Stability</h3>
           <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
             <span className="data-badge">{fsD.fetched?'live':'seed'}</span>
-            {' '}{fsD.source}{fsD.asOf?' \u00b7 '+fsD.asOf:''}
+            {' '}{fsD.source}{fsD.asOf?' · '+fsD.asOf:''}
           </div>
         </div>
         <button className="refresh-btn" onClick={()=>fetchFinancialStability(dispatch)}>&#x27f3; Fetch FRED</button>
@@ -3922,32 +3922,32 @@ function FinStabTab({state, dispatch, finance}) {
             <div className="fw-stat"><div className="fw-stat-l">HY OAS</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.hyOAS||325).toFixed(0)} bp</div><div className="fw-stat-s">ICE BofA HY index</div></div>
             <div className="fw-stat"><div className="fw-stat-l">Xccy basis</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{(fsD.xccyBasis||-8).toFixed(0)} bp</div><div className="fw-stat-s">EUR/USD 3M</div></div>
             <div className="fw-stat">
-              <div className="fw-stat-l">\u03bb_fc (NFCI weight)</div>
+              <div className="fw-stat-l">λ_fc (NFCI weight)</div>
               <div><input className="fw-in" type="number" value={fsD.lambdaFC} style={{width:'55px'}} onChange={e=>setFsd('lambdaFC',e.target.value)} step="0.1" min="0" max="2"/></div>
               <div className="fw-stat-s">Borio (2012) finance-neutral</div>
             </div>
           </div>
-          <div className="k-note">NFCI: Chicago Fed National Financial Conditions Index. Positive = tighter than average. Regime fills per Borio (2014, JBF): financial cycle affects optimal policy stance. \u03bb_fc weights NFCI in finance-neutral Taylor Rule (Panel 2).</div>
+          <div className="k-note">NFCI: Chicago Fed National Financial Conditions Index. Positive = tighter than average. Regime fills per Borio (2014, JBF): financial cycle affects optimal policy stance. λ_fc weights NFCI in finance-neutral Taylor Rule (Panel 2).</div>
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2461 Finance-Neutral Taylor Rule Gap</span>
+            <span className="k-title">② Finance-Neutral Taylor Rule Gap</span>
             <span style={{fontSize:'10px',color:leanColor}}>Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg2}}/>
           <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(130px,1fr))',gap:'8px',margin:'10px 0'}}>
-            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral rate</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral rate</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + λ·NFCI</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Inflation-neutral only</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-leaning)'}}>Leaning premium</div><div className="fw-stat-v" style={{fontSize:'16px',color:leanColor}}>{leanBp>=0?'+':''}{leanBp.toFixed(0)} bp</div><div className="fw-stat-s">{leanBp>0?'Market below fin-neutral':'Market at/above fin-neutral'}</div></div>
             <div className="fw-stat"><div className="fw-stat-l">Gradualism gap</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{gradGap>=0?'+':''}{gradGap.toFixed(0)} bp</div><div className="fw-stat-s">SEP dot \u2212 ZQ terminal (SS 2018)</div></div>
           </div>
-          <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (\u03bb_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
+          <div className="k-note">Finance-neutral rate: Borio (2012, 2014) JR ECM augmented with NFCI (λ_fc = {fsD.lambdaFC}). Leaning premium: gap between finance-neutral prescription and ZQ-implied terminal. Positive = market prices less tightening than financial stability warrants. Gradualism gap: Stein &amp; Sunderam (2018, JoF) SEP dot vs market terminal.</div>
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
           <div className="k-hdr">
-            <span className="k-title">\u2461b Gap Decomposition: JR + r* Endogeneity</span>
+            <span className="k-title">②b Gap Decomposition: JR + r* Endogeneity</span>
             <span style={{fontSize:'10px',color:leanBp>50?'var(--c-stress-hi)':leanBp<-50?'var(--c-stress-lo)':'var(--c-leaning)'}}>
               Leaning premium: {leanBp>=0?'+':''}{leanBp.toFixed(0)} bp
             </span>
@@ -3957,7 +3957,7 @@ function FinStabTab({state, dispatch, finance}) {
             <div className="fw-stat"><div className="fw-stat-l">CME terminal</div><div className="fw-stat-v" style={{fontSize:'16px'}}>{termRate.toFixed(2)}%</div><div className="fw-stat-s">Market-implied 12M</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-taylor)'}}>JR ECM prescribed</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-taylor)'}}>{jrRate.toFixed(2)}%</div><div className="fw-stat-s">Gap: {jrGapBp>=0?'+':''}{jrGapBp.toFixed(0)} bp</div></div>
             <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Borio r* adj.</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{(finance.rstarAdj||0.5).toFixed(3)}%</div><div className="fw-stat-s">Corr: {rstarDiffBp>=0?'+':''}{rstarDiffBp.toFixed(0)} bp vs LW</div></div>
-            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + \u03bb\u00b7NFCI + r* corr</div></div>
+            <div className="fw-stat"><div className="fw-stat-l" style={{color:'var(--c-fin-neutral)'}}>Finance-neutral</div><div className="fw-stat-v" style={{fontSize:'16px',color:'var(--c-fin-neutral)'}}>{fnRateVal.toFixed(2)}%</div><div className="fw-stat-s">JR + λ·NFCI + r* corr</div></div>
           </div>
           <div style={{display:'flex',gap:'12px',flexWrap:'wrap',fontSize:'11px',margin:'6px 0'}}>
             <label style={{color:'var(--color-text-secondary)'}}>Credit-GDP gap (\u03c3):
@@ -3969,7 +3969,7 @@ function FinStabTab({state, dispatch, finance}) {
                 onChange={e=>setFsd('productivityDrag',e.target.value)} step="0.05" min="-2" max="0"/>
             </label>
           </div>
-          <div className="k-note">Finance-neutral rule: JR ECM + \u03bb_fc \u00d7 NFCI (Borio 2012/2014). r* endogeneity correction: Borio (2016, Cato J, Pillar II) productivity drag ({fsD.productivityDrag} pp/yr \u00d7 {fsD.cycleHorizonYrs} yr). Finance-neutral output gap: Borio, Disyatat &amp; Juselius (2013, BIS WP404).</div>
+          <div className="k-note">Finance-neutral rule: JR ECM + λ_fc × NFCI (Borio 2012/2014). r* endogeneity correction: Borio (2016, Cato J, Pillar II) productivity drag ({fsD.productivityDrag} pp/yr × {fsD.cycleHorizonYrs} yr). Finance-neutral output gap: Borio, Disyatat &amp; Juselius (2013, BIS WP404).</div>
         </div>
 
         <div className="k-panel k-full" style={{marginBottom:'12px'}}>
@@ -3998,7 +3998,7 @@ function FinStabTab({state, dispatch, finance}) {
             <span className="k-title">\u2463 Doom Loop Scatter: Term Premium vs. HY OAS</span>
             <span style={{fontSize:'10px',color:bubbleCol}}>
               SS put: {ssSignal>0?'\u2705 active':ssSignal<0?'\u274c compressed':'\u2014 normal'}
-              {' \u00b7 '}LP bubble: {lpAbs.toFixed(0)} bp
+              {' · '}LP bubble: {lpAbs.toFixed(0)} bp
             </span>
           </div>
           <div dangerouslySetInnerHTML={{__html:svg5}}/>
