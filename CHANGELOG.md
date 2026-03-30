@@ -6,6 +6,15 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Added — Sticky collapsing header
+- feat(nav): sticky collapsing header — compact nav sticks at top:0 (42px),
+  tab bar docks below at top:var(--nav-h); EFFR readout fades into compact bar
+  on scroll; version chip right-aligned; full hero header scrolls away cleanly
+- CSS: `.mse-sticky-nav`, `.mse-sticky-tabs`, `.mse-wordmark`, `.mse-nav-effr`, `.version-chip`
+- State: `scrolled` boolean + passive scroll listener (threshold 10px)
+- Body padding: `1.5rem` → `0 1.5rem 1.5rem` to seat sticky nav flush at viewport top
+- Mobile: narrower margins on ≤640px for both sticky bars
+
 ### Changed — Footer mirror index.html design
 - CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
 - CSS: added `.sf-icon.sf-yt:hover` (red), `.sf-icon.sf-li:hover` (#0077b5), `.sf-icon.sf-x:hover`, `.sf-divider`
