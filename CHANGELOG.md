@@ -6,6 +6,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Footer mirror index.html design
+- CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
+- CSS: added `.sf-icon.sf-yt:hover` (red), `.sf-icon.sf-li:hover` (#0077b5), `.sf-icon.sf-x:hover`, `.sf-divider`
+- HTML: lowercase brand "david bieri", split version/license into separate spans, bumped MSE v4.3→v4.4
+- HTML: added personal site links (david-bieri.com, circular-flows.org, august-loesch.org)
+- HTML: added social icons (GitHub, YouTube, LinkedIn, X/Twitter) with brand-color hover
+- HTML: added divider spans, "GitHub ↗" repo link, "Cite" anchor
+
 ### Fixed — SvgPanel ref-based tooltip wiring
 - SvgPanel: added `useRef` + `useEffect` to call `initTooltips` directly on the panel's container DOM node after each render
 - App useEffect: removed broken `querySelectorAll('[dangerouslySetInnerHTML]')` scan; kept `document.body` fallback only

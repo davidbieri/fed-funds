@@ -188,14 +188,18 @@ nav#mse-nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
   font-size:10px;color:var(--faint);text-align:center;
   padding:3px 24px 6px;border-top:1px solid var(--border);opacity:.7;
 }
-.sf-brand{font-family:'Spectral',serif;font-style:italic;color:var(--text);font-size:13px}
+.sf-brand{font-family:'Spectral',serif;font-style:italic;color:var(--text);font-size:14px}
 .sf-sep{color:var(--border);font-size:12px;margin:0 6px}
 .sf-left{display:flex;align-items:center;font-size:11px;color:var(--faint)}
-.sf-right{display:flex;align-items:center;gap:14px}
+.sf-right{display:flex;align-items:center;gap:12px}
 .sf-link{font-size:11px;color:var(--faint);text-decoration:none;transition:color .15s}
 .sf-link:hover{color:var(--cme-text)}
-.sf-icon{font-size:16px;color:var(--faint);text-decoration:none;transition:color .2s}
+.sf-icon{font-size:16px;color:var(--faint);text-decoration:none;transition:color .2s;line-height:1}
 .sf-icon:hover{color:var(--text)}
+.sf-icon.sf-yt:hover{color:#ff0000}
+.sf-icon.sf-li:hover{color:#0077b5}
+.sf-icon.sf-x:hover{color:var(--text)}
+.sf-divider{width:1px;height:16px;background:var(--border);display:inline-block}
 /* padding so footer doesn't overlap content */
 body{padding-bottom:72px}
 .mse-hover{cursor:pointer}
@@ -4308,19 +4312,31 @@ if(window.self !== window.top){
 <footer class="mse-footer">
   <div class="sf-main">
     <div class="sf-left">
-      <span class="sf-brand">David Bieri</span>
+      <span class="sf-brand">david bieri</span>
       <span class="sf-sep">·</span>
       <span>SPIA · Virginia Tech</span>
       <span class="sf-sep">·</span>
-      <span>MSE v4.3 · MIT License</span>
+      <span>MSE v4.4</span>
+      <span class="sf-sep">·</span>
+      <span>MIT License</span>
     </div>
     <div class="sf-right">
-      <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub</a>
-      <a class="sf-link" href="https://www.david-bieri.com" target="_blank">SPIA</a>
-      <a class="sf-icon sf-li" href="https://linkedin.com/in/davidbieri" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a class="sf-link" href="https://www.david-bieri.com" target="_blank">david-bieri.com</a>
+      <a class="sf-link" href="https://www.circular-flows.org" target="_blank">circular-flows.org</a>
+      <a class="sf-link" href="https://www.august-loesch.org" target="_blank">august-loesch.org</a>
+      <span class="sf-divider"></span>
+      <a class="sf-icon" href="https://github.com/davidbieri" target="_blank" title="GitHub"><i class="fa-brands fa-github"></i></a>
+      <a class="sf-icon sf-yt" href="https://www.youtube.com/c/DavidBieri" target="_blank" title="YouTube"><i class="fa-brands fa-youtube"></i></a>
+      <a class="sf-icon sf-li" href="https://www.linkedin.com/in/david-bieri-a586262" target="_blank" title="LinkedIn"><i class="fa-brands fa-linkedin"></i></a>
+      <a class="sf-icon sf-x" href="https://x.com/space_economy" target="_blank" title="X / Twitter"><i class="fa-brands fa-x-twitter"></i></a>
+      <span class="sf-divider"></span>
+      <a class="sf-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
+      <a class="sf-link" href="#cite">Cite</a>
     </div>
   </div>
-  <div class="sf-disclaimer">For educational and research purposes only. Not financial advice.</div>
+  <div class="sf-disclaimer">
+    For educational and research purposes only. Not financial advice.
+  </div>
 </footer>
 <script>
 (function(){
