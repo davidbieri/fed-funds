@@ -8,6 +8,14 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
+### Added — Sticky collapsing header
+- feat(nav): sticky collapsing header — compact nav sticks at top:0 (42px),
+  tab bar docks below at top:var(--nav-h); EFFR readout fades into compact bar
+  on scroll; version chip right-aligned; full hero header scrolls away cleanly
+- CSS: `.mse-sticky-nav`, `.mse-sticky-tabs`, `.mse-wordmark`, `.mse-nav-effr`, `.version-chip`
+- State: `scrolled` boolean + passive scroll listener (threshold 10px)
+- Body padding: `1.5rem` → `0 1.5rem 1.5rem` to seat sticky nav flush at viewport top
+- Mobile: narrower margins on ≤640px for both sticky bars
 
 ### Changed — Footer mirror index.html design
 - CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
@@ -52,6 +60,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 ---
 
 ## [4.3] — March 2026
+
+### Added — PWA manifest and Apple meta tags
+- `manifest.json`: name (em-dash, no colon), short_name "MSE", start_url, scope, display standalone, orientation portrait-primary, theme/background #f8f7f4, icon entries (180/192/512)
+- `fed_funds_v3.html` `<head>`: `<link rel="manifest">`, apple-mobile-web-app-capable, apple-mobile-web-app-status-bar-style, apple-mobile-web-app-title (MSE), apple-touch-icon (icon-180.png), theme-color meta
+- Placeholder icons: icon-180.png, icon-192.png, icon-512.png (node-canvas, CME blue rounded square + white "MSE" text)
 
 ### Fixed — Chrome: iframe detection + version bump
 - `fed_funds_v3.html`: hide `#mse-nav` and `.mse-footer` when loaded inside an iframe (`window.self !== window.top`)
