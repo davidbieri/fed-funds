@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics — David Bieri · Virginia Tech SPIA</title>
-<meta name="description" content="MSE: A Multi-Market Framework for Federal Reserve Policy Analytics. CME ZQ futures chain, unconditional probability lattice, Kalshi/Polymarket prediction markets, SOFR strip, Dashboard, Nelson-Siegel yield curve, Taylor Rule suite, and Bieri-Chincarini riding-the-yield-curve calculator. 9 tabs, 10 historical scenarios, 5 Taylor variants.">
+<meta name="description" content="MSE: A Multi-Market Framework for Federal Reserve Policy Analytics. CME ZQ futures chain, unconditional probability lattice, Kalshi/Polymarket prediction markets, SOFR strip, Dashboard, Nelson-Siegel yield curve, Taylor Rule suite, and Bieri-Chincarini riding-the-yield-curve calculator. 11 tabs, 10 historical scenarios, 5 Taylor variants.">
 <link rel="canonical" href="https://davidbieri.github.io/fed-funds/">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,600;1,300&family=JetBrains+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
@@ -449,7 +449,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 <div class="modal-backdrop" id="modal" onclick="if(event.target===this)closeModal()">
   <div class="modal">
     <div class="modal-bar">
-      <span class="modal-title">SPIA · VT | MSE · v4.3</span>
+      <span class="modal-title">SPIA · VT | MSE · v4.5</span>
       <button class="modal-close" onclick="closeModal()">×</button>
     </div>
     <iframe src="fed_funds_v3.html" title="MSE: A Multi-Market Framework for Federal Reserve Policy Analytics"></iframe>
@@ -467,7 +467,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <a class="nav-link" href="#sources">Sources</a>
       <a class="nav-link" href="#guide">Guide</a>
       <a class="nav-link" href="#cite">Cite</a>
-      <span class="nav-badge">v4.3 · Mar 2026</span>
+      <span class="nav-badge">v4.5 · Mar 2026</span>
       <a class="nav-link" href="https://github.com/davidbieri/fed-funds" target="_blank">GitHub ↗</a>
       <button class="nav-theme" id="theme-toggle" title="Toggle light/dark mode">◐</button>
     </div>
@@ -519,7 +519,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
       <div class="tab-card tc-kal">
         <div class="tab-num">04 — PREDICTION MARKETS</div>
         <div class="tab-name">10-Panel Comparison</div>
-        <div class="tab-desc">CME vs Kalshi vs Polymarket across 9 panels plus panel ⑩ Signal/Noise Decomposition: PCI component breakdown, platform divergence tracker, conviction spread (Atlanta Fed MPT IQR vs crowd SentimentGap).</div>
+        <div class="tab-desc">CME vs Kalshi vs Polymarket across 11 panels: meeting divergence, risk-neutral cut count distributions (Arrow&#8211;Debreu framing, FEDS 2026-010), combo paths, dot plot, hike risk, first-cut timing, terminal rates, Fed Chair regime risk, emergency cut gauge, Kalshi forecast convergence path, and SentimentGap (crowd vs ZQ per meeting).</div>
       </div>
       <div class="tab-card tc-sofr">
         <div class="tab-num">05 — SOFR STRIP</div>
@@ -874,7 +874,8 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑦</div><div class="ug-ptitle">Terminal rate distribution</div><div class="ug-pdesc">CME final distribution vs Polymarket end-2026 market (−0.25% adjustment for upper bound convention).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">CME</span><span class="ug-pill ug-pill-c">Poly</span></div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑧</div><div class="ug-ptitle">Fed Chair regime risk</div><div class="ug-pdesc">Polymarket $230M nominee market — a second-order shift in the policy function entirely absent from CME futures.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
         <div class="ug-pcard" style="border-left:3px solid var(--poly)"><div class="ug-pnum">⑨</div><div class="ug-ptitle">Emergency cut gauge</div><div class="ug-pdesc">P(unscheduled FOMC cut before end-2026). Absent from Kalshi and CME — they only price scheduled outcomes.</div><div class="ug-pills"><span class="ug-pill ug-pill-c">Polymarket only</span></div></div>
-        <div class="ug-pcard" style="border-left:3px solid var(--cme)"><div class="ug-pnum">⑩</div><div class="ug-ptitle">Signal/Noise decomposition</div><div class="ug-pdesc">PCI component breakdown (4 bars), platform divergence tracker (Poly−Kal spread over time), conviction spread (MPT IQR vs crowd SentimentGap).</div><div class="ug-pills"><span class="ug-pill ug-pill-b">PCI</span><span class="ug-pill ug-pill-a">MPT</span><span class="ug-pill ug-pill-c">Poly−Kal</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">⑩</div><div class="ug-ptitle">Kalshi convergence</div><div class="ug-pdesc">P(hold/cut25/cut50) vs days-to-FOMC, accumulating across successive fetches. Sep 2024 dashed reference: the sole Kalshi outperformance episode in FEDS 2026-010 Fig. 1 (correct 50bp call at T&#8722;1).</div><div class="ug-pills"><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill" style="background:rgba(245,158,11,.15);color:#b45309">Sep&#8202;2024 ref</span></div></div>
+        <div class="ug-pcard" style="border-left:3px solid var(--kal)"><div class="ug-pnum">⑪</div><div class="ug-ptitle">SentimentGap</div><div class="ug-pdesc">avg(Kalshi, Polymarket) P(cut) &#8722; ZQ P(cut) per meeting. Positive = crowd more dovish; negative = crowd more hawkish. Kal&#8593;/Poly&#8593; badges flag which platform leads (&#8805;2pp).</div><div class="ug-pills"><span class="ug-pill ug-pill-o">Kalshi</span><span class="ug-pill ug-pill-c">Poly</span><span class="ug-pill ug-pill-b">vs ZQ</span></div></div>
       </div>
     </div>
 
@@ -1971,14 +1972,14 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
     <div class="cite-box">
       <button class="cite-copy" onclick="copyCite()">Copy</button>
       <div class="cite-content act" id="cite-apa">
-        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v4.3) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
+        <pre class="cite-text">Bieri, D. (2026). <em>MSE: A Multi-Market Framework for Federal Reserve Policy Analytics</em> (v4.5) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds</pre>
       </div>
       <div class="cite-content" id="cite-bib">
         <pre class="cite-text">@software{bieri2026mse,
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {4.2},
+  version     = {4.5},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds},
@@ -1989,7 +1990,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
 }</pre>
       </div>
       <div class="cite-content" id="cite-chi">
-        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.3. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
+        <pre class="cite-text">Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.5. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.</pre>
       </div>
     </div>
   </div>
@@ -2001,7 +2002,7 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <span class="sf-sep">·</span>
         <span>SPIA · Virginia Tech</span>
         <span class="sf-sep">·</span>
-        <span>MSE v4.3</span>
+        <span>MSE v4.5</span>
         <span class="sf-sep">·</span>
         <span>MIT License</span>
       </div>
