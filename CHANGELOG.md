@@ -6,6 +6,34 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Episode tooltips (Financial Stability tab)
+- BalanceSheetTab: episode dots now carry episode-specific historical context in `ctx` field
+- Replaced placeholder `data-sub="Hover for episode context"` with rich descriptions
+  (FFR level, balance sheet size, policy context) for all 9 historical episodes
+- Unicode middle-dot in data-val for consistency
+
+### Added — Kalshi convergence panel (KalshiTab Panel 10)
+- feat(kalshi): `panelConvSvg()` — SVG convergence chart showing probability paths
+  (hold, cut 25bp, cut 50bp) from T-90 to FOMC day; Sep 2024 dashed reference
+  lines from FEDS 2026-010 Fig. 1; solid lines for live next-meeting snapshots
+- feat(kalshi): convergence seed in `kalshiD` — `convergence` object keyed by
+  meeting label, each entry an array of `{daysOut, hold, cut25, cut50}` snapshots;
+  Sep 2024 pre-seeded as canonical reference
+- feat(kalshi): `fetchKalshi` merge handler accumulates convergence snapshots
+  automatically — each Fetch call appends a time-stamped snapshot (deduped within
+  1-day window) to build the convergence path over successive days
+- Panel 10 rendered as full-width k-panel with legend, grid, FOMC vertical, and
+  explanatory note referencing FEDS 2026-010
+
+### Added — SentimentGap panel (KalshiTab Panel 10)
+- feat(kalshi): `computeSentimentGap()` — computes crowd P(cut) minus ZQ-implied
+  P(cut) per meeting; averages Kalshi + Polymarket; flags platform leader (>=2pp)
+- feat(kalshi): `panelSentimentSvg()` — horizontal divergence bar chart with
+  zero-centre line, per-meeting bars (dovish +orange / hawkish -red / neutral grey),
+  pp labels, Kal/Poly leader badges
+- Panel 10 header: avg gap pill + leader label; full-width k-note with
+  interpretation guide (dovish/hawkish/platform divergence)
+
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
 - feat(riding): buildRideExplainerSVG() pure function — SVG riding arc diagram
