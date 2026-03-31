@@ -6,6 +6,12 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+### Changed — Episode tooltips (Financial Stability tab)
+- BalanceSheetTab: episode dots now carry episode-specific historical context in `ctx` field
+- Replaced placeholder `data-sub="Hover for episode context"` with rich descriptions
+  (FFR level, balance sheet size, policy context) for all 9 historical episodes
+- Unicode middle-dot in data-val for consistency
+
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
 - feat(riding): buildRideExplainerSVG() pure function — SVG riding arc diagram
