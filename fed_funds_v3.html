@@ -3883,11 +3883,15 @@ function BalanceSheetTab({state, dispatch, finance}) {
   const curY=(bsD.effr||4.33)-inflation;
   const neutralX=(bsD.neutralFloor||6200)/(bsD.gdpNominal||28500)*100;
   const episodes=[
-    {x:6,y:2.5,lb:'Pre-GFC (2007)'},{x:15,y:-2.5,lb:'QE1 (2009)'},
-    {x:20,y:-3.0,lb:'QE2 (2010)'},{x:26,y:-2.8,lb:'QE3 peak (2014)'},
-    {x:24,y:-1.0,lb:'QT start (2018)'},{x:19,y:-0.5,lb:'Sep-19 repo'},
-    {x:37,y:-7.5,lb:'COVID (2020)'},{x:35,y:-4.0,lb:'Liftoff (Mar 22)'},
-    {x:32,y:1.0,lb:'QT + hike (2023)'},
+    {x:6, y:2.5,  lb:'Pre-GFC (2007)',   ctx:'Peak pre-crisis stance. FFR at 5.25%. Balance sheet ~$870bn, sub-6% GDP. Financial cycle at maximum expansion before Lehman.'},
+    {x:15,y:-2.5, lb:'QE1 (2009)',        ctx:'Emergency asset purchase response to GFC. FFR at ZLB (0\u20130.25%). Fed buys $1.25T MBS + $300bn Treasuries. Real EFFR deeply negative.'},
+    {x:20,y:-3.0, lb:'QE2 (2010)',        ctx:'Second round: $600bn Treasury purchases (Nov 2010\u2013Jun 2011). Balance sheet ~$2.3T. Real EFFR at \u22123% with CPI above target.'},
+    {x:26,y:-2.8, lb:'QE3 peak (2014)',   ctx:'Open-ended QE3 ($85bn/mo) peaks before taper. Balance sheet ~$4.5T. Bernanke taper tantrum (May 2013) preceded this plateau.'},
+    {x:24,y:-1.0, lb:'QT start (2018)',   ctx:'First passive runoff begins Oct 2017. FFR at 1.75\u20132.25% by mid-2018. Caps: $30bn Tsy + $20bn MBS/mo. Balance sheet ~$4.2T.'},
+    {x:19,y:-0.5, lb:'Sep-19 repo',       ctx:'Repo market stress: overnight GCF rate spikes to 10%. Fed restarts repo operations + resumes T-bill purchases. Reserves judged scarce too early.'},
+    {x:37,y:-7.5, lb:'COVID (2020)',       ctx:'Emergency expansion: $120bn/mo QE4. Balance sheet doubles to ~$8.9T by Apr 2022. Real EFFR at \u22127.5% with CPI surge. Most negative real rate since 1970s.'},
+    {x:35,y:-4.0, lb:'Liftoff (Mar 22)',  ctx:'FFR liftoff March 2022 from ZLB. Balance sheet still near peak ($9T). Most negative combined stance at liftoff in Fed history: tightening into deeply negative real rate.'},
+    {x:32,y:1.0,  lb:'QT + hike (2023)', ctx:'Fastest simultaneous rate + balance sheet tightening since Volcker. FFR at 5.25\u20135.50%. QT at $95bn/mo cap. Balance sheet ~$7.7T. Real EFFR turns positive for first time since 2019.'},
   ];
 
   let svg4='<svg viewBox="0 0 '+W4+' '+H4+'" style="width:100%;display:block;overflow:visible">';
@@ -3913,8 +3917,8 @@ function BalanceSheetTab({state, dispatch, finance}) {
     // Hover target centered on episode dot
     svg4+='<rect class="mse-hover" x="'+(ex-10).toFixed(1)+'" y="'+(ey-10).toFixed(1)+'" width="20" height="20" fill="transparent"'
       +' data-label="'+ep.lb+'"'
-      +' data-val="BS: '+ep.x+'% GDP · Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
-      +' data-sub="Hover for episode context"/>';
+      +' data-val="BS: '+ep.x+'% GDP \u00b7 Real EFFR: '+(ep.y>0?'+':'')+ep.y+'%"'
+      +' data-sub="'+ep.ctx+'"/>';
   });
   // current position
   svg4+='<circle cx="'+xSc4(curX)+'" cy="'+ySc4(curY)+'" r="7" fill="var(--c-combined)" opacity=".9"/>';
