@@ -6,6 +6,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+- feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
+  for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
+
 ### Changed — Footer mirror index.html design
 - CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
 - CSS: added `.sf-icon.sf-yt:hover` (red), `.sf-icon.sf-li:hover` (#0077b5), `.sf-icon.sf-x:hover`, `.sf-divider`

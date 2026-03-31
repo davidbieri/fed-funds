@@ -861,6 +861,131 @@ function rideMatrix(syncedYcD, nsFitParams, scenarioCurves, fwD, fwLb, taylorSig
   });});
 }
 
+// buildRideExplainerSVG(ym, ymh, yh, m, h, cush, nsFitParams) -> SVG string
+// Pure function -- no DOM deps. Returns full <svg>...</svg> markup string.
+// Used by RidingTab explainer panel (seeded from live nsFitParams).
+// ym   = yield at instrument maturity m (%)
+// ymh  = projected yield at (m-h) after riding (%)
+// yh   = yield at horizon h (%) -- buy-and-hold benchmark
+// cush = cushion in bp (from rideCushion)
+// nsFitParams = {beta0,beta1,beta2,tau} from useFinance
+function buildRideExplainerSVG(ym, ymh, yh, m, h, cush, nsFitParams) {
+  var W = 580, H = 210;
+  var pl = 42, pr = 16, pt = 18, pb = 32;
+  var pw = W - pl - pr, ph = H - pt - pb;
+
+  // Build curve points
+  var maxT = Math.max(m * 1.5, m + 0.5, 2.5);
+  var pts = [];
+  for(var i = 0; i <= 120; i++) {
+    var t = (i / 120) * maxT;
+    pts.push([t, nsYield(t, nsFitParams)]);
+  }
+  var allY = pts.map(function(p){return p[1];}).concat([ym, ymh, yh]);
+  var yMin = Math.min.apply(null, allY) - 0.15;
+  var yMax = Math.max.apply(null, allY) + 0.15;
+
+  function xs(t){ return pl + (t / maxT) * pw; }
+  function ys(y){ return pt + (1 - (y - yMin) / (yMax - yMin)) * ph; }
+
+  // Axis grid
+  var yRange = yMax - yMin;
+  var gstep = yRange > 2 ? 0.5 : yRange > 0.8 ? 0.25 : 0.1;
+  var yGridLines = [];
+  for(var yg = Math.ceil(yMin / gstep) * gstep; yg <= yMax + 0.001; yg = Math.round((yg + gstep) * 10000) / 10000) {
+    yGridLines.push(yg);
+  }
+  var xTicks = [0, 0.25, 0.5, 1, 2, 3, 5, 7, 10].filter(function(t){ return t <= maxT; });
+  function tLbl(t){ return t < 1 ? (Math.round(t * 12)) + 'mo' : t + 'yr'; }
+
+  // Key coordinates
+  var x1 = xs(m),     y1 = ys(ym);   // buy point
+  var x2 = xs(m - h), y2 = ys(ymh);  // sell point
+  var xh = xs(h),     yhl = ys(yh);  // horizon line x
+
+  // Arc control point -- above midpoint
+  var arcCX = (x1 + x2) / 2;
+  var arcCY = Math.min(y1, y2) - 22;
+
+  // Cushion color
+  var rc = cush > 15 ? '#16a34a' : cush > 0 ? '#f59e0b' : '#dc2626';
+  var sig = cush > 15 ? 'RIDE' : cush > 0 ? 'MARGINAL' : 'HOLD';
+
+  // Curve path
+  var pathD = pts.map(function(p, idx){
+    return (idx === 0 ? 'M' : 'L') + xs(p[0]).toFixed(1) + ',' + ys(p[1]).toFixed(1);
+  }).join('');
+
+  // Roll-down gap segment
+  var rollGap = (m > h && y2 < yhl) ? (
+    '<line x1="' + x2.toFixed(1) + '" y1="' + y2.toFixed(1) +
+    '" x2="' + x2.toFixed(1) + '" y2="' + yhl.toFixed(1) +
+    '" stroke="' + rc + '" stroke-width="1.5" stroke-dasharray="2,2" opacity=".55" marker-end="url(#rxarr)"/>' +
+    '<text x="' + (x2 + 5).toFixed(1) + '" y="' + ((y2 + yhl) / 2).toFixed(1) +
+    '" dominant-baseline="central" style="font-size:9px;fill:' + rc + ';font-family:var(--font-mono)">+' +
+    (ym - ymh).toFixed(2) + '%</text>'
+  ) : '';
+
+  // Slope badge
+  var slope = ym - yh;
+  var shapeLbl = slope > 0.1 ? 'Normal curve' : slope < -0.1 ? 'Inverted curve' : 'Flat curve';
+  var shapeC  = slope > 0.1 ? '#16a34a' : slope < -0.1 ? '#dc2626' : '#f59e0b';
+
+  var gridSvg = yGridLines.map(function(yv){
+    return '<line x1="' + pl + '" y1="' + ys(yv).toFixed(1) + '" x2="' + (W - pr) + '" y2="' + ys(yv).toFixed(1) +
+      '" stroke="var(--color-border-tertiary)" stroke-width=".4"/>' +
+      '<text x="' + (pl - 4) + '" y="' + ys(yv).toFixed(1) + '" text-anchor="end" dominant-baseline="central"' +
+      ' style="font-size:9px;fill:var(--color-text-tertiary);font-family:var(--font-mono)">' +
+      yv.toFixed(2) + '</text>';
+  }).join('');
+
+  var tickSvg = xTicks.map(function(t){
+    return '<text x="' + xs(t).toFixed(1) + '" y="' + (H - pb + 14) + '" text-anchor="middle"' +
+      ' style="font-size:9px;fill:var(--color-text-tertiary);font-family:var(--font-mono)">' +
+      tLbl(t) + '</text>';
+  }).join('');
+
+  return '<svg width="100%" viewBox="0 0 ' + W + ' ' + H + '" style="display:block">' +
+    '<defs><marker id="rxarr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">' +
+    '<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</marker></defs>' +
+    gridSvg + tickSvg +
+    '<line x1="' + pl + '" y1="' + pt + '" x2="' + pl + '" y2="' + (H - pb) + '" stroke="var(--color-border-secondary)" stroke-width=".5"/>' +
+    '<line x1="' + pl + '" y1="' + (H - pb) + '" x2="' + (W - pr) + '" y2="' + (H - pb) + '" stroke="var(--color-border-secondary)" stroke-width=".5"/>' +
+    '<text x="' + (pl + 3) + '" y="' + (pt + 11) + '" style="font-size:9px;fill:var(--color-text-tertiary)">yield (%)</text>' +
+    // Horizon dashed benchmark line
+    '<line x1="' + pl + '" y1="' + yhl.toFixed(1) + '" x2="' + xh.toFixed(1) + '" y2="' + yhl.toFixed(1) +
+    '" stroke="var(--color-text-tertiary)" stroke-width=".8" stroke-dasharray="4,3" opacity=".5"/>' +
+    '<text x="' + (xh + 4).toFixed(1) + '" y="' + (yhl - 5).toFixed(1) +
+    '" style="font-size:9px;fill:var(--color-text-tertiary);font-family:var(--font-mono)">y(' + tLbl(h) + ')=' + yh.toFixed(2) + '%</text>' +
+    // NS curve
+    '<path d="' + pathD + '" fill="none" stroke="var(--c-cme)" stroke-width="2.5"/>' +
+    // Arc arrow -- riding trajectory
+    '<path d="M' + x1.toFixed(1) + ',' + y1.toFixed(1) +
+    ' Q' + arcCX.toFixed(1) + ',' + arcCY.toFixed(1) +
+    ' ' + x2.toFixed(1) + ',' + y2.toFixed(1) +
+    '" fill="none" stroke="' + rc + '" stroke-width="2" marker-end="url(#rxarr)"/>' +
+    // Roll-down gap
+    rollGap +
+    // Buy dot + label
+    '<circle cx="' + x1.toFixed(1) + '" cy="' + y1.toFixed(1) + '" r="5" fill="var(--c-cme)"/>' +
+    '<text x="' + (x1 + 7).toFixed(1) + '" y="' + (y1 - 9).toFixed(1) +
+    '" style="font-size:10px;fill:var(--c-cme);font-family:var(--font-mono);font-weight:600">buy ' + ym.toFixed(2) + '%</text>' +
+    // Sell dot + label
+    '<circle cx="' + x2.toFixed(1) + '" cy="' + y2.toFixed(1) + '" r="5" fill="' + rc + '"/>' +
+    '<text x="' + (x2 + 7).toFixed(1) + '" y="' + (y2 + 16).toFixed(1) +
+    '" style="font-size:10px;fill:' + rc + ';font-family:var(--font-mono);font-weight:600">sell ' + ymh.toFixed(2) + '%</text>' +
+    // Slope badge
+    '<rect x="' + (pl + 3) + '" y="' + (H - pb - 22) + '" width="84" height="15" rx="3" fill="' + shapeC + '" opacity=".12"/>' +
+    '<text x="' + (pl + 45) + '" y="' + (H - pb - 14) + '" text-anchor="middle" dominant-baseline="central"' +
+    ' style="font-size:9px;fill:' + shapeC + ';font-weight:600">' + shapeLbl + '</text>' +
+    // Signal badge (top right)
+    '<rect x="' + (W - pr - 70) + '" y="' + pt + '" width="66" height="16" rx="3" fill="' + rc + '" opacity=".12"/>' +
+    '<text x="' + (W - pr - 37) + '" y="' + (pt + 8) + '" text-anchor="middle" dominant-baseline="central"' +
+    ' style="font-size:9px;fill:' + rc + ';font-weight:600">' + sig + ' \u00b7 ' + (cush >= 0 ? '+' : '') + Math.round(cush) + 'bp</text>' +
+    '</svg>';
+}
+
 // ============================================================================
 // INITIAL STATE + REDUCER STUB
 // ============================================================================
