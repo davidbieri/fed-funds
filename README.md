@@ -2,7 +2,7 @@
 
 **A multi-market framework for Federal Reserve policy analytics.**
 
-[![Version](https://img.shields.io/badge/version-4.2-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-4.5-blue)](https://github.com/davidbieri/fed-funds/blob/main/CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub Pages](https://img.shields.io/badge/deployed-GitHub%20Pages-brightgreen)](https://davidbieri.github.io/fed-funds/)
 
@@ -32,7 +32,7 @@ No build step. No npm. Open directly in a browser or deploy as a static file.
 | 01 | **Futures Inputs** | Editable ZQ price table (Apr 2026–Mar 2027), FOMC meeting flags, N/M day splits. Source of truth for all tabs. |
 | 02 | **EFFR Chain** | EFFR anchor propagation: non-meeting months fix EFFR(End) = EFFR(Avg) = EFFR(Start+1); meeting months solved via the day-weighted FedWatch formula. |
 | 03 | **Probability Tree** | SVG unconditional probability lattice across all FOMC meetings. Node opacity ∝ probability. Summary stats: P(≥1/2/3 cuts), expected cuts, implied rate, final distribution. |
-| 04 | **Prediction Markets** | Ten-panel comparison: CME vs Kalshi vs Polymarket across nine panels + panel ⑩ Signal/Noise Decomposition (PCI breakdown, platform divergence, conviction spread). |
+| 04 | **Prediction Markets** | Eleven-panel comparison: CME vs Kalshi vs Polymarket. Meeting divergence, risk-neutral cut count distributions (Arrow–Debreu framing), combo paths, dot plots, hike risk, first-cut timing, terminal rates, Fed Chair regime risk, emergency cut gauge, Kalshi forecast convergence path (FEDS 2026-010), SentimentGap (crowd vs ZQ per meeting). |
 | 05 | **SOFR Strip** | 7 quarterly SR3 contracts (SR3M6–SR3Z7, Jun 2026–Dec 2027). Three-curve chart: SOFR strip, ZQ quarterly EFFR avg, instantaneous 3M forward. Per-quarter SOFR–EFFR basis in bp. |
 | 06 | **Dashboard** | Unified cross-market view: stat cards including PCI score + regime dial + sentiment gap sparklines, combined rate path chart, divergence table, financial stability row (NFCI, leaning premium, cycle phase). |
 | 07 | **Yield Curve** | Nelson-Siegel fitting over 7 Treasury CMT maturities (3mo–30yr) via 2,000-iteration Nelder-Mead. Log-scale spot and instantaneous forward curves. Scenario-shocked paths per FOMC meeting using Bieri-Chincarini empirical factor loadings. |
@@ -195,10 +195,10 @@ Live refresh uses the Anthropic API with web search (`claude-sonnet-4-6`). Insid
 
 ## Prediction market panels (tab 04)
 
-Nine panels comparing CME-derived probabilities against Kalshi and Polymarket, plus a tenth Signal/Noise panel:
+Eleven panels comparing CME-derived probabilities against Kalshi and Polymarket:
 
-1. **Meeting divergence** — 3 bars per meeting (CME / Kalshi / Polymarket) with Kal−CME and Poly−Kal basis pills
-2. **Cut count distribution** — P(0–5+ cuts in 2026) across all three sources (Polymarket has 13 discrete strikes)
+1. **Meeting divergence** — 3 bars per meeting (CME / Kalshi / Polymarket) with Kal−CME and Poly−Kal basis pills. Kal−CME validated by Diercks, Katz & Wright (FEDS 2026-010) as a statistically significant signal.
+2. **Risk-neutral cut count distribution** — Each bar is an Arrow–Debreu security price (pay $1 if outcome occurs); the distribution is read directly from contract prices without model assumptions. CME bars derived from the ZQ futures tree.
 3. **Combo path decomposer** — Top 8 hold/cut path sequences vs Kalshi kxfedcombo contracts
 4. **Market-implied dot plot** — CME chain + Kalshi implied rates + Fed Dec 2025 SEP on one chart
 5. **Hike risk monitor** — Semicircular gauge with three concentric arcs (CME / Kalshi / Polymarket)
@@ -206,7 +206,8 @@ Nine panels comparing CME-derived probabilities against Kalshi and Polymarket, p
 7. **Terminal rate distribution** — CME final distribution vs Polymarket end-2026 market
 8. **Fed Chair regime risk** — Polymarket $230M nominee market with hawkishness tags
 9. **Emergency cut gauge** — P(unscheduled FOMC cut before end-2026), Polymarket-unique
-10. **Signal/Noise decomposition** — PCI component breakdown, platform divergence, conviction spread (Atlanta Fed MPT IQR vs crowd SentimentGap)
+10. **Kalshi forecast convergence** — P(hold/cut25/cut50) plotted against days-to-FOMC, accumulating across successive fetches. Sep 2024 dashed reference (the sole Kalshi outperformance episode in FEDS 2026-010 Fig. 1: Kalshi correctly placed majority weight on the 50bp cut at T−1).
+11. **SentimentGap** — avg(Kalshi, Polymarket) P(cut) minus ZQ-implied P(cut), per meeting. Positive = crowd more dovish than capital-at-risk futures pricing; negative = crowd more hawkish. Kal↑/Poly↑ badges flag which platform leads (≥2pp threshold). Reflects trader composition gradient: ZQ (institutional, margin-backed) → Kalshi (CFTC-regulated, market-made) → Polymarket (crypto-native, global retail).
 
 The key analytical signal is the *basis* between markets — Kal−CME captures the regulated vs futures spread; Poly−Kal captures the information gap between institutional/domestic (Kalshi) and global/retail/crypto-native (Polymarket) sentiment.
 
@@ -265,10 +266,11 @@ ZQ prices are derived from the CME N/M weighting formula at each FOMC meeting. S
 ## Architecture
 
 ```
-fed_funds_v3.html                 ← React 18 (CDN) application, ~4,000 lines
-index.html                        ← Landing page / documentation wrapper
+fed_funds_v3.html                 ← React 18 (CDN) application, ~4,200 lines
+index.html                        ← Landing page
 README.md
 CHANGELOG.md
+ROADMAP.md
 CLAUDE.md                         ← Claude Code session instructions
 ```
 
@@ -347,7 +349,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ## Citation
 
 **APA**
-> Bieri, D. (2026). *MSE: A Multi-Market Framework for Federal Reserve Policy Analytics* (v4.2) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
+> Bieri, D. (2026). *MSE: A multi-market framework for Federal Reserve policy analytics* (v4.5) [Interactive tool]. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds
 
 **BibTeX**
 ```bibtex
@@ -355,7 +357,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
   author      = {Bieri, David},
   title       = {{MSE}: A Multi-Market Framework for {Federal Reserve} Policy Analytics},
   year        = {2026},
-  version     = {4.2},
+  version     = {4.5},
   institution = {Virginia Tech School of Public and International Affairs},
   publisher   = {GitHub},
   url         = {https://github.com/davidbieri/fed-funds}
@@ -363,7 +365,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 ```
 
 **Chicago**
-> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.2. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
+> Bieri, David. 2026. "MSE: A Multi-Market Framework for Federal Reserve Policy Analytics." v4.5. Interactive tool. Virginia Tech School of Public and International Affairs. GitHub. https://github.com/davidbieri/fed-funds.
 
 ---
 
@@ -381,6 +383,7 @@ Where MSE extends beyond WIRP: prediction market integration (Kalshi, Polymarket
 - Taylor, J. B. (1993). Discretion versus policy rules in practice. *Carnegie-Rochester Conference Series on Public Policy*, 39, 195–214.
 - Wolfers, J., & Zitzewitz, E. (2004). Prediction markets. *Journal of Economic Perspectives*, 18(2), 107–126.
 - CME Group. (2024). *CME FedWatch methodology*. https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html
+- Diercks, A. M., Katz, J. D., & Wright, J. H. (2026). Kalshi and the rise of macro markets. *Finance and Economics Discussion Series*, 2026-010. Federal Reserve Board. https://doi.org/10.17016/FEDS.2026.010
 - Federal Reserve Bank of Atlanta. (2026). *Market Probability Tracker*. https://www.atlantafed.org/research-and-data/data/market-probability-tracker
 - Borio, C., Disyatat, P., & Juselius, M. (2013/2017). Rethinking potential output: Embedding information about the financial cycle. BIS Working Paper No. 404; published in *Oxford Economic Papers*, 69(3), 655–677.
 - D'Amico, S., & King, T. B. (2013). Flow and stock effects of large-scale Treasury purchases: Evidence on the importance of local supply. *Journal of Financial Economics*, 108(2), 425–448.
