@@ -6,6 +6,8 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ## [Unreleased]
 
+- feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
+  for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
 ### Added — Sticky collapsing header
 - feat(nav): sticky collapsing header — compact nav sticks at top:0 (42px),
   tab bar docks below at top:var(--nav-h); EFFR readout fades into compact bar
