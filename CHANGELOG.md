@@ -4,7 +4,7 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
-## [Unreleased]
+## [4.5] — 2026-03-31
 
 ### Changed — Episode tooltips (Financial Stability tab)
 - BalanceSheetTab: episode dots now carry episode-specific historical context in `ctx` field
