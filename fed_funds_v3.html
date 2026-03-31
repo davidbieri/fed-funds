@@ -2560,26 +2560,32 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+='<span><span class="k-dot" style="background:var(--c-dots)"></span> Fed SEP</span>';
   html+='</span></div>';
 
+  // Methodology block --- FEDS 2026-010
+  html+='<div style="background:var(--color-background-secondary);border-left:3px solid var(--c-market);border-radius:var(--border-radius-md);padding:10px 14px;margin-bottom:14px;font-size:10.5px;color:var(--color-text-secondary);line-height:1.6">';
+  html+='<b style="color:var(--color-text-primary)">Methodology.</b> Each source provides a distinct mechanism: CME ZQ futures price the <i>expected</i> EFFR under the risk-neutral measure; Kalshi event contracts are Arrow\u2013Debreu securities that pay $1 if the specified outcome occurs, constructing the full risk-neutral PDF meeting-by-meeting without model assumptions; Polymarket applies the same logic on a crypto-native venue. These three sources are complements, not substitutes\u2014each reflects a different trader composition and liquidity structure. ';
+  html+='Diercks, Katz &amp; Wright (<a href="https://doi.org/10.17016/FEDS.2026.010" target="_blank" style="color:var(--c-market);text-decoration:none">FEDS 2026-010</a>) validate Kalshi as a \u201chigh-frequency, continuously updated, distributionally rich benchmark\u201d comparable to professional forecasters, with Kalshi\u2019s median and mode achieving a perfect forecast record on the eve of FOMC meetings.';
+  html+='</div>';
+
   // Panel 1
   const comps=getMeetingComps(meetings,kD,pD);
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
   html+='<div class="k-hdr"><span class="k-title">① Meeting-by-meeting divergence: P(cut) — CME vs Kalshi vs Polymarket</span>';
   html+='<span style="display:flex;gap:4px;flex-wrap:wrap"><span class="k-contract">kxfeddecision-26xxx</span><span class="k-contract">polymarket fed-decision</span></span></div>';
   html+=panel1Svg(comps,lb);
-  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal−CME</b> basis flags where regulated prediction markets diverge from futures; the <b>Poly−Kal</b> basis reveals the information spread between the two platforms.</div>';
+  html+='<div class="k-note">Three bars per meeting: CME futures-implied (blue), Kalshi (orange), Polymarket (cyan). The <b>Kal\u2212CME</b> basis flags where regulated prediction markets diverge from futures\u2014documented by Diercks et al. (FEDS 2026-010) as a statistically significant signal, with Kalshi outperforming fed funds futures on FOMC meeting eves. The <b>Poly\u2212Kal</b> basis is partly a <i>trader composition effect</i>: Kalshi is CFTC-regulated and market-made by institutions (e.g. Susquehanna) with retail access via Robinhood/Webull; Polymarket is crypto-native with a distinct participant mix\u2014so the spread reflects venue-type information differences, not only probability disagreement.</div>';
   html+='</div></div>';
 
   // Panel 2 + 3
   html+='<div class="k-grid" style="margin-bottom:12px">';
   const cmeCC=cmeCutCountDist(final,fwD);
-  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">② Cut count distribution — 2026</span>';
+  html+='<div class="k-panel"><div class="k-hdr"><span class="k-title">② Risk-neutral cut count distribution — 2026</span>';
   html+='<span style="display:flex;gap:4px"><span class="k-contract">kxratecutcount-26dec31</span><span class="k-contract">polymarket how-many-cuts</span></span></div>';
   html+=panel2Svg(cmeCC,kD.cutCount,pD.cutCount);
   const cmeExpCC=Object.entries(cmeCC).reduce((s,[k,p])=>s+parseInt(k)*p,0);
   const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
   const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
   const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
-  html+='<div class="k-note">Expected 2026 cuts — CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='<div class="k-note">Each bar is a risk-neutral probability mass: Kalshi and Polymarket contracts are Arrow\u2013Debreu securities (pay $1 if outcome occurs), so the distribution is read directly from contract prices without model assumptions. CME bars are derived from the ZQ futures tree. Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
   html+='Kal−CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
   html+='Poly−CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
   html+='Poly−Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
