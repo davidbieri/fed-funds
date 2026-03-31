@@ -25,6 +25,15 @@ All notable changes to this project are documented here. Dates reflect the data 
 - Panel 10 rendered as full-width k-panel with legend, grid, FOMC vertical, and
   explanatory note referencing FEDS 2026-010
 
+### Added — SentimentGap panel (KalshiTab Panel 10)
+- feat(kalshi): `computeSentimentGap()` — computes crowd P(cut) minus ZQ-implied
+  P(cut) per meeting; averages Kalshi + Polymarket; flags platform leader (>=2pp)
+- feat(kalshi): `panelSentimentSvg()` — horizontal divergence bar chart with
+  zero-centre line, per-meeting bars (dovish +orange / hawkish -red / neutral grey),
+  pp labels, Kal/Poly leader badges
+- Panel 10 header: avg gap pill + leader label; full-width k-note with
+  interpretation guide (dovish/hawkish/platform divergence)
+
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
 - feat(riding): buildRideExplainerSVG() pure function — SVG riding arc diagram
