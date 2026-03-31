@@ -3426,6 +3426,13 @@ function RidingTab({state, dispatch, finance}) {
     {key:'ssPut',            label:'SS put signal'},
   ];
 
+  const [showExpl, setShowExpl] = useState(false);
+  const [exMI, setExMI] = useState(2);
+  const [exHI, setExHI] = useState(1);
+
+  const EXMATS_V = [0.5, 1, 2, 5, 7, 10, 30];
+  const EXHORS_V = [1/12, 3/12, 0.5, 1, 1.5];
+
   const sel = state.rideSelected;
   const selectedCell = rideData[sel.matIdx] && rideData[sel.matIdx][sel.hIdx] ? rideData[sel.matIdx][sel.hIdx] : null;
 
@@ -3447,6 +3454,104 @@ function RidingTab({state, dispatch, finance}) {
           );
         })}
       </div>
+
+      {/* How-it-works toggle */}
+      <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'.75rem'}}>
+        <button className="refresh-btn" style={{fontSize:'11px',padding:'4px 12px'}}
+          onClick={()=>setShowExpl(function(v){return !v;})}>
+          How it works {showExpl ? '\u25b4' : '\u25be'}
+        </button>
+        {showExpl && <span style={{fontSize:'11px',color:'var(--color-text-tertiary)'}}>
+          Curve seeded from live NS fit &nbsp;&middot;&nbsp; adjust instrument &amp; horizon independently of matrix
+        </span>}
+      </div>
+
+      {/* Explainer panel */}
+      {showExpl && (function(){
+        var m = EXMATS_V[exMI], h = EXHORS_V[exHI];
+        var ym  = nsYield(m,   nsFitParams);
+        var ymh = nsYield(m-h, nsFitParams);
+        var yh  = nsYield(h,   nsFitParams);
+        var cush = m > h ? rideCushion(ym, yh, ymh, m, h) : 0;
+        var hpr  = m > h ? rideHPR(ym, ymh, m, h) : 0;
+        var hBH  = m > h ? rideHPR(yh, yh, h, h) : 0;
+        var xhpr = m > h ? (hpr - hBH) / h : 0;
+        var om   = m > h ? h / m : 0;
+        var rc = cush > 15 ? 'var(--color-text-success)' : cush > 0 ? 'var(--color-text-warning)' : 'var(--color-text-danger)';
+        var svgStr = m > h ? buildRideExplainerSVG(ym, ymh, yh, m, h, cush, nsFitParams) : '';
+        var remM = m - h;
+        var remLbl = remM < 1 ? Math.round(remM*12)+'mo' : remM.toFixed(1)+'yr';
+        return (
+          <div className="k-panel" style={{marginBottom:'12px'}}>
+            <div className="k-hdr">
+              <span className="k-title">How riding the yield curve works</span>
+              <span style={{fontSize:'10px',color:'var(--color-text-tertiary)'}}>Bieri-Chincarini (2005) Eqs. 8&ndash;16</span>
+            </div>
+            {/* Sliders */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'8px',marginBottom:'10px'}}>
+              <div style={{background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'8px 12px'}}>
+                <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'.04em'}}>
+                  Instrument &nbsp;<b style={{color:'var(--color-text-primary)',fontSize:'12px'}}>{MATS[exMI]}</b>
+                </div>
+                <input type="range" min={0} max={6} step={1} value={exMI}
+                  style={{width:'100%'}} onChange={function(e){setExMI(parseInt(e.target.value));}}/>
+              </div>
+              <div style={{background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',padding:'8px 12px'}}>
+                <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',marginBottom:'4px',textTransform:'uppercase',letterSpacing:'.04em'}}>
+                  Horizon &nbsp;<b style={{color:'var(--color-text-primary)',fontSize:'12px'}}>{HORIZONS[exHI]}</b>
+                </div>
+                <input type="range" min={0} max={4} step={1} value={exHI}
+                  style={{width:'100%'}} onChange={function(e){setExHI(parseInt(e.target.value));}}/>
+              </div>
+            </div>
+            {/* Stat cards */}
+            <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'8px',marginBottom:'10px'}}>
+              {[
+                {l:'Ann. XHPR', v:(xhpr>=0?'+':'')+(xhpr*100).toFixed(2)+'pp', s:'excess vs buy-hold', c:xhpr>0?'var(--color-text-success)':'var(--color-text-danger)'},
+                {l:'Cushion',   v:(cush>=0?'+':'')+Math.round(cush)+'bp',       s:'bp to break-even',  c:rc},
+                {l:'HPR (ann.)',v:(hpr/Math.max(h,0.01)*100).toFixed(2)+'%',    s:'raw holding return', c:'var(--color-text-primary)'},
+                {l:'\u03c9 barbell', v:Math.round(om*100)+'%',                  s:'in riding instrument',c:'var(--color-text-primary)'},
+              ].map(function(card){return (
+                <div key={card.l} className="fw-stat">
+                  <div className="fw-stat-l">{card.l}</div>
+                  <div className="fw-stat-v" style={{fontSize:'16px',color:card.c}}>{card.v}</div>
+                  <div className="fw-stat-s">{card.s}</div>
+                </div>
+              );})}
+            </div>
+            {/* SVG diagram */}
+            {m > h
+              ? <div style={{marginBottom:'8px'}} dangerouslySetInnerHTML={{__html: svgStr}}/>
+              : <div style={{padding:'12px',textAlign:'center',fontSize:'12px',color:'var(--color-text-tertiary)'}}>
+                  Instrument maturity must exceed horizon. Adjust sliders above.
+                </div>
+            }
+            {/* Cushion gauge */}
+            {m > h && <div style={{marginBottom:'8px'}}>
+              <div style={{height:'12px',borderRadius:'3px',overflow:'hidden',border:'.5px solid var(--color-border-tertiary)',background:'var(--color-background-secondary)',position:'relative'}}>
+                <div style={{position:'absolute',left:'50%',top:0,bottom:0,width:'1px',background:'var(--color-border-secondary)'}}/>
+                {cush > 0 && <div style={{position:'absolute',left:'50%',top:0,height:'100%',width:Math.min(50,cush/2)+'%',background:cush>15?'#16a34a':'#f59e0b',opacity:.7}}/>}
+                {cush < 0 && <div style={{position:'absolute',right:'50%',top:0,height:'100%',width:Math.min(50,-cush/2)+'%',background:'#dc2626',opacity:.7}}/>}
+                <div style={{position:'absolute',left:'57.5%',top:0,bottom:0,width:'2px',background:'#f59e0b',opacity:.5}}/>
+              </div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:'9px',color:'var(--color-text-tertiary)',marginTop:'2px'}}>
+                <span>{'\u2212'}100bp</span><span>0</span><span>75th pctile (~15bp)</span><span>+100bp</span>
+              </div>
+            </div>}
+            {/* Narrative */}
+            {m > h && <div style={{fontSize:'11px',color:'var(--color-text-secondary)',padding:'7px 10px',background:'var(--color-background-secondary)',borderRadius:'var(--border-radius-md)',lineHeight:1.6}}>
+              Buying <b>{MATS[exMI]}</b> at y={ym.toFixed(2)}%, holding <b>{HORIZONS[exHI]}</b>: the bond becomes
+              a <b>{remLbl}</b> instrument priced at {ymh.toFixed(2)}%.
+              The {Math.round(ym-ymh)}bp roll-down yield gain is the <em>riding premium</em>.
+              Rates must rise more than <b>{Math.abs(Math.round(cush))}bp</b> above today&apos;s {remLbl} yield to eliminate it.
+              &nbsp;Duration-neutral barbell: {'\u03c9'}={HORIZONS[exHI]}/{MATS[exMI]}={Math.round(om*100)}% in the riding instrument + {Math.round((1-om)*100)}% overnight.
+            </div>}
+            <div className="k-note" style={{marginTop:'8px'}}>
+              Source: Bieri &amp; Chincarini (2005) &ldquo;Riding the Yield Curve: A Variety of Strategies,&rdquo; <em>Journal of Fixed Income</em>. Eqs. 8&ndash;16 (HPR, cushion) and 29&ndash;30 (barbell).
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Matrix */}
       <div className="k-panel" style={{marginBottom:'12px'}}>

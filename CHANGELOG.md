@@ -8,6 +8,9 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
+- feat(riding/ui): collapsible How-it-works explainer panel in RidingTab —
+  live NS-seeded riding arc SVG, 4 stat cards, cushion gauge, narrative sentence;
+  exMI/exHI sliders independent of matrix selection; collapsed by default
 
 ### Changed — Footer mirror index.html design
 - CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
