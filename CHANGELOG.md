@@ -11,6 +11,11 @@ All notable changes to this project are documented here. Dates reflect the data 
 - feat(riding/ui): collapsible How-it-works explainer panel in RidingTab —
   live NS-seeded riding arc SVG, 4 stat cards, cushion gauge, narrative sentence;
   exMI/exHI sliders independent of matrix selection; collapsed by default
+- feat(index/riding): static riding arc SVG figure in pg-riding How-it-works section
+  (buy dot, arc, sell dot, roll-down gap annotation, barbell bar — 5 ug-hover targets)
+- feat(index/riding): sixth filter card (SS put, Stein-Sunderam 2018) added to filter grid
+- feat(index/riding): renamed "Five-filter suite" → "Six-filter suite"
+- feat(index/riding): Signal cascade note connecting Riding → Dashboard, Tabs 07 + 08
 
 ### Changed — Footer mirror index.html design
 - CSS: `.sf-brand` font-size 13→14px, `.sf-right` gap 14→12px, `.sf-icon` added `line-height:1`
