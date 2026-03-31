@@ -1406,29 +1406,34 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
     <!-- RIDING -->
     <div class="ug-page" id="pg-riding">
       <p class="ug-body"><strong>Purpose:</strong> Apply the Bieri-Chincarini (2005) riding-the-yield-curve framework to identify whether the current curve shape generates positive excess returns for extending duration beyond the money-market horizon.</p>
-      <p class="ug-body" style="margin-top:6px">The 7×5 HPR matrix computes annualized excess holding-period returns and break-even cushions for every combination of instrument maturity (6mo–30yr) and holding horizon (1mo–18mo). Six filters gate the composite riding signal: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal (JR ECM), CME expectations signal, and SS term-premium put signal (Stein-Sunderam 2018). All six filters passing simultaneously is the strongest possible riding signal.</p>
+      <p class="ug-body" style="margin-top:6px">The 7&times;5 HPR matrix computes annualized excess holding-period returns and break-even cushions for every combination of instrument maturity (6mo&ndash;30yr) and holding horizon (1mo&ndash;18mo). Six filters gate the composite riding signal: positive slope, positive cushion, 75th-percentile cushion, Taylor rule signal (JR ECM), CME expectations signal, and SS term-premium put signal (Stein-Sunderam 2018). All six filters passing simultaneously is the strongest possible riding signal.</p>
       <p class="ug-body" style="margin-top:6px"><strong>What to look for:</strong> Green HPR cells = favorable riding. The cushion gauge shows how much the curve can flatten before the ride loses money. The barbell panel shows whether optimal duration extension concentrates at a specific maturity or spreads across the curve.</p>
-      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Composite riding signal → Dashboard stat card.</p>
+      <p class="ug-body" style="margin-top:6px"><strong>Key output:</strong> Composite riding signal &rarr; Dashboard stat card.</p>
       <div class="ug-head">Zero-coupon bond HPR (Bieri-Chincarini 2005, Eq. 12)</div>
       <div class="ug-formula">
-        \[\text{HPR}_{m,h} = \frac{r_m \cdot m - r_{m-h} \cdot (m-h)}{h} - r_h\]
-        <div style="font-size:11px;margin-top:8px;color:var(--faint)">Annualized excess HPR of an \(m\)-year instrument over horizon \(h\), relative to the \(h\)-period risk-free rate.</div>
+        \[\text{HPR}_{m,h} = \frac{(1+y_m)^m}{(1+y_{m-h})^{m-h}} - 1\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">Holding-period return of an \(m\)-year zero-coupon bond over horizon \(h\), where \(y_{m-h}\) is the projected yield at which the bond is sold.</div>
       </div>
       <div class="ug-head">Break-even cushion (Eq. 16)</div>
       <div class="ug-formula">
-        \[\text{Cushion} = r_m - r_h - \Delta r_{\text{break-even}}\]
-        <div style="font-size:11px;margin-top:8px;color:var(--faint)">Yield rise tolerated before the riding strategy underperforms the roll-down. Shown in basis points.</div>
+        \[\text{Cushion} = y^* - y_{m-h} \quad \text{where} \quad y^* = \left[\frac{(1+y_m)^m}{(1+y_h)^h}\right]^{\!1/(m-h)} - 1\]
+        <div style="font-size:11px;margin-top:8px;color:var(--faint)">\(y^*\) is the break-even sell yield: the rate at which riding HPR equals the \(h\)-period buy-and-hold return. Cushion in basis points = \((y^* - y_{m-h}) \times 10{,}000\). Positive cushion means rates must <em>rise</em> before the ride loses money.</div>
       </div>
       <div class="ug-head">Illustrative: riding the yield curve</div>
       <div class="ug-fig">
       <svg viewBox="0 0 620 240" style="width:100%;display:block;font-family:'JetBrains Mono',monospace" aria-label="Riding the yield curve mechanics">
+        <defs>
+          <marker id="ugrarr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </marker>
+        </defs>
         <!-- Grid lines -->
-        <line x1="52" y1="40" x2="590" y2="40"  stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
-        <line x1="52" y1="80" x2="590" y2="80"  stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="52" y1="40"  x2="590" y2="40"  stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
+        <line x1="52" y1="80"  x2="590" y2="80"  stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
         <line x1="52" y1="120" x2="590" y2="120" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
         <line x1="52" y1="160" x2="590" y2="160" stroke="var(--border)" stroke-width=".3" stroke-dasharray="3,3"/>
         <!-- Axes -->
-        <line x1="52" y1="20" x2="52" y2="200"  stroke="var(--border)" stroke-width=".8"/>
+        <line x1="52" y1="20"  x2="52"  y2="200" stroke="var(--border)" stroke-width=".8"/>
         <line x1="52" y1="200" x2="590" y2="200" stroke="var(--border)" stroke-width=".8"/>
         <!-- Y-axis labels -->
         <text x="46" y="44"  text-anchor="end" font-size="8" fill="var(--faint)">4.5%</text>
@@ -1443,67 +1448,75 @@ nav.scrolled{box-shadow:0 2px 12px rgba(0,0,0,.08)}
         <text x="364" y="214" text-anchor="middle" font-size="8" fill="var(--faint)">2yr</text>
         <text x="520" y="214" text-anchor="middle" font-size="8" fill="var(--faint)">3yr</text>
         <text x="321" y="227" text-anchor="middle" font-size="8" fill="var(--faint)">maturity</text>
-        <!-- Normal yield curve (upward sloping) -->
+        <!-- Normal yield curve -->
         <path d="M52,172 C130,165 208,145 364,105 C450,88 520,72 590,58"
           fill="none" stroke="var(--cme)" stroke-width="2.5"/>
-        <!-- Horizon benchmark dashed line at y(3mo) = 3.57% -->
+        <!-- Horizon benchmark dashed line at y(3mo) -->
         <line x1="52" y1="172" x2="130" y2="172"
           stroke="var(--faint)" stroke-width="1" stroke-dasharray="4,3"/>
         <text x="134" y="170" font-size="8" fill="var(--faint)">y(3mo)=3.57%</text>
-        <!-- Buy dot at 2yr, yield=3.97% -->
-        <circle cx="364" cy="105" r="6" fill="var(--cme)"/>
-        <text x="372" y="96" font-size="9" fill="var(--cme)" font-weight="600">buy 3.97%</text>
-        <!-- Arc arrow: riding from 2yr to 21mo -->
+        <!-- Arc arrow: riding trajectory 2yr → 21mo (no ug-hover — rect overlay below) -->
         <path d="M364,105 Q280,60 208,115"
           fill="none" stroke="#16a34a" stroke-width="2" marker-end="url(#ugrarr)"/>
-        <!-- Sell dot at 21mo (~1.75yr), yield=3.82% -->
+        <!-- Roll-down gap dashed segment (no ug-hover — rect overlay below) -->
+        <line x1="208" y1="115" x2="208" y2="172"
+          stroke="#16a34a" stroke-width="1.5" stroke-dasharray="2,2" opacity=".6"
+          marker-end="url(#ugrarr)"/>
+        <text x="215" y="148" font-size="8.5" fill="#16a34a">+15bp</text>
+        <!-- Buy dot at 2yr (no ug-hover — rect overlay below) -->
+        <circle cx="364" cy="105" r="6" fill="var(--cme)"/>
+        <text x="372" y="96" font-size="9" fill="var(--cme)" font-weight="600">buy 3.97%</text>
+        <!-- Sell dot at 21mo (no ug-hover — rect overlay below) -->
         <circle cx="208" cy="115" r="6" fill="#16a34a"/>
         <text x="215" y="128" font-size="9" fill="#16a34a" font-weight="600">sell 3.82%</text>
-        <!-- Roll-down gap annotation -->
-        <line x1="208" y1="115" x2="208" y2="172"
-          stroke="#16a34a" stroke-width="1.5" stroke-dasharray="2,2" opacity=".6" marker-end="url(#ugrarr)"/>
-        <text x="215" y="148" font-size="8.5" fill="#16a34a">+15bp</text>
-        <!-- Barbell bar at bottom -->
+        <!-- Barbell bar (no ug-hover — rect overlay below) -->
         <rect x="52" y="186" width="23" height="8" rx="2" fill="var(--riding)" opacity=".8"/>
         <rect x="77" y="186" width="160" height="8" rx="2" fill="var(--border)"/>
-        <text x="52"  y="182" font-size="8" fill="var(--riding)" font-weight="600">&omega;=12.5%</text>
-        <text x="77"  y="182" font-size="8" fill="var(--faint)">87.5% overnight</text>
-        <!-- Arrow marker def -->
-        <defs>
-          <marker id="ugrarr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-            <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          </marker>
-        </defs>
+        <text x="52"  y="182" font-size="8" fill="var(--riding)" font-weight="600">&#969;=12.5%</text>
+        <text x="242" y="182" font-size="8" fill="var(--faint)">87.5% overnight</text>
         <!-- Normal curve badge -->
         <rect x="56" y="22" width="74" height="13" rx="3" fill="#16a34a" opacity=".1"/>
         <text x="93" y="29" text-anchor="middle" dominant-baseline="central" font-size="8" fill="#16a34a" font-weight="600">Normal curve</text>
-        <!-- Transparent hover hit targets (standard ug-hover rects) -->
-        <rect class="ug-hover" x="344" y="85" width="50" height="34" fill="transparent"
-          data-label="Buy: 2yr instrument" data-val="y(2yr) = 3.97%" data-sub="Purchase the bond at today&apos;s 2yr yield"/>
-        <rect class="ug-hover" x="240" y="50" width="100" height="40" fill="transparent"
-          data-label="The ride" data-val="3-month holding period" data-sub="Bond ages from 2yr to 21mo on the same curve"/>
-        <rect class="ug-hover" x="188" y="95" width="50" height="44" fill="transparent"
-          data-label="Sell: now a 21mo bond" data-val="y(21mo) = 3.82%" data-sub="Yield fell 15bp — bond price rose"/>
-        <rect class="ug-hover" x="195" y="115" width="26" height="60" fill="transparent"
-          data-label="Roll-down yield gain" data-val="+15bp = +0.15% yield drop" data-sub="Cushion: rates must rise &gt;15bp to erase this gain"/>
-        <rect class="ug-hover" x="48" y="176" width="195" height="22" fill="transparent"
-          data-label="Duration-neutral barbell" data-val="&omega; = 3mo/2yr = 12.5% riding" data-sub="87.5% in overnight cash — removes rate-level bet"/>
+        <!-- ═══ Transparent rect hit areas — placed last, sit on top ═══ -->
+        <!-- Buy dot -->
+        <rect class="ug-hover" x="352" y="93" width="24" height="24" fill="transparent"
+          data-label="Buy: 2yr instrument"
+          data-val="y(2yr) = 3.97%"
+          data-sub="Purchase at today's 2yr spot rate"/>
+        <!-- Arc midpoint (Q-bezier t=0.5: 0.25×364 + 0.5×280 + 0.25×208 = 283, y=60+½(105-60)=83→approx 72) -->
+        <rect class="ug-hover" x="269" y="55" width="28" height="28" fill="transparent"
+          data-label="The ride — 3mo holding period"
+          data-val="Bond ages from 2yr → 21mo"
+          data-sub="Price rises as yield falls along the curve"/>
+        <!-- Sell dot -->
+        <rect class="ug-hover" x="196" y="103" width="24" height="24" fill="transparent"
+          data-label="Sell: now a 21mo bond"
+          data-val="y(21mo) = 3.82% — roll-down: +0.15%"
+          data-sub="Yield fell 15bp — bond price rose"/>
+        <!-- Roll-down gap segment (between y=119 and y=168, clear of both dots) -->
+        <rect class="ug-hover" x="196" y="127" width="24" height="37" fill="transparent"
+          data-label="Roll-down yield gain"
+          data-val="Cushion: +15bp break-even"
+          data-sub="Rates must rise 15bp above y(21mo) to erase gain"/>
+        <!-- Barbell bar -->
+        <rect class="ug-hover" x="52" y="183" width="185" height="14" fill="transparent"
+          data-label="Duration-neutral barbell"
+          data-val="&#969; = 3mo/2yr = 12.5% riding"
+          data-sub="87.5% overnight cash — removes rate-level bet"/>
       </svg>
       </div>
       <p class="ug-fig-cap">Illustrative riding mechanics. Buy a 2yr bond at 3.97%; after 3mo it is a 21mo bond yielding 3.82% on the same curve. The 15bp roll-down gain is the riding premium. Cushion = how much rates must rise to erase it. Hover each element for detail.</p>
-
       <div class="ug-head">Six-filter suite</div>
       <div class="ug-grid">
-        <div class="ug-pcard"><div class="ug-ptitle">① Positive slope</div><div class="ug-pdesc">10yr–2yr spread must be positive (normal curve). Active riding requires upward-sloping term structure.</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">② Positive cushion</div><div class="ug-pdesc">Cushion > 0bp. A non-negative break-even removes the downside risk of small rate moves.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">① Positive slope</div><div class="ug-pdesc">10yr&ndash;2yr spread must be positive (normal curve). Active riding requires upward-sloping term structure.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">② Positive cushion</div><div class="ug-pdesc">Cushion &gt; 0bp. A non-negative break-even removes the downside risk of small rate moves.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">③ 75th pctile cushion</div><div class="ug-pdesc">Cushion must exceed its historical 75th percentile. Selects only high-conviction rides.</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">④ Taylor rule signal</div><div class="ug-pdesc">JR ECM signal = −1 (cut mode). Riding is most attractive when the Taylor Rule prescribes easing.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">④ Taylor rule signal</div><div class="ug-pdesc">JR ECM signal = &minus;1 (cut mode). Riding is most attractive when the Taylor Rule prescribes easing.</div></div>
         <div class="ug-pcard"><div class="ug-ptitle">⑤ CME expectations</div><div class="ug-pdesc">CME 12M path must have negative slope (cuts priced). Market expectations of easing enhance carry.</div></div>
-        <div class="ug-pcard"><div class="ug-ptitle">⑥ SS put signal</div><div class="ug-pdesc">Stein-Sunderam (2018) term-premium put: NS β₀ − EFFR must exceed its 75th percentile, signaling the Fed will cut defensively if term premia compress. Adds a macro backstop condition.</div></div>
+        <div class="ug-pcard"><div class="ug-ptitle">⑥ SS put signal</div><div class="ug-pdesc">Stein-Sunderam (2018) term-premium put: NS &beta;&#8320; &minus; EFFR must exceed its 75th percentile, signaling the Fed will cut defensively if term premia compress. Adds a macro backstop condition.</div></div>
       </div>
-
       <div class="ug-head">Signal cascade</div>
-      <p class="ug-body">The composite riding signal (RIDE / MARGINAL / HOLD) from the 2yr &times; 3mo default cell flows into the <strong>Dashboard</strong> stat card as one of six cross-market signals feeding the unified policy stance indicator. The Taylor Rule tab (Tab 08) supplies filter ④ directly: when the JR ECM variant prescribes cuts, that signal is imported here automatically. The SS put (filter ⑥) is sourced from the Nelson-Siegel β₀ factor in Tab 07. All signal dependencies are one-directional — the Riding tab reads from Tabs 07 and 08, never writes to them.</p>
+      <p class="ug-body">The composite riding signal (RIDE / MARGINAL / HOLD) from the 2yr &times; 3mo default cell flows into the <strong>Dashboard</strong> stat card as one of six cross-market signals feeding the unified policy stance indicator. The Taylor Rule tab (Tab 08) supplies filter ④ directly: when the JR ECM variant prescribes cuts, that signal is imported here automatically. The SS put (filter ⑥) is sourced from the Nelson-Siegel &beta;&#8320; factor in Tab 07. All signal dependencies are one-directional &mdash; the Riding tab reads from Tabs 07 and 08, never writes to them.</p>
     </div>
 
     <!-- BALANCE SHEET -->

@@ -8,14 +8,16 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 - feat(riding): add buildRideExplainerSVG() pure function — SVG string builder
   for riding arc diagram; seeds from live nsFitParams; used by RidingTab explainer panel
+- feat(riding): buildRideExplainerSVG() pure function — SVG riding arc diagram
+  seeded from live nsFitParams; 5 mse-hover transparent rect overlays
+  (buy dot, arc midpoint, sell dot, roll-down gap with gapH>4 guard, signal badge)
 - feat(riding/ui): collapsible How-it-works explainer panel in RidingTab —
   live NS-seeded riding arc SVG, 4 stat cards, cushion gauge, narrative sentence;
   exMI/exHI sliders independent of matrix selection; collapsed by default
-- feat(index/riding): static riding arc SVG figure in pg-riding How-it-works section
-  (buy dot, arc, sell dot, roll-down gap annotation, barbell bar — 5 ug-hover targets)
-- feat(index/riding): sixth filter card (SS put, Stein-Sunderam 2018) added to filter grid
-- feat(index/riding): renamed "Five-filter suite" → "Six-filter suite"
-- feat(index/riding): Signal cascade note connecting Riding → Dashboard, Tabs 07 + 08
+- feat(index/riding): replace pg-riding — static riding arc SVG (5 transparent
+  rect ug-hover overlays: buy dot, arc, sell dot, roll-down gap, barbell);
+  corrected HPR and cushion LaTeX (exact BC2005 forms); six-filter grid
+  (adds SS put card); Signal cascade note; renamed Five→Six-filter suite
 ### Added — Sticky collapsing header
 - feat(nav): sticky collapsing header — compact nav sticks at top:0 (42px),
   tab bar docks below at top:var(--nav-h); EFFR readout fades into compact bar
