@@ -2585,7 +2585,7 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   const kalExpCC=Object.entries(kD.cutCount).reduce((s,[k,p])=>s+(k==='4'?4:parseInt(k))*p,0);
   const polyExpCC=Object.entries(pD.cutCount).reduce((s,[k,p])=>s+(k==='7+'?7:parseInt(k))*p,0);
   const bKC2=(kalExpCC-cmeExpCC).toFixed(2),bPC2=(polyExpCC-cmeExpCC).toFixed(2),bKP2=(polyExpCC-kalExpCC).toFixed(2);
-  html+='<div class="k-note">Expected 2026 cuts — CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
+  html+='<div class="k-note">Each bar is a risk-neutral probability mass: Kalshi and Polymarket contracts are Arrow\u2013Debreu securities (pay $1 if outcome occurs), so the distribution is read directly from contract prices without model assumptions. CME bars are derived from the ZQ futures tree. Expected 2026 cuts \u2014 CME: <b>'+cmeExpCC.toFixed(2)+'</b> · Kalshi: <b>'+kalExpCC.toFixed(2)+'</b> · Polymarket: <b>'+polyExpCC.toFixed(2)+'</b><br>';
   html+='Kal−CME <span class="k-pill '+(parseFloat(bKC2)>0.05?'k-up':parseFloat(bKC2)<-0.05?'k-dn':'k-neu')+'">'+(bKC2>0?'+':'')+bKC2+'</span> &nbsp;';
   html+='Poly−CME <span class="k-pill '+(parseFloat(bPC2)>0.05?'k-up':parseFloat(bPC2)<-0.05?'k-dn':'k-neu')+'">'+(bPC2>0?'+':'')+bPC2+'</span> &nbsp;';
   html+='Poly−Kal <span class="k-pill '+(parseFloat(bKP2)>0.05?'k-up':parseFloat(bKP2)<-0.05?'k-dn':'k-neu')+'">'+(bKP2>0?'+':'')+bKP2+'</span></div></div>';
