@@ -365,7 +365,7 @@ const kalshiD={
       {daysOut:1, hold:.02,cut25:.46,cut50:.52},
     ],
   },
-  convergenceNote:'Sep 2024 approximate; see FEDS 2026-010 Fig.\u202f1 for exact data.',
+  convergenceNote:'Sep 2024 approximate; see FEDS 2026-010 Fig. 1 for exact data.',
 };
 
 const polyD={
@@ -1555,20 +1555,19 @@ async function fetchKalshi(state, dispatch, apiKey, setFetching, setRefreshStatu
     if(p.largeCutAny!==undefined) merged.largeCutAny=p.largeCutAny;
     if(p.cutBinary) merged.cutBinary={...state.kalshiD.cutBinary,...p.cutBinary};
     if(p.kalshiRate) merged.kalshiRate={...state.kalshiD.kalshiRate,...p.kalshiRate};
-    // Build convergence snapshots: compute daysOut from today and append to each meeting's series
     if(p.meetings){
-      const FOMC_DATES={'Apr 2026':'2026-04-29','Jun 2026':'2026-06-18','Jul 2026':'2026-07-29','Sep 2026':'2026-09-17','Oct 2026':'2026-10-29','Dec 2026':'2026-12-10','Jan 2027':'2027-01-28','Mar 2027':'2027-03-18'};
+      const FOMC_DATES2={'Apr 2026':'2026-04-29','Jun 2026':'2026-06-18','Jul 2026':'2026-07-29','Sep 2026':'2026-09-17','Oct 2026':'2026-10-29','Dec 2026':'2026-12-10','Jan 2027':'2027-01-28','Mar 2027':'2027-03-18'};
       const now2=new Date();
       const convUpdate={};
       Object.entries(p.meetings).forEach(function([lb2,m]){
-        const fd=FOMC_DATES[lb2];if(!fd)return;
+        const fd=FOMC_DATES2[lb2];if(!fd)return;
         const daysOut=Math.round((new Date(fd)-now2)/86400000);
         if(daysOut<0||daysOut>95)return;
         const existing=(state.kalshiD.convergence&&state.kalshiD.convergence[lb2])||[];
         const filtered=existing.filter(function(pt){return Math.abs(pt.daysOut-daysOut)>1;});
         convUpdate[lb2]=[...filtered,{daysOut,hold:m.hold,cut25:m.cut25,cut50:m.cut50}];
       });
-      if(Object.keys(convUpdate).length) merged.convergence={...((state.kalshiD.convergence)||{}),...convUpdate};
+      if(Object.keys(convUpdate).length) merged.convergence={...(state.kalshiD.convergence||{}),...convUpdate};
     }
     merged.asOf=p.asOf||new Date().toISOString().slice(0,10);
     merged.source=p.source||'Kalshi (web search)';
@@ -1978,28 +1977,25 @@ function panel8bSvg(emergencyCut,polyHike){
 function panelConvSvg(kD,meetings){
   const W=720,H=100,mt=24,mb=20,ml=32,mr=10,cW=W-ml-mr;
   const maxDays=90;
-  const xs=d=>ml+cW*(1-d/maxDays);
-  const yp=v=>mt+H*(1-v);
+  const xs=function(d){return ml+cW*(1-d/maxDays);};
+  const yp=function(v){return mt+H*(1-v);};
   let svg='<svg viewBox="0 0 '+W+' '+(mt+H+mb)+'" style="width:100%;display:block;overflow:visible">';
-  // Grid
-  [.25,.5,.75].forEach(v=>{
+  [.25,.5,.75].forEach(function(v){
     svg+='<line x1="'+ml+'" y1="'+yp(v).toFixed(1)+'" x2="'+(ml+cW)+'" y2="'+yp(v).toFixed(1)+'" stroke="var(--color-border-tertiary)" stroke-width=".5"/>';
     svg+='<text x="'+(ml-3)+'" y="'+(yp(v)+3).toFixed(1)+'" text-anchor="end" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">'+(v*100).toFixed(0)+'%</text>';
   });
-  [90,60,30,14,7,1].forEach(d=>{
+  [90,60,30,14,7,1].forEach(function(d){
     const x=xs(d);
     svg+='<line x1="'+x.toFixed(1)+'" y1="'+mt+'" x2="'+x.toFixed(1)+'" y2="'+(mt+H)+'" stroke="var(--color-border-tertiary)" stroke-width=".4" stroke-dasharray="2,3"/>';
-    svg+='<text x="'+x.toFixed(1)+'" y="'+(mt+H+13).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">T\u221200'+d+'</text>';
+    svg+='<text x="'+x.toFixed(1)+'" y="'+(mt+H+13).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--color-text-tertiary)" font-family="var(--font-mono)">T-0'+d+'</text>';
   });
   svg+='<line x1="'+(ml+cW)+'" y1="'+mt+'" x2="'+(ml+cW)+'" y2="'+(mt+H)+'" stroke="var(--c-dots)" stroke-width="1" stroke-dasharray="4,3"/>';
   svg+='<text x="'+(ml+cW)+'" y="'+(mt+H+13).toFixed(1)+'" text-anchor="middle" font-size="7.5" fill="var(--c-dots)" font-family="var(--font-mono)">FOMC</text>';
-  // Helper: polyline path string from sorted pts + accessor
   const mkPath=function(pts,acc){
     const v=pts.filter(function(p){return acc(p)!=null;});
     if(v.length<2)return '';
     return v.map(function(p,i){return(i===0?'M':'L')+xs(p.daysOut).toFixed(1)+','+yp(acc(p)).toFixed(1);}).join(' ');
   };
-  // Sep 2024 reference (dashed)
   const ref=(kD.convergence&&kD.convergence['Sep 2024']||[]).slice().sort(function(a,b){return b.daysOut-a.daysOut;});
   if(ref.length>=2){
     const dH=mkPath(ref,function(p){return p.hold;}),d25=mkPath(ref,function(p){return p.cut25;}),d50=mkPath(ref,function(p){return p.cut50;});
@@ -2007,7 +2003,6 @@ function panelConvSvg(kD,meetings){
     if(d25)svg+='<path d="'+d25+'" fill="none" stroke="var(--c-kal)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".4"/>';
     if(d50)svg+='<path d="'+d50+'" fill="none" stroke="var(--c-overlay)" stroke-width="1.2" stroke-dasharray="3,3" opacity=".4"/>';
   }
-  // Next FOMC meeting live snapshots (solid)
   const nextLb=meetings&&meetings[0]?meetings[0].lb:null;
   const priPts=nextLb&&kD.convergence&&kD.convergence[nextLb]?kD.convergence[nextLb].slice().sort(function(a,b){return b.daysOut-a.daysOut;}):[];
   if(priPts.length>=2){
@@ -2016,12 +2011,10 @@ function panelConvSvg(kD,meetings){
     if(d25)svg+='<path d="'+d25+'" fill="none" stroke="var(--c-kal)" stroke-width="2" opacity=".9"/>';
     if(d50)svg+='<path d="'+d50+'" fill="none" stroke="var(--c-overlay)" stroke-width="2" opacity=".9"/>';
   }
-  // Current snapshot dot(s) from priPts, or fall back to kD.meetings snapshot
-  const snapPts=priPts.length?priPts.slice(-1):[];
+  const FOMC_DATES={'Apr 2026':'2026-04-29','Jun 2026':'2026-06-18','Jul 2026':'2026-07-29','Sep 2026':'2026-09-17','Oct 2026':'2026-10-29','Dec 2026':'2026-12-10','Jan 2027':'2027-01-28','Mar 2027':'2027-03-18'};
+  const snapPts=priPts.length?[priPts[priPts.length-1]]:[];
   if(!snapPts.length&&nextLb&&kD.meetings[nextLb]){
     const m=kD.meetings[nextLb];
-    // Estimate rough daysOut from today
-    const FOMC_DATES={'Apr 2026':'2026-04-29','Jun 2026':'2026-06-18','Jul 2026':'2026-07-29','Sep 2026':'2026-09-17','Oct 2026':'2026-10-29','Dec 2026':'2026-12-10','Jan 2027':'2027-01-28','Mar 2027':'2027-03-18'};
     const fd=FOMC_DATES[nextLb];
     const est=fd?Math.max(1,Math.round((new Date(fd)-new Date())/86400000)):45;
     snapPts.push({daysOut:est,hold:m.hold,cut25:m.cut25,cut50:m.cut50});
@@ -2033,11 +2026,10 @@ function panelConvSvg(kD,meetings){
     svg+='<circle cx="'+x.toFixed(1)+'" cy="'+yp(p.cut50).toFixed(1)+'" r="3.5" fill="var(--c-overlay)"/>';
     if(nextLb)svg+='<text x="'+x.toFixed(1)+'" y="'+(mt-6)+'" text-anchor="middle" font-size="8" fill="var(--c-kal)" font-family="var(--font-sans)">'+nextLb+'</text>';
   });
-  // Legend
-  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">\u25a0 Hold</text>';
-  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)">\u25a0 P(cut 25bp)</text>';
-  svg+='<text x="'+(ml+132)+'" y="12" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)">\u25a0 P(cut 50bp)</text>';
-  svg+='<text x="'+(ml+222)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">Dashed = Sep\u20242024 reference \u2014 FEDS 2026-010 Fig.\u20021</text>';
+  svg+='<text x="'+ml+'" y="12" font-size="8.5" fill="var(--color-text-secondary)" font-family="var(--font-sans)">&#9632; Hold</text>';
+  svg+='<text x="'+(ml+46)+'" y="12" font-size="8.5" fill="var(--c-kal)" font-family="var(--font-sans)">&#9632; P(cut 25bp)</text>';
+  svg+='<text x="'+(ml+132)+'" y="12" font-size="8.5" fill="var(--c-overlay)" font-family="var(--font-sans)">&#9632; P(cut 50bp)</text>';
+  svg+='<text x="'+(ml+222)+'" y="12" font-size="8" fill="var(--color-text-tertiary)" font-family="var(--font-sans)">Dashed = Sep 2024 reference (FEDS 2026-010 Fig. 1)</text>';
   svg+='</svg>';
   return svg;
 }
@@ -2743,12 +2735,12 @@ function KalshiTab({state, dispatch, finance, fetching, setFetching, refreshStat
   html+=panel8bSvg(pD.emergencyCut,pD.hikeAny);
   html+='<div class="k-note">Polymarket-unique contract: P(FOMC holds an unscheduled emergency meeting and cuts before end-2026). Historical context: Jan 2001, Sep 2001, Oct 2008, Mar 2020.</div></div></div>';
 
-  // Panel 10: Convergence
+  // Panel 9: Convergence
   html+='<div class="k-grid" style="margin-bottom:12px"><div class="k-panel k-full">';
-  html+='<div class="k-hdr"><span class="k-title">\u2469Kalshi forecast convergence \u2014 probability path to FOMC day</span>';
-  html+='<span class="k-contract">kxfeddecision next meeting \u00b7 FEDS 2026-010 Fig.\u20021</span></div>';
+  html+='<div class="k-hdr"><span class="k-title">&#9321; Kalshi forecast convergence &#8212; probability path to FOMC day</span>';
+  html+='<span class="k-contract">kxfeddecision next meeting &#183; FEDS 2026-010 Fig. 1</span></div>';
   html+=panelConvSvg(kD,meetings);
-  html+='<div class="k-note">Solid dots/lines: current meeting probability snapshots accumulated across successive Fetch calls. Dashed lines: Sep 2024 reference (Kalshi correctly placed majority weight on the 50bp cut at T\u22121, while ZQ futures and professional forecasters remained divided \u2014 the sole forecasting error in the FEDS 2026-010 sample). Fetch Kalshi repeatedly over the coming days to build the convergence path for the next meeting.</div>';
+  html+='<div class="k-note">Solid lines/dots: current meeting snapshots accumulated across successive Fetch calls. Dashed lines: Sep 2024 reference &#8212; Kalshi correctly placed majority weight on the 50bp cut at T&#8722;1, the sole forecasting error in the FEDS 2026-010 sample where Kalshi outperformed fed funds futures. Fetch Kalshi repeatedly over coming days to build the convergence path for the next meeting.</div>';
   html+='</div></div>';
 
   // Wire fetch buttons via window globals (inline onclick in generated HTML)
