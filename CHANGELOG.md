@@ -4,6 +4,18 @@ All notable changes to this project are documented here. Dates reflect the data 
 
 ---
 
+## [Unreleased]
+
+### Changed
+- API key entry replaced with persistent settings modal (ApiKeyModal component)
+  - ⚙ gear button + status chip in sticky nav (always visible, scroll-safe)
+  - Key persisted to localStorage under `mse-api-key`; cleared via modal Clear button
+  - Show/hide toggle, format validation indicator (sk-ant- prefix check)
+  - Removed inline password input from full header; Refresh ZQ button retained
+  - Removed .api-note banner (instructions moved into modal body)
+
+---
+
 ## [4.5] — 2026-03-31
 
 ### Changed — Episode tooltips (Financial Stability tab)

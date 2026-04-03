@@ -237,6 +237,48 @@ circle:has(+ .mse-hover:hover){stroke:var(--c-cme);stroke-width:2;filter:brightn
   .mse-sticky-nav{margin:0 -.75rem;padding:0 .75rem;}
   .mse-sticky-tabs{margin:0 -.75rem;padding:6px .75rem 8px;}
 }
+/* -- API Key modal ---------------------------------------------------- */
+.mse-key-btn{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:50%;border:.5px solid var(--color-border-secondary);
+  background:transparent;cursor:pointer;color:var(--color-text-secondary);
+  font-size:13px;transition:background .15s,color .15s;flex-shrink:0;
+}
+.mse-key-btn:hover{background:var(--color-background-secondary);color:var(--color-text-primary);}
+.mse-key-chip{
+  display:inline-flex;align-items:center;gap:4px;font-size:10px;
+  font-family:var(--font-mono);padding:2px 7px;border-radius:20px;
+  border:.5px solid var(--color-border-secondary);white-space:nowrap;
+  color:var(--color-text-tertiary);background:var(--color-background-secondary);
+  cursor:pointer;transition:border-color .15s;
+}
+.mse-key-chip.active{border-color:var(--c-cme);color:var(--c-cme);}
+.mse-key-chip .dot{width:5px;height:5px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.mse-key-overlay{
+  position:fixed;inset:0;z-index:900;background:rgba(0,0,0,.45);
+  display:flex;align-items:center;justify-content:center;
+}
+.mse-key-panel{
+  background:var(--color-background-primary);border:.5px solid var(--color-border-secondary);
+  border-radius:var(--border-radius-lg);padding:20px 24px;width:380px;max-width:94vw;
+  box-shadow:0 12px 40px rgba(0,0,0,.25);
+}
+.mse-key-panel h4{
+  margin:0 0 4px;font-size:14px;font-weight:600;color:var(--color-text-primary);
+}
+.mse-key-panel p{
+  margin:0 0 14px;font-size:11px;color:var(--color-text-secondary);line-height:1.5;
+}
+.mse-key-panel p code{
+  font-family:var(--font-mono);font-size:10px;
+  background:var(--color-background-secondary);
+  padding:1px 4px;border-radius:3px;border:.5px solid var(--color-border-tertiary);
+}
+.mse-key-row{display:flex;gap:6px;align-items:center;margin-bottom:10px;}
+.mse-key-row input{flex:1;font-family:var(--font-mono);font-size:11px;}
+.mse-key-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;}
+.mse-key-status{font-size:10px;font-family:var(--font-mono);color:var(--color-text-tertiary);}
+.mse-key-status.ok{color:var(--c-cme);}
 </style>
 </head>
 <body>
@@ -4666,10 +4708,65 @@ function FinStabTab({state, dispatch, finance}) {
 // REACT APP
 // ============================================================================
 
+function ApiKeyModal({apiKey, onSave, onClose}) {
+  const [draft, setDraft] = React.useState(apiKey);
+  const [show, setShow] = React.useState(false);
+  const inputRef = React.useRef(null);
+  React.useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
+  const handleSave = () => { onSave(draft.trim()); onClose(); };
+  const handleClear = () => { onSave(''); onClose(); };
+  const handleKeyDown = (e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') onClose(); };
+  return (
+    <div className="mse-key-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="mse-key-panel">
+        <h4>&#9881; Anthropic API Key</h4>
+        <p>
+          Required for standalone use. Paste your <code>sk-ant-...</code> key &#8212; get one at{' '}
+          <code>console.anthropic.com</code>. Key is stored in <code>localStorage</code> and never
+          transmitted except directly to the Anthropic API. Inside claude.ai the key is injected
+          automatically &#8212; no entry needed.
+        </p>
+        <div className="mse-key-row">
+          <input
+            ref={inputRef}
+            className="fw-in"
+            type={show ? 'text' : 'password'}
+            placeholder="sk-ant-api03-..."
+            value={draft}
+            onChange={e => setDraft(e.target.value)}
+            onKeyDown={handleKeyDown}
+            style={{width:'100%'}}
+          />
+          <button className="mse-key-btn" title={show ? 'Hide' : 'Show'}
+            onClick={() => setShow(s => !s)}>
+            {show ? '&#128065;' : '&#128274;'}
+          </button>
+        </div>
+        <div className="mse-key-actions">
+          <span className={'mse-key-status' + (draft.trim().startsWith('sk-ant-') ? ' ok' : '')}>
+            {draft.trim().startsWith('sk-ant-') ? '&#10003; valid format' : draft.trim() ? '&#9888; check format' : 'no key set'}
+          </span>
+          <div style={{display:'flex',gap:6}}>
+            {apiKey && <button className="refresh-btn" style={{fontSize:'11px',padding:'4px 10px',color:'var(--color-text-secondary)'}}
+              onClick={handleClear}>Clear</button>}
+            <button className="refresh-btn" style={{fontSize:'11px',padding:'4px 10px'}}
+              onClick={onClose}>Cancel</button>
+            <button className="refresh-btn" style={{fontSize:'11px',padding:'4px 14px',background:'var(--c-cme)',color:'#fff',border:'none'}}
+              onClick={handleSave}>Save</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE);
   const finance = useFinance(state);
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(() => {
+    try { return localStorage.getItem('mse-api-key') || ''; } catch(e) { return ''; }
+  });
+  const [showKeyModal, setShowKeyModal] = React.useState(false);
   const [refreshStatus, setRefreshStatus] = useState({zq:'', kal:'', poly:'', sofr:'', yc:''});
   const [fetching, setFetching] = useState({zq:false, kal:false, poly:false, sofr:false, yc:false});
   const [scrolled, setScrolled] = useState(false);
@@ -4685,6 +4782,12 @@ function App() {
     try { localStorage.setItem('fwCfg', JSON.stringify({lb:state.fwLb, scenario:state.fwActiveScenario, compare:state.fwCompareScenario})); }
     catch(e) {}
   }, [state.fwLb, state.fwActiveScenario, state.fwCompareScenario]);
+
+  useEffect(() => {
+    try { if (apiKey) localStorage.setItem('mse-api-key', apiKey);
+          else localStorage.removeItem('mse-api-key'); }
+    catch(e) {}
+  }, [apiKey]);
 
   useEffect(() => {
     const timer = setTimeout(() => initTooltips(document.body), 50);
@@ -4722,7 +4825,17 @@ function App() {
           Target: <b style={{color:'var(--color-text-primary)'}}>{state.fwLb.toFixed(2)}&ndash;{(state.fwLb+0.25).toFixed(2)}%</b>
           &nbsp;&middot;&nbsp;EFFR: <b style={{color:'var(--color-text-primary)'}}>{finance.effrStart.toFixed(2)}%</b>
         </span>}
-        <span className="version-chip">v4.3 &middot; Mar 2026</span>
+        <span
+          className={'mse-key-chip' + (apiKey.trim().startsWith('sk-ant-') ? ' active' : '')}
+          title="API key settings"
+          onClick={() => setShowKeyModal(true)}
+        >
+          <span className="dot"/>
+          {apiKey.trim().startsWith('sk-ant-') ? 'key &#10003;' : 'no key'}
+        </span>
+        <button className="mse-key-btn" title="API key settings"
+          onClick={() => setShowKeyModal(true)}>&#9881;</button>
+        <span className="version-chip">v4.6 &middot; Apr 2026</span>
       </div>
       {/* -- Full header (scrolls away) ----------------------------------- */}
       <div style={{padding:'.75rem 0 .5rem'}}>
@@ -4735,23 +4848,15 @@ function App() {
           </div>
         </div>
         <div style={{display:'flex',flexDirection:'column',alignItems:'flex-end',gap:'4px'}}>
-          <div style={{display:'flex',gap:'6px',alignItems:'center'}}>
-            <input type="password" className="fw-in" placeholder="sk-ant-... (standalone only)"
-              style={{width:'195px',fontSize:'11px'}} value={apiKey}
-              onChange={e=>setApiKey(e.target.value)}/>
-            <button className="refresh-btn" disabled={fetching.zq}
-              onClick={()=>refreshData(state,dispatch,apiKey,setFetching,setRefreshStatus)}>
-              <span className={fetching.zq?'spin':''}>&#x27f3;</span> Refresh ZQ
-            </button>
-          </div>
+          <button className="refresh-btn" disabled={fetching.zq}
+            onClick={()=>refreshData(state,dispatch,apiKey,setFetching,setRefreshStatus)}>
+            <span className={fetching.zq?'spin':''}>&#x27f3;</span> Refresh ZQ
+          </button>
           <div style={{fontSize:'10px',color:'var(--color-text-tertiary)',textAlign:'right',maxWidth:'400px',minHeight:'14px'}}>{refreshStatus.zq}</div>
         </div>
       </div>
 
       <p style={{fontSize:'13px',color:'var(--color-text-secondary)',margin:'0 0 .5rem'}}>CME FedWatch methodology (ZQ futures chain) · Kalshi &amp; Polymarket prediction markets · SOFR strip · Dashboard · Nelson-Siegel yield curve · Taylor Rule suite (6 variants) · Bieri-Chincarini riding calculator · Fed balance sheet &amp; QT monitor · Financial stability (BIS/Mehrling). 12 months forward, 11 tabs.</p>
-      <div className="api-note">
-        <b>Running standalone?</b> Paste your Anthropic API key (<code>sk-ant-...</code>) above &mdash; get one at <code>console.anthropic.com</code>. Refreshes cost &lt;$0.01 each. Inside claude.ai the key is injected automatically.
-      </div>
 
       </div>{/* /full header */}
       {/* -- Sticky tab bar ----------------------------------------------- */}
@@ -4789,6 +4894,11 @@ function App() {
       {state.fwActive==='fs' && <FinStabTab state={state} dispatch={dispatch} finance={finance}/>}
       {!['inputs','chain','tree','kalshi','sofr','dashboard','taylor','yieldcurve','riding','bs','fs'].includes(state.fwActive) &&
         <div style={{color:'var(--color-text-tertiary)',fontSize:'13px'}}>Tab content coming in next steps</div>}
+      {showKeyModal && <ApiKeyModal
+        apiKey={apiKey}
+        onSave={setApiKey}
+        onClose={() => setShowKeyModal(false)}
+      />}
     </div>
   );
 }
